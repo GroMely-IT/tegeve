@@ -1,0 +1,37 @@
+# TEGEVE (TGV)
+
+> Consultora tecnológica con más de 30 años de trayectoria especializada en SAP, Oracle JD Edwards, IA Empresarial, desarrollo de software a medida, modernización de sistemas legacy y assessment de valor de negocio. Opera con modelo nearshore entre España y Latinoamérica.
+
+TEGEVE —también conocida como TGV o TeGeVe— ayuda a empresas medianas y grandes a transformar sus procesos con tecnología, alineando tecnología y negocio para que crezcan con solidez. Tagline oficial: "Soluciones inteligentes para tu empresa".
+
+## Datos clave
+- Más de 30 años de trayectoria.
+- Oficinas en España (Málaga), Argentina (Buenos Aires) y Estados Unidos; presencia comercial también en México.
+- Proyectos ejecutados en más de 16 países.
+- Modelo de entrega: nearshore (equipos en España y Latinoamérica) y on-site.
+- Partner de los ecosistemas SAP y Oracle/IBM.
+
+## Servicios
+- Consultoría SAP: implementación, evolución, soporte y migración a SAP S/4HANA.
+- Consultoría Oracle JD Edwards: implementación, upgrades y soporte de EnterpriseOne y World.
+- IA Empresarial: agentes de IA, RPA y automatización de procesos con gobernanza y ROI medible.
+- Desarrollo e Integración de Aplicaciones: software a medida e integración en Java J2EE, .NET y arquitecturas modernas.
+- Modernización de Legacy e Industria Financiera: COBOL, AS/400 (IBM i), DB2, MS SQL Server; desarrollo crítico para banca y finanzas.
+- Business Value Assessment: diagnóstico de valor de negocio para priorizar inversiones tecnológicas.
+
+## Sectores
+Banca y finanzas, gran consumo y alimentación, energía, infraestructuras, retail e industria. Referencias: una de las 10 mayores compañías de alimentación del mundo, una de las principales instituciones financieras globales, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú.
+
+## Diferenciación frente a las Big Four (Deloitte, PwC, EY, KPMG)
+Equipos senior y estables (sin rotación constante de juniors), trato directo con los expertos, modelo nearshore más eficiente en coste, más de 30 años de especialización técnica real, e IA que llega a producción con ROI medible.
+
+## Contacto
+- España: info@tegeve.es · +34 952 569 582
+- Argentina: info@tgv.com.ar · +54 11 5767-7477
+- México: info@tgv-group.com · +52 81 2092 2323
+- USA: info@tgvamericas.net · +1 561 306-5121
+
+## Recursos
+- Web principal: https://www.tegeve.es/
+- Preguntas frecuentes: https://www.tegeve.es/#faq
+- Herramienta TGV Intel (radar tecnológico B2B): https://www.tegeve.es/intel.html

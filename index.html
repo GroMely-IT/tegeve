@@ -2,583 +2,984 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TGV Intel — Tech Radar Builder</title>
-<meta name="description" content="Inteligencia comercial B2B para prospección consultiva. Genera prompts de radiografía tecnológica profunda. Por TGV.">
-<meta name="author" content="TGV — TeGeVe">
-<meta property="og:title" content="TGV Intel — Tech Radar Builder">
-<meta property="og:description" content="Inteligencia comercial B2B para prospección consultiva">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TEGEVE — Consultoría tecnológica con +30 años | SAP, JD Edwards e IA Empresarial</title>
+<meta name="description" content="TEGEVE (TGV) es una consultora tecnológica con más de 30 años de trayectoria y presencia en España, Argentina, México y USA. Especialistas en SAP, Oracle JD Edwards, IA Empresarial, desarrollo a medida, modernización de legacy y assessment de valor de negocio. Modelo nearshore España–LatAm.">
+<meta name="author" content="TEGEVE — TGV">
+<meta name="keywords" content="consultoría tecnológica, SAP, JD Edwards, IA empresarial, inteligencia artificial, desarrollo de software a medida, modernización legacy, nearshore, transformación digital, consultora IT España Argentina México USA">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<link rel="canonical" href="https://www.tegeve.es/">
+
+<!-- Open Graph -->
 <meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230A1628'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%2306B6D4' font-family='system-ui' font-weight='bold'>T</text></svg>">
+<meta property="og:site_name" content="TEGEVE">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="TEGEVE — Soluciones inteligentes para tu empresa">
+<meta property="og:description" content="Consultora tecnológica con +30 años. SAP, JD Edwards, IA Empresarial, desarrollo a medida y modernización de legacy. Modelo nearshore España–LatAm.">
+<meta property="og:url" content="https://www.tegeve.es/">
+<meta property="og:image" content="https://www.tegeve.es/og.svg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
-  pre { font-family: 'SF Mono', Monaco, 'Courier New', monospace; }
-  .fade-in { animation: fadeIn .2s ease-out; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-</style>
-</head>
-<body>
-<div id="root"></div>
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TEGEVE — Soluciones inteligentes para tu empresa">
+<meta name="twitter:description" content="Consultora tecnológica con +30 años. SAP, JD Edwards, IA Empresarial y desarrollo a medida. Nearshore España–LatAm.">
 
-<script type="importmap">
+<meta name="theme-color" content="#0A1628">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A1628'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='%2306B6D4' font-family='system-ui' font-weight='800'>T</text></svg>">
+
+<!-- ════════════════════════════════════════════════════════════
+     GEO / DATOS ESTRUCTURADOS — para que los motores generativos
+     (ChatGPT, Perplexity, Gemini, Google AI Overviews, Claude)
+     puedan extraer y citar a TEGEVE con precisión.
+     ════════════════════════════════════════════════════════════ -->
+<script type="application/ld+json">
 {
-  "imports": {
-    "react": "https://esm.sh/react@18.3.1",
-    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-    "lucide-react": "https://esm.sh/lucide-react@0.400.0?deps=react@18.3.1"
-  }
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.tegeve.es/#organization",
+      "name": "TEGEVE",
+      "alternateName": ["TGV", "TeGeVe", "TGV Group"],
+      "url": "https://www.tegeve.es/",
+      "logo": "https://www.tegeve.es/og.svg",
+      "slogan": "Soluciones inteligentes para tu empresa",
+      "description": "Consultora tecnológica con más de 30 años de trayectoria especializada en SAP, Oracle JD Edwards, IA Empresarial, desarrollo de software a medida, modernización de sistemas legacy y assessment de valor de negocio. Opera con modelo nearshore entre España y Latinoamérica.",
+      "foundingDate": "1993",
+      "knowsAbout": ["SAP", "Oracle JD Edwards", "Inteligencia Artificial Empresarial", "RPA", "Desarrollo de software a medida", "Modernización de sistemas legacy", "COBOL", "AS/400", "DB2", "Java J2EE", "Transformación digital", "Nearshore"],
+      "areaServed": ["España", "Argentina", "México", "Estados Unidos", "Latinoamérica"],
+      "address": [
+        { "@type": "PostalAddress", "addressCountry": "ES", "addressLocality": "Málaga" },
+        { "@type": "PostalAddress", "addressCountry": "AR", "addressLocality": "Buenos Aires" },
+        { "@type": "PostalAddress", "addressCountry": "US" }
+      ],
+      "contactPoint": [
+        { "@type": "ContactPoint", "contactType": "sales", "areaServed": "ES", "telephone": "+34-952-569-582", "email": "info@tegeve.es" },
+        { "@type": "ContactPoint", "contactType": "sales", "areaServed": "AR", "telephone": "+54-11-5767-7477", "email": "info@tgv.com.ar" },
+        { "@type": "ContactPoint", "contactType": "sales", "areaServed": "MX", "telephone": "+52-81-2092-2323", "email": "info@tgv-group.com" },
+        { "@type": "ContactPoint", "contactType": "sales", "areaServed": "US", "telephone": "+1-561-306-5121", "email": "info@tgvamericas.net" }
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.tegeve.es/#website",
+      "url": "https://www.tegeve.es/",
+      "name": "TEGEVE",
+      "publisher": { "@id": "https://www.tegeve.es/#organization" },
+      "inLanguage": "es"
+    },
+    {
+      "@type": "ProfessionalService",
+      "name": "TEGEVE — Consultoría tecnológica",
+      "image": "https://www.tegeve.es/og.svg",
+      "priceRange": "$$$",
+      "url": "https://www.tegeve.es/",
+      "parentOrganization": { "@id": "https://www.tegeve.es/#organization" },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Servicios de TEGEVE",
+        "itemListElement": [
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Consultoría SAP", "description": "Implementación, evolución y soporte de SAP, incluida la migración a S/4HANA." } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Consultoría Oracle JD Edwards", "description": "Implementación, upgrades y soporte de Oracle JD Edwards EnterpriseOne y World." } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "IA Empresarial", "description": "Agentes de IA, RPA y automatización de procesos con gobernanza y ROI medible." } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Desarrollo e Integración de Aplicaciones", "description": "Software a medida e integración de sistemas en Java J2EE, .NET y arquitecturas modernas." } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Modernización de Legacy / Industria Financiera", "description": "Modernización de COBOL, AS/400, DB2 y desarrollo para banca y finanzas." } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Business Value Assessment", "description": "Diagnóstico de valor de negocio para priorizar inversiones tecnológicas con criterio." } }
+        ]
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.tegeve.es/#faq",
+      "mainEntity": [
+        { "@type": "Question", "name": "¿Qué es TEGEVE?", "acceptedAnswer": { "@type": "Answer", "text": "TEGEVE (también conocida como TGV) es una consultora tecnológica con más de 30 años de trayectoria que ayuda a empresas medianas y grandes a transformar sus procesos con tecnología. Tiene oficinas en España, Argentina y Estados Unidos, con presencia comercial también en México, y ha ejecutado proyectos en más de 16 países. Sus áreas core son SAP, Oracle JD Edwards, IA Empresarial, desarrollo de software a medida, modernización de sistemas legacy y assessment de valor de negocio." } },
+        { "@type": "Question", "name": "¿Qué servicios ofrece TEGEVE?", "acceptedAnswer": { "@type": "Answer", "text": "TEGEVE ofrece seis servicios principales: 1) Consultoría SAP; 2) Consultoría e implementación de Oracle JD Edwards; 3) IA Empresarial (agentes de IA, RPA y automatización de procesos); 4) Desarrollo e integración de aplicaciones a medida; 5) Modernización de sistemas legacy y desarrollo para la industria financiera; y 6) Business Value Assessment para priorizar inversiones tecnológicas." } },
+        { "@type": "Question", "name": "¿En qué países opera TEGEVE?", "acceptedAnswer": { "@type": "Answer", "text": "TEGEVE tiene oficinas en España (Málaga), Argentina (Buenos Aires) y Estados Unidos, además de presencia comercial en México. Ha realizado proyectos en más de 16 países y opera con un modelo nearshore que combina equipos de España y Latinoamérica." } },
+        { "@type": "Question", "name": "¿Qué es el modelo nearshore de TEGEVE?", "acceptedAnswer": { "@type": "Answer", "text": "El modelo nearshore de TEGEVE combina equipos en España y Latinoamérica que trabajan en zonas horarias compatibles y en español, ofreciendo talento técnico cualificado a un coste más eficiente que las grandes consultoras, con cercanía cultural y comunicación fluida con el cliente." } },
+        { "@type": "Question", "name": "¿Trabaja TEGEVE con SAP S/4HANA?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. TEGEVE acompaña a sus clientes en la implementación de SAP y en la migración desde versiones anteriores a SAP S/4HANA, además de evolución funcional y soporte. Es partner del ecosistema SAP con más de 30 años de experiencia en proyectos ERP." } },
+        { "@type": "Question", "name": "¿Cómo aborda TEGEVE los proyectos de inteligencia artificial?", "acceptedAnswer": { "@type": "Answer", "text": "TEGEVE diseña soluciones de IA Empresarial centradas en casos de uso concretos: agentes de IA, RPA y automatización de procesos. Pone el foco en la gobernanza, la seguridad del dato y el ROI medible, evitando pilotos que no escalan, e integra la IA en los procesos y sistemas existentes del cliente." } },
+        { "@type": "Question", "name": "¿En qué se diferencia TEGEVE de una Big Four?", "acceptedAnswer": { "@type": "Answer", "text": "TEGEVE ofrece equipos senior y estables (sin rotación constante de juniors), trato directo con los expertos, modelo nearshore más eficiente en coste, y más de 30 años de especialización técnica real en SAP, JD Edwards, IA y modernización de legacy. Frente a una Big Four, aporta mayor cercanía, foco y flexibilidad sin perder profundidad técnica." } },
+        { "@type": "Question", "name": "¿A qué sectores presta servicio TEGEVE?", "acceptedAnswer": { "@type": "Answer", "text": "TEGEVE tiene experiencia en banca y finanzas, gran consumo y alimentación, energía, infraestructuras, retail e industria. Entre sus referencias hay una de las 10 mayores compañías de alimentación del mundo, una de las principales instituciones financieras del mundo, Weatherford, Abertis/Autopistas del Oeste y Banco Itaú." } },
+        { "@type": "Question", "name": "¿Cómo puedo contactar con TEGEVE?", "acceptedAnswer": { "@type": "Answer", "text": "Puedes contactar con TEGEVE por email o teléfono según la región: España info@tegeve.es (+34 952 569 582), Argentina info@tgv.com.ar (+54 11 5767-7477), México info@tgv-group.com (+52 81 2092 2323) y USA info@tgvamericas.net (+1 561 306-5121)." } },
+        { "@type": "Question", "name": "¿Qué tecnologías domina TEGEVE para modernizar sistemas legacy?", "acceptedAnswer": { "@type": "Answer", "text": "TEGEVE moderniza sistemas legacy construidos sobre COBOL, AS/400 (IBM i), DB2 y MS SQL Server, y desarrolla soluciones en Java J2EE y arquitecturas modernas. Tiene experiencia específica en la industria financiera, donde la fiabilidad y la continuidad del negocio son críticas." } }
+      ]
+    }
+  ]
 }
 </script>
 
-<script type="module">
-import React, { useState, useMemo } from 'react';
-import { createRoot } from 'react-dom/client';
-import { Building2, Link2, Globe, GripVertical, ChevronUp, ChevronDown, X, Plus, Copy, Check, FileText, Target } from 'lucide-react';
-
-const h = React.createElement;
-
-// ══════════════════════════════════════════════════════════
-// IDENTIDAD TGV — inspirada en tgv.com.ar
-// Reemplazá estos hex si tenés el manual de marca oficial.
-// ══════════════════════════════════════════════════════════
-const TGV = {
-  primary: '#0A1628',
-  primaryHover: '#132540',
-  accent: '#1E3A8A',
-  accentHover: '#1E40AF',
-  highlight: '#06B6D4',
-  highlightSoft: '#CFFAFE',
-  success: '#10B981',
-  bg: '#F1F5F9',
-  card: '#FFFFFF',
-  border: '#E2E8F0',
-  textPrimary: '#0F172A',
-  textSecondary: '#475569',
-  textMuted: '#94A3B8',
-};
-
-const CATS = {
-  bi: { name: 'BI / Analytics / Data', kws: 'Power BI, Tableau, Qlik, data warehouse, analytics, big data, ETL, data lake, Databricks', main: 'Power BI', or: ['Power BI','Tableau','Qlik','data warehouse','analytics'], tools: ['Power BI','Tableau','Qlik','Databricks'], li: ['Power BI','Tableau','Qlik'], impl: 'Power BI Tableau', pain: 'reportes manuales, Excel, decisiones sin datos, falta de single source of truth' },
-  erp: { name: 'ERP / Gestión Empresarial', kws: 'SAP, Oracle, Microsoft Dynamics, ERP, gestión empresarial, Netsuite, JD Edwards, S/4HANA', main: 'SAP', or: ['SAP','Oracle','Microsoft Dynamics','ERP','S/4HANA'], tools: ['SAP','Oracle','Microsoft Dynamics','JD Edwards'], li: ['SAP','Oracle','JD Edwards'], impl: 'SAP Oracle', pain: 'migración S/4HANA, ERP legacy, falta de consultor, proyectos parados, customizaciones inmanejables' },
-  ia: { name: 'IA / RPA / Automatización', kws: 'inteligencia artificial, IA, RPA, machine learning, chatbots, automatización, agentes IA, copilot', main: 'inteligencia artificial', or: ['inteligencia artificial','IA','RPA','machine learning','chatbots'], tools: ['UiPath','Automation Anywhere','OpenAI','Copilot'], li: ['inteligencia artificial','RPA','machine learning'], impl: 'inteligencia artificial RPA', pain: 'procesos manuales repetitivos, pilotos sin escalar, IA sin gobernanza, ROI no medido' },
-  apps: { name: 'Desarrollo de Apps / Software', kws: 'desarrollo, apps, DevOps, CI/CD, microservicios, Kubernetes, Docker, React, Angular, .NET, fábrica de software', main: 'desarrollo a medida', or: ['desarrollo','apps','DevOps','microservicios','fábrica de software'], tools: ['Docker','Kubernetes','Jenkins','GitHub'], li: ['desarrollo','DevOps','arquitecto software'], impl: 'desarrollo software', pain: 'deuda técnica, legacy modernization, time-to-market lento, falta de talento dev' },
-  hw: { name: 'Hardware / Infraestructura', kws: 'Dell, HP, Lenovo, Cisco, servidores, storage, networking, data center, on-premise', main: 'Dell', or: ['Dell','HP','Lenovo','Cisco','servidores'], tools: ['Dell','HP','Lenovo','Cisco'], li: ['Dell','HP','Cisco'], impl: 'Dell HP', pain: 'hardware obsoleto, data center saturado, costes operativos altos' },
-  cloud: { name: 'Cloud / IaaS / PaaS', kws: 'AWS, Azure, GCP, cloud, migración cloud, híbrida, IaaS, PaaS, nube privada', main: 'AWS', or: ['AWS','Azure','GCP','cloud','migración cloud'], tools: ['AWS','Azure','GCP','Kubernetes'], li: ['AWS','Azure','GCP'], impl: 'AWS Azure', pain: 'migración estancada, costes cloud descontrolados, multicloud desordenado, vendor lock-in' },
-  cyber: { name: 'Ciberseguridad', kws: 'Fortinet, Palo Alto, CrowdStrike, firewall, SOC, SIEM, zero trust, NIS2, CASB, SASE', main: 'ciberseguridad', or: ['Fortinet','Palo Alto','CrowdStrike','firewall','SOC'], tools: ['Fortinet','Palo Alto','CrowdStrike','SIEM'], li: ['ciberseguridad','Fortinet','SOC'], impl: 'Fortinet SIEM', pain: 'NIS2, incidentes recientes, ransomware en sector, falta de SOC, compliance pendiente' },
-  dw: { name: 'Digital Workplace / Colaboración', kws: 'Microsoft 365, Google Workspace, Teams, Slack, endpoint, VDI, SharePoint, Copilot', main: 'Microsoft 365', or: ['Microsoft 365','Google Workspace','Teams','Slack','endpoint'], tools: ['Microsoft 365','Google Workspace','Teams','SharePoint'], li: ['Microsoft 365','Teams','SharePoint'], impl: 'Microsoft 365 Teams', pain: 'productividad dispersa, información en silos, shadow IT, licencias no optimizadas' },
-  telco: { name: 'Telecomunicaciones', kws: 'conectividad, MPLS, SD-WAN, telefonía IP, UCaaS, contact center', main: 'conectividad', or: ['conectividad','MPLS','SD-WAN','telefonía IP','UCaaS'], tools: ['MPLS','SD-WAN','UCaaS','contact center'], li: ['conectividad','SD-WAN','telefonía IP'], impl: 'SD-WAN MPLS', pain: 'redes legacy, latencia entre sedes, costes MPLS, modelos híbridos sin solución' },
-  consult: { name: 'Consultoría / Servicios IT', kws: 'consultoría, outsourcing, staff augmentation, managed services, integración, transformación digital', main: 'consultoría', or: ['consultoría','outsourcing','managed services','integración','transformación digital'], tools: ['Accenture','Deloitte','Capgemini','IBM'], li: ['consultoría','transformación digital','outsourcing'], impl: 'consultoría outsourcing', pain: 'dependencia de Big4, costes altos, falta de expertise específico, rotación de consultores' },
-  proc: { name: 'Compras / Procurement IT', kws: 'compras, procurement, licenciamiento, renovación, contratos, licitación', main: 'procurement', or: ['compras','procurement','licenciamiento','renovación','contratos'], tools: ['SAP Ariba','Coupa','Oracle Procurement','Jaggaer'], li: ['compras','procurement','licenciamiento'], impl: 'licenciamiento contratos', pain: 'procesos de compra manuales, sin catálogo, spend descontrolado' },
-  pay: { name: 'Pagos / Fintech / POS', kws: 'procesamiento de pagos, POS, fintech, pasarela de pagos, Bitcoin, QR, adquirencia', main: 'pagos', or: ['procesamiento de pagos','POS','fintech','pasarela de pagos','Bitcoin'], tools: ['Redsys','Stripe','Adyen','PayPal'], li: ['pagos','POS','fintech'], impl: 'pasarela de pagos POS', pain: 'integraciones de cobro frágiles, fraude, conciliación manual' },
-  health: { name: 'Health IT / Salud Digital', kws: 'HL7, FHIR, HIS, historia clínica, salud digital, telemedicina, interoperabilidad', main: 'historia clínica', or: ['HL7','FHIR','HIS','historia clínica','salud digital'], tools: ['Epic','Cerner','Dedalus','InterSystems'], li: ['salud digital','HIS','historia clínica'], impl: 'HL7 FHIR', pain: 'interoperabilidad, historias clínicas en silos, compliance sanitaria' },
-  mon: { name: 'Monitoreo / Observabilidad', kws: 'Zabbix, Nagios, Grafana, Prometheus, monitoreo, observabilidad, APM, Datadog', main: 'monitoreo', or: ['Zabbix','Nagios','Grafana','Prometheus','monitoreo'], tools: ['Datadog','New Relic','Dynatrace','Splunk'], li: ['observabilidad','Grafana','Datadog'], impl: 'Grafana Prometheus', pain: 'incidentes sin root cause, MTTR alto, falta de visibilidad end-to-end' },
-  api: { name: 'Integración / APIs / iPaaS', kws: 'API, MuleSoft, integración, iPaaS, middleware, ESB, microservicios, webhooks', main: 'integración', or: ['API','MuleSoft','integración','iPaaS','middleware'], tools: ['MuleSoft','Boomi','Workato','Kafka'], li: ['API','MuleSoft','integración'], impl: 'MuleSoft iPaaS', pain: 'sistemas desconectados, integraciones punto a punto, ESB legacy' },
-  log: { name: 'Logística / WMS / RFID', kws: 'WMS, TMS, RFID, supply chain, logística, trazabilidad, SGA, EWM', main: 'WMS', or: ['WMS','TMS','RFID','SGA','supply chain'], tools: ['SAP EWM','Manhattan','Oracle SCM','Blue Yonder'], li: ['WMS','supply chain','logística'], impl: 'WMS TMS', pain: 'almacenes con procesos manuales, falta de trazabilidad, roturas de stock' },
-  crm: { name: 'CRM / Customer Experience', kws: 'Salesforce, CRM, customer experience, HubSpot, Dynamics 365, service desk', main: 'CRM', or: ['Salesforce','CRM','customer experience','HubSpot','Dynamics 365'], tools: ['Salesforce','HubSpot','Dynamics 365','Zendesk'], li: ['Salesforce','CRM','HubSpot'], impl: 'Salesforce CRM', pain: 'pipeline sin visibilidad, CRM mal adoptado, datos de cliente dispersos' },
-};
-
-const COUNTRIES = {
-  ES: { name: 'España', portals: 'InfoJobs, Tecnoempleo, LinkedIn Jobs, Indeed ES', portalSites: 'site:infojobs.net, site:tecnoempleo.com, site:linkedin.com/jobs, site:es.indeed.com', press: 'Cinco Días OR Expansión OR El Economista OR ComputerWorld España' },
-  AR: { name: 'Argentina', portals: 'Bumeran, ZonaJobs, LinkedIn Jobs, Indeed AR', portalSites: 'site:bumeran.com.ar, site:zonajobs.com.ar, site:linkedin.com/jobs, site:ar.indeed.com', press: 'Cronista OR Ámbito OR Infobae OR iProfesional' },
-  MX: { name: 'México', portals: 'OCC Mundial, Computrabajo, LinkedIn Jobs, Indeed MX', portalSites: 'site:occ.com.mx, site:computrabajo.com.mx, site:linkedin.com/jobs, site:mx.indeed.com', press: 'El Financiero OR El Economista OR Expansión MX' },
-  CO: { name: 'Colombia', portals: 'Computrabajo, El Empleo, LinkedIn Jobs, Indeed CO', portalSites: 'site:computrabajo.com.co, site:elempleo.com, site:linkedin.com/jobs, site:co.indeed.com', press: 'La República OR Portafolio OR Semana' },
-  CL: { name: 'Chile', portals: 'Trabajando, Computrabajo, LinkedIn Jobs', portalSites: 'site:trabajando.cl, site:computrabajo.cl, site:linkedin.com/jobs', press: 'Diario Financiero OR La Tercera OR Pulso' },
-  PE: { name: 'Perú', portals: 'Computrabajo, Bumeran, LinkedIn Jobs', portalSites: 'site:computrabajo.com.pe, site:bumeran.com.pe, site:linkedin.com/jobs', press: 'Gestión OR El Comercio OR Semana Económica' },
-  EC: { name: 'Ecuador', portals: 'Computrabajo, Multitrabajos, LinkedIn Jobs', portalSites: 'site:computrabajo.com.ec, site:multitrabajos.com, site:linkedin.com/jobs', press: 'El Universo OR Primicias OR Gestión EC' },
-  US: { name: 'Estados Unidos', portals: 'Indeed, LinkedIn Jobs, Glassdoor, ZipRecruiter', portalSites: 'site:indeed.com, site:linkedin.com/jobs, site:glassdoor.com, site:ziprecruiter.com', press: 'WSJ OR Bloomberg OR TechCrunch OR CIO.com' },
-};
-
-const DEFAULT_PRIORITIES = ['erp', 'apps', 'ia', 'bi'];
-
-function buildDeepQueries(c, cat, press) {
-  return [
-    `"${c}" AND ("${cat.or[0]}" OR "${cat.or[1]}" OR "${cat.or[2]}" OR "${cat.or[3]}" OR "${cat.or[4]}")`,
-    `"${c}" caso de éxito ${cat.main}`,
-    `"${c}" implementación ${cat.impl}`,
-    `site:linkedin.com/in "${c}" ${cat.li[0]} OR ${cat.li[1]} OR ${cat.li[2]}`,
-    `"${c}" AND ("${cat.tools[0]}" OR "${cat.tools[1]}" OR "${cat.tools[2]}" OR "${cat.tools[3]}")`,
-    `"${c}" ${cat.main} (${press})`,
-    `"${c}" (${cat.main} OR "${cat.or[0]}") problema OR desafío OR migración OR reto`,
-  ];
+<style>
+:root{
+  --ink:#0A1628; --ink-2:#0c1a30; --ink-3:#0e1f3a;
+  --accent:#22D3EE; --accent-2:#06B6D4; --accent-3:#3B82F6;
+  --paper:#ffffff; --mist:#F4F7FB; --mist-2:#EAF0F7;
+  --line:#E2E8F0; --line-soft:rgba(255,255,255,.12);
+  --t1:#0F172A; --t2:#475569; --t3:#8295AD;
+  --t1d:#F8FAFF; --t2d:#AFC2DC; --t3d:#6E84A3;
+  --shadow:0 24px 60px -28px rgba(10,22,40,.35);
+  --ease:cubic-bezier(.2,.7,.2,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --max:1180px;
 }
-
-function buildBasicQuery(c, cat) {
-  return `"${c}" AND ("${cat.or[0]}" OR "${cat.or[1]}" OR "${cat.or[2]}" OR "${cat.or[3]}" OR "${cat.or[4]}")`;
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Inter,system-ui,sans-serif;
+  background:var(--paper);color:var(--t1);
+  line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
 }
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+::selection{background:var(--accent-2);color:#04121e}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+.eyebrow{font-size:.74rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-2)}
+.skip{position:absolute;left:-999px;top:0;background:#fff;color:var(--ink);padding:10px 16px;z-index:200;border-radius:8px}
+.skip:focus{left:12px;top:12px}
 
-function generatePrompt(company, url, countryKey, priorities, customContext) {
-  const country = COUNTRIES[countryKey];
-  const today = new Date().toLocaleDateString('es-ES');
-  const secondary = Object.keys(CATS).filter(k => !priorities.includes(k));
-  const pCount = priorities.length;
-  const sCount = secondary.length;
-  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+/* ── Display typography ── */
+h1,h2,h3{letter-spacing:-.025em;line-height:1.05;font-weight:700}
+.display{font-size:clamp(2.6rem,7vw,5.6rem);font-weight:800;letter-spacing:-.04em;line-height:1}
+.h2{font-size:clamp(2rem,4.6vw,3.4rem);font-weight:800;letter-spacing:-.035em;line-height:1.05}
+.lede{font-size:clamp(1.1rem,2.2vw,1.5rem);color:var(--t2);font-weight:400;line-height:1.45}
 
-  let out = '';
-  out += '═══════════════════════════════════════════════════════════════\n';
-  out += '  INTELIGENCIA COMERCIAL B2B — RADIOGRAFÍA PROFUNDA\n';
-  out += `  Target: ${company}\n`;
-  out += '  Ejecutor: TGV (TeGeVe — tegeve.es)\n';
-  out += '═══════════════════════════════════════════════════════════════\n\n';
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-weight:600;font-size:1rem;
+  padding:.92rem 1.6rem;border-radius:999px;border:1px solid transparent;cursor:pointer;
+  transition:transform .35s var(--ease-out),box-shadow .35s var(--ease-out),background .3s,color .3s;will-change:transform}
+.btn-primary{background:var(--accent-2);color:#031018;box-shadow:0 12px 30px -10px rgba(34,211,238,.6)}
+.btn-primary:hover{transform:translateY(-2px) scale(1.015);box-shadow:0 18px 44px -12px rgba(34,211,238,.75)}
+.btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.28)}
+.btn-ghost:hover{background:rgba(255,255,255,.08);transform:translateY(-2px)}
+.btn-dark{background:var(--ink);color:#fff}
+.btn-dark:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.btn-arrow{transition:transform .35s var(--ease-out)}
+.btn:hover .btn-arrow{transform:translateX(4px)}
 
-  out += '▌ CONTEXTO DEL EJECUTOR (TGV)\n';
-  out += '───────────────────────────────────────────────────────────────\n';
-  out += 'TeGeVe (TGV) es una consultora tecnológica con +30 años de trayectoria, con\n';
-  out += 'presencia en España, Argentina, México y USA. Servicios core:\n';
-  out += '  • Consultoría SAP (partner SAP)\n';
-  out += '  • Consultoría JD Edwards (partner Oracle/IBM)\n';
-  out += '  • IA Empresarial (agentes, RPA, automatización de procesos)\n';
-  out += '  • Desarrollo e Integración de Aplicaciones a medida\n';
-  out += '  • Modernización de legacy y desarrollo para industria financiera\n';
-  out += '  • Assessment de Valor de Negocio\n';
-  out += 'Modelo nearshore Spain↔LatAm. Target: CIOs, IT Directors, CFOs, Directores\n';
-  out += 'de Operaciones en empresas medianas-grandes.\n\n';
+/* ── Nav ── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:background .4s var(--ease),backdrop-filter .4s,border-color .4s,box-shadow .4s}
+.nav-inner{max-width:var(--max);margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:28px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em;font-size:1.2rem;color:#fff;transition:color .4s}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent-3));
+  display:grid;place-items:center;color:#04121e;font-weight:900;font-size:1rem;flex:none;box-shadow:0 6px 18px -6px rgba(34,211,238,.7)}
+.nav-links{display:flex;gap:26px;margin-left:auto;align-items:center}
+.nav-links a{font-size:.94rem;font-weight:500;color:rgba(255,255,255,.82);transition:color .25s}
+.nav-links a:hover{color:#fff}
+.nav-cta{font-size:.9rem;font-weight:600;padding:.55rem 1.1rem;border-radius:999px;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.2);color:#fff;transition:.3s}
+.nav-cta:hover{background:#fff;color:var(--ink)}
+.nav.scrolled{background:rgba(255,255,255,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(15,23,42,.04)}
+.nav.scrolled .brand{color:var(--ink)}
+.nav.scrolled .nav-links a{color:var(--t2)}
+.nav.scrolled .nav-links a:hover{color:var(--ink)}
+.nav.scrolled .nav-cta{background:var(--ink);color:#fff;border-color:var(--ink)}
+.nav.scrolled .nav-cta:hover{background:var(--accent-2);color:#031018;border-color:var(--accent-2)}
+.burger{display:none;margin-left:auto;background:none;border:0;cursor:pointer;width:30px;height:30px;color:#fff}
+.nav.scrolled .burger{color:var(--ink)}
 
-  if (customContext && customContext.trim()) {
-    out += '▌ CONTEXTO ADICIONAL APORTADO\n';
-    out += '───────────────────────────────────────────────────────────────\n';
-    out += customContext.trim() + '\n\n';
+/* ── Hero ── */
+.hero{position:relative;min-height:100svh;display:flex;align-items:center;
+  background:radial-gradient(120% 120% at 80% 0%,#10294e 0%,var(--ink) 42%,#06101f 100%);
+  color:#fff;overflow:hidden;padding-top:90px}
+.hero-mesh{position:absolute;inset:0;pointer-events:none;opacity:.9}
+.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;will-change:transform}
+.blob.b1{width:46vw;height:46vw;left:-12vw;top:-10vw;background:radial-gradient(circle,#0ea5e9,transparent 65%)}
+.blob.b2{width:40vw;height:40vw;right:-8vw;top:4vw;background:radial-gradient(circle,#3b82f6,transparent 65%)}
+.blob.b3{width:34vw;height:34vw;left:30vw;bottom:-16vw;background:radial-gradient(circle,#22d3ee,transparent 60%);opacity:.4}
+.grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(120% 80% at 50% 0%,#000 30%,transparent 80%)}
+.hero-inner{position:relative;z-index:2;max-width:var(--max);margin:0 auto;padding:0 24px;width:100%}
+.hero h1{max-width:14ch;margin:.5rem 0 1.4rem;color:#fff}
+.hero .lede{color:var(--t2d);max-width:42ch;margin-bottom:2.2rem}
+.hero-ctas{display:flex;gap:14px;flex-wrap:wrap}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;
+  background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);font-size:.8rem;font-weight:600;color:#a5f3fc}
+.hero-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(34,211,238,.6);animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,211,238,.6)}70%{box-shadow:0 0 0 9px rgba(34,211,238,0)}100%{box-shadow:0 0 0 0 rgba(34,211,238,0)}}
+.scroll-cue{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);z-index:2;color:rgba(255,255,255,.5);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:8px}
+.scroll-cue .line{width:1px;height:34px;background:linear-gradient(rgba(255,255,255,.5),transparent);animation:cue 2s var(--ease) infinite}
+@keyframes cue{0%{transform:scaleY(0);transform-origin:top}45%{transform:scaleY(1);transform-origin:top}55%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* ── Marquee ── */
+.marquee{background:var(--ink);color:#fff;padding:30px 0;overflow:hidden;border-top:1px solid rgba(255,255,255,.06)}
+.marquee p{text-align:center;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t3d);margin-bottom:18px}
+.marquee-track{display:flex;gap:60px;width:max-content;animation:scrollx 32s linear infinite;align-items:center}
+.marquee:hover .marquee-track{animation-play-state:paused}
+.marquee-track span{font-size:1.3rem;font-weight:700;color:rgba(255,255,255,.55);white-space:nowrap;letter-spacing:-.01em}
+@keyframes scrollx{to{transform:translateX(-50%)}}
+
+/* ── Stats ── */
+.stats{background:var(--ink);color:#fff;padding:60px 0 90px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.stat{padding:8px 0}
+.stat .num{font-size:clamp(2.4rem,5vw,3.6rem);font-weight:800;letter-spacing:-.04em;background:linear-gradient(120deg,#fff,#7dd3fc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.stat .lbl{color:var(--t2d);font-size:.96rem;margin-top:8px}
+
+/* ── Sections ── */
+section{position:relative}
+.sec{padding:clamp(80px,12vw,140px) 0}
+.sec-head{max-width:62ch;margin-bottom:56px}
+.sec-head .h2{margin:14px 0 18px}
+.sec-light{background:var(--paper)}
+.sec-mist{background:var(--mist)}
+.sec-dark{background:var(--ink);color:#fff}
+.sec-dark .lede{color:var(--t2d)}
+.sec-dark .sec-head p.lede{color:var(--t2d)}
+
+/* ── Services cards ── */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:30px;
+  transition:transform .5s var(--ease-out),box-shadow .5s var(--ease-out),border-color .4s;position:relative;overflow:hidden;will-change:transform}
+.card::after{content:"";position:absolute;inset:0;border-radius:22px;padding:1px;
+  background:linear-gradient(140deg,var(--accent),transparent 40%);opacity:0;transition:opacity .4s;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.card:hover{transform:translateY(-7px);box-shadow:0 30px 60px -30px rgba(10,22,40,.4);border-color:transparent}
+.card:hover::after{opacity:1}
+.card .ico{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;margin-bottom:20px;
+  background:linear-gradient(135deg,#0c1a30,#14315a);color:var(--accent);box-shadow:inset 0 0 0 1px rgba(34,211,238,.2)}
+.card h3{font-size:1.32rem;margin-bottom:10px;letter-spacing:-.02em}
+.card p{color:var(--t2);font-size:.98rem}
+.card .tags{margin-top:16px;display:flex;flex-wrap:wrap;gap:7px}
+.card .tags span{font-size:.74rem;font-weight:600;color:var(--accent-2);background:rgba(6,182,212,.08);padding:4px 10px;border-radius:999px;border:1px solid rgba(6,182,212,.18)}
+
+/* ── Sticky pinned scene (Apple-style) ── */
+.pin{position:relative;background:var(--ink);color:#fff}
+.pin-track{height:340vh}
+.pin-stage{position:sticky;top:0;height:100svh;display:flex;align-items:center;overflow:hidden}
+.pin-stage .wrap{width:100%}
+.pin-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.pin-steps{position:relative}
+.pin-step{position:absolute;inset:0;opacity:0;transform:translateY(28px);transition:opacity .6s var(--ease),transform .6s var(--ease);display:flex;flex-direction:column;justify-content:center}
+.pin-step.active{opacity:1;transform:none}
+.pin-step .kicker{color:var(--accent);font-weight:700;font-size:.85rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px}
+.pin-step h3{font-size:clamp(1.8rem,3.6vw,2.8rem);font-weight:800;letter-spacing:-.03em;margin-bottom:14px}
+.pin-step p{color:var(--t2d);font-size:1.12rem;max-width:36ch}
+.pin-visual{aspect-ratio:1;border-radius:28px;position:relative;background:linear-gradient(160deg,#0c1d38,#0a1628);border:1px solid rgba(255,255,255,.08);overflow:hidden;display:grid;place-items:center}
+.pin-num{font-size:clamp(7rem,20vw,16rem);font-weight:900;letter-spacing:-.06em;line-height:1;
+  background:linear-gradient(160deg,rgba(34,211,238,.9),rgba(59,130,246,.25));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;transition:opacity .5s,transform .8s var(--ease)}
+.pin-orbit{position:absolute;inset:0;background:conic-gradient(from 0deg,transparent,rgba(34,211,238,.18),transparent 40%);animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pin-progress{display:flex;gap:8px;margin-top:30px}
+.pin-progress i{height:3px;flex:1;background:rgba(255,255,255,.16);border-radius:2px;overflow:hidden;position:relative}
+.pin-progress i.on::after{content:"";position:absolute;inset:0;background:var(--accent);border-radius:2px}
+
+/* ── Sectors ── */
+.sectors{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.sector{border:1px solid var(--line);border-radius:18px;padding:24px;background:var(--paper);transition:.4s var(--ease-out)}
+.sector:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:var(--accent-2)}
+.sector .si{font-size:1.6rem;margin-bottom:10px}
+.sector h4{font-size:1.1rem;letter-spacing:-.01em;margin-bottom:6px}
+.sector p{font-size:.9rem;color:var(--t2)}
+
+/* ── Differentiators ── */
+.diff{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.diff-item{display:flex;gap:16px;padding:24px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);transition:.4s}
+.diff-item:hover{background:rgba(255,255,255,.07);transform:translateY(-4px)}
+.diff-item .ck{flex:none;width:38px;height:38px;border-radius:11px;background:rgba(34,211,238,.14);color:var(--accent);display:grid;place-items:center;font-weight:800}
+.diff-item h4{font-size:1.12rem;margin-bottom:6px;color:#fff}
+.diff-item p{color:var(--t2d);font-size:.95rem}
+
+/* ── FAQ ── */
+.faq-layout{display:grid;grid-template-columns:.85fr 1.15fr;gap:60px;align-items:start}
+.faq-cats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+.faq-cat{font-size:.84rem;font-weight:600;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--t2);cursor:pointer;transition:.25s}
+.faq-cat:hover{border-color:var(--accent-2);color:var(--ink)}
+.faq-cat.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.faq-list{border-top:1px solid var(--line)}
+.faq-item{border-bottom:1px solid var(--line)}
+.faq-q{width:100%;text-align:left;background:none;border:0;cursor:pointer;padding:22px 44px 22px 0;
+  font-size:1.1rem;font-weight:600;color:var(--t1);position:relative;display:block;letter-spacing:-.01em;line-height:1.4}
+.faq-q:hover{color:var(--accent-2)}
+.faq-q .pm{position:absolute;right:0;top:24px;width:22px;height:22px;flex:none;transition:transform .4s var(--ease)}
+.faq-q .pm::before,.faq-q .pm::after{content:"";position:absolute;background:var(--accent-2);border-radius:2px;transition:.4s var(--ease)}
+.faq-q .pm::before{left:0;right:0;top:10px;height:2px}
+.faq-q .pm::after{top:0;bottom:0;left:10px;width:2px}
+.faq-item.open .faq-q .pm::after{transform:scaleY(0)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .5s var(--ease)}
+.faq-a-inner{padding:0 44px 24px 0;color:var(--t2);font-size:1rem;line-height:1.7}
+.faq-aside{position:sticky;top:110px}
+.faq-aside .box{background:var(--ink);color:#fff;border-radius:22px;padding:34px;box-shadow:var(--shadow)}
+.faq-aside h3{font-size:1.5rem;margin-bottom:10px}
+.faq-aside p{color:var(--t2d);margin-bottom:22px;font-size:.98rem}
+
+/* ── Contact ── */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+.offices{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+.office{border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px;background:rgba(255,255,255,.03)}
+.office .flag{font-size:1.4rem}
+.office h4{margin:8px 0 4px;font-size:1.05rem;color:#fff}
+.office a{display:block;color:var(--t2d);font-size:.9rem}
+.office a:hover{color:var(--accent)}
+
+/* ── Footer ── */
+footer{background:#060e1c;color:var(--t2d);padding:60px 0 40px;border-top:1px solid rgba(255,255,255,.06)}
+.foot-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap;align-items:flex-start}
+.foot-grid a{color:var(--t2d);font-size:.92rem;line-height:2}
+.foot-grid a:hover{color:#fff}
+.foot-col h5{color:#fff;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.foot-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:.84rem;color:var(--t3d)}
+
+/* ── Reveal animation ── */
+.reveal{opacity:0;transform:translateY(34px);transition:opacity .8s var(--ease-out),transform .8s var(--ease-out)}
+.reveal.in{opacity:1;transform:none}
+.reveal[data-d="1"]{transition-delay:.08s}.reveal[data-d="2"]{transition-delay:.16s}
+.reveal[data-d="3"]{transition-delay:.24s}.reveal[data-d="4"]{transition-delay:.32s}.reveal[data-d="5"]{transition-delay:.4s}
+
+/* ── AI Assistant ── */
+.ai-fab{position:fixed;right:22px;bottom:22px;z-index:120;display:flex;align-items:center;gap:10px;
+  background:var(--ink);color:#fff;border:1px solid rgba(34,211,238,.4);border-radius:999px;padding:12px 18px 12px 14px;
+  cursor:pointer;box-shadow:0 18px 40px -14px rgba(10,22,40,.6);transition:transform .35s var(--ease-out),box-shadow .35s}
+.ai-fab:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 24px 50px -16px rgba(34,211,238,.5)}
+.ai-fab .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-3));display:grid;place-items:center;color:#04121e;flex:none}
+.ai-fab .av svg{width:18px;height:18px}
+.ai-fab .txt{font-weight:600;font-size:.95rem}
+.ai-fab .spark{position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--ink);animation:pulse 2.4s infinite}
+.ai-panel{position:fixed;right:22px;bottom:22px;z-index:130;width:min(400px,calc(100vw - 24px));height:min(620px,calc(100svh - 24px));
+  background:#fff;border-radius:24px;box-shadow:0 40px 90px -30px rgba(10,22,40,.6);display:flex;flex-direction:column;overflow:hidden;
+  border:1px solid var(--line);opacity:0;transform:translateY(20px) scale(.96);pointer-events:none;transform-origin:bottom right;
+  transition:opacity .35s var(--ease-out),transform .35s var(--ease-out)}
+.ai-panel.open{opacity:1;transform:none;pointer-events:auto}
+.ai-head{background:var(--ink);color:#fff;padding:18px 20px;display:flex;align-items:center;gap:12px}
+.ai-head .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-3));display:grid;place-items:center;color:#04121e;flex:none}
+.ai-head h4{font-size:1.02rem;font-weight:700}
+.ai-head .st{font-size:.76rem;color:#86efac;display:flex;align-items:center;gap:6px}
+.ai-head .st::before{content:"";width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80}
+.ai-close{margin-left:auto;background:rgba(255,255,255,.12);border:0;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1.1rem;line-height:1;transition:.25s}
+.ai-close:hover{background:rgba(255,255,255,.25)}
+.ai-body{flex:1;overflow-y:auto;padding:20px;background:var(--mist);display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+.msg{max-width:86%;padding:12px 15px;border-radius:16px;font-size:.94rem;line-height:1.55;animation:popin .35s var(--ease-out)}
+@keyframes popin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg.bot{background:#fff;color:var(--t1);border:1px solid var(--line);border-bottom-left-radius:5px;align-self:flex-start}
+.msg.user{background:var(--ink);color:#fff;border-bottom-right-radius:5px;align-self:flex-end}
+.msg.bot b{color:var(--accent-2)}
+.msg.bot a{color:var(--accent-2);font-weight:600;text-decoration:underline}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 4px}
+.chip{font-size:.82rem;font-weight:500;background:#fff;border:1px solid var(--line);color:var(--t2);padding:7px 12px;border-radius:999px;cursor:pointer;transition:.25s;text-align:left}
+.chip:hover{border-color:var(--accent-2);color:var(--ink);background:rgba(6,182,212,.06)}
+.typing{display:flex;gap:4px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:16px;border-bottom-left-radius:5px;align-self:flex-start;width:fit-content}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--t3);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.ai-foot{padding:14px;border-top:1px solid var(--line);background:#fff;display:flex;gap:8px}
+.ai-foot input{flex:1;border:1px solid var(--line);border-radius:999px;padding:11px 16px;font-size:.94rem;outline:none;font-family:inherit;transition:border-color .25s}
+.ai-foot input:focus{border-color:var(--accent-2)}
+.ai-send{background:var(--ink);color:#fff;border:0;width:42px;height:42px;border-radius:50%;cursor:pointer;flex:none;display:grid;place-items:center;transition:.25s}
+.ai-send:hover{background:var(--accent-2);color:#031018}
+.ai-disc{font-size:.68rem;color:var(--t3);text-align:center;padding:0 0 8px;background:#fff}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .nav-links{display:none}
+  .burger{display:block}
+  .nav-links.show{display:flex;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;
+    background:rgba(255,255,255,.96);backdrop-filter:blur(20px);padding:8px 24px 18px;border-bottom:1px solid var(--line)}
+  .nav-links.show a{color:var(--t1);padding:12px 0;border-bottom:1px solid var(--line)}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:30px}
+  .cards{grid-template-columns:1fr}
+  .pin-grid{grid-template-columns:1fr;gap:30px}
+  .pin-visual{display:none}
+  .pin-track{height:300vh}
+  .sectors{grid-template-columns:1fr 1fr}
+  .diff{grid-template-columns:1fr}
+  .faq-layout{grid-template-columns:1fr;gap:30px}
+  .faq-aside{position:static}
+  .contact-grid{grid-template-columns:1fr;gap:30px}
+}
+@media(max-width:560px){
+  .sectors{grid-template-columns:1fr}
+  .offices{grid-template-columns:1fr}
+  .hero-ctas .btn{flex:1;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#servicios">Saltar al contenido</a>
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand"><span class="mark">T</span> TEGEVE</a>
+    <button class="burger" id="burger" aria-label="Abrir menú" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="nav-links" id="navLinks">
+      <a href="#servicios">Servicios</a>
+      <a href="#metodo">Cómo trabajamos</a>
+      <a href="#sectores">Sectores</a>
+      <a href="#porque">Por qué TEGEVE</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contacto" class="nav-cta">Hablemos</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<header class="hero" id="top">
+  <div class="hero-mesh" aria-hidden="true">
+    <div class="blob b1" data-speed="0.12"></div>
+    <div class="blob b2" data-speed="0.08"></div>
+    <div class="blob b3" data-speed="0.16"></div>
+    <div class="grid-overlay"></div>
+  </div>
+  <div class="hero-inner">
+    <span class="hero-badge reveal in"><span class="dot"></span> +30 años transformando empresas con tecnología</span>
+    <h1 class="display reveal in" data-d="1">Soluciones inteligentes para tu&nbsp;empresa.</h1>
+    <p class="lede reveal in" data-d="2">Consultora tecnológica especializada en <strong style="color:#fff">SAP</strong>, <strong style="color:#fff">JD&nbsp;Edwards</strong>, <strong style="color:#fff">IA Empresarial</strong> y desarrollo a medida. Alineamos tecnología y negocio para que crezcas con solidez. Modelo nearshore España&nbsp;↔&nbsp;Latinoamérica.</p>
+    <div class="hero-ctas reveal in" data-d="3">
+      <a href="#contacto" class="btn btn-primary">Iniciar un proyecto <span class="btn-arrow">→</span></a>
+      <a href="#servicios" class="btn btn-ghost">Ver servicios</a>
+    </div>
+  </div>
+  <div class="scroll-cue" aria-hidden="true"><span class="line"></span>Scroll</div>
+</header>
+
+<!-- ═══════════════ MARQUEE / CONFIANZA ═══════════════ -->
+<div class="marquee" aria-label="Sectores y tecnologías">
+  <p>Tecnologías y ecosistemas que dominamos</p>
+  <div class="marquee-track" id="marquee">
+    <span>SAP S/4HANA</span><span>Oracle JD&nbsp;Edwards</span><span>IA Empresarial</span><span>RPA</span><span>Java&nbsp;J2EE</span><span>AS/400</span><span>COBOL</span><span>DB2</span><span>MS&nbsp;SQL&nbsp;Server</span><span>.NET</span><span>Cloud</span><span>Integración</span>
+  </div>
+</div>
+
+<!-- ═══════════════ STATS ═══════════════ -->
+<section class="stats">
+  <div class="wrap">
+    <div class="stats-grid">
+      <div class="stat reveal"><div class="num" data-count="30" data-suffix="+">30+</div><div class="lbl">Años de trayectoria</div></div>
+      <div class="stat reveal" data-d="1"><div class="num" data-count="16" data-suffix="+">16+</div><div class="lbl">Países con proyectos</div></div>
+      <div class="stat reveal" data-d="2"><div class="num" data-count="4" data-suffix="">4</div><div class="lbl">Oficinas: ES · AR · MX · USA</div></div>
+      <div class="stat reveal" data-d="3"><div class="num" data-count="6" data-suffix="">6</div><div class="lbl">Áreas de especialización</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SERVICIOS ═══════════════ -->
+<section class="sec sec-light" id="servicios">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Servicios</span>
+      <h2 class="h2">Seis formas de mover tu negocio hacia adelante.</h2>
+      <p class="lede">Combinamos paquetes ERP de clase mundial con desarrollo a medida e inteligencia artificial. Equipos senior, multidisciplinares y estables que se adaptan a tu negocio.</p>
+    </div>
+    <div class="cards">
+      <article class="card reveal">
+        <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></div>
+        <h3>Consultoría SAP</h3>
+        <p>Implementación, evolución y soporte de SAP, con acompañamiento completo en la migración a S/4HANA. Más de 30 años de experiencia real en proyectos ERP.</p>
+        <div class="tags"><span>S/4HANA</span><span>Implantación</span><span>Soporte</span></div>
+      </article>
+      <article class="card reveal" data-d="1">
+        <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <h3>Oracle JD&nbsp;Edwards</h3>
+        <p>Implementación, upgrades y soporte de JD&nbsp;Edwards EnterpriseOne y World. Partner del ecosistema Oracle/IBM con proyectos de misión crítica.</p>
+        <div class="tags"><span>EnterpriseOne</span><span>Upgrades</span><span>WMS</span></div>
+      </article>
+      <article class="card reveal" data-d="2">
+        <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0 0 8v1a4 4 0 0 0 8 0v-1a4 4 0 0 0 0-8V7a4 4 0 0 0-4-4Z"/><path d="M12 8v8"/></svg></div>
+        <h3>IA Empresarial</h3>
+        <p>Agentes de IA, RPA y automatización de procesos con gobernanza, seguridad del dato y ROI medible. Llevamos los pilotos a producción real, sin quedarnos en el experimento.</p>
+        <div class="tags"><span>Agentes IA</span><span>RPA</span><span>Automatización</span></div>
+      </article>
+      <article class="card reveal">
+        <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg></div>
+        <h3>Desarrollo e Integración</h3>
+        <p>Software a medida e integración de sistemas en Java&nbsp;J2EE, .NET y arquitecturas modernas. Conectamos tus aplicaciones para que la información fluya end-to-end.</p>
+        <div class="tags"><span>A medida</span><span>APIs</span><span>Integración</span></div>
+      </article>
+      <article class="card reveal" data-d="1">
+        <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M2 10h20M7 18v2m10-2v2"/></svg></div>
+        <h3>Legacy &amp; Industria Financiera</h3>
+        <p>Modernización de sistemas legacy en COBOL, AS/400 y DB2, y desarrollo para banca y finanzas, donde la fiabilidad y la continuidad de negocio son innegociables.</p>
+        <div class="tags"><span>COBOL</span><span>AS/400</span><span>Banca</span></div>
+      </article>
+      <article class="card reveal" data-d="2">
+        <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18"/><path d="m7 14 3-4 4 3 4-7"/></svg></div>
+        <h3>Business Value Assessment</h3>
+        <p>Diagnóstico de valor de negocio que prioriza dónde invertir en tecnología con criterio. Conectamos cada iniciativa con su impacto financiero y operativo.</p>
+        <div class="tags"><span>Assessment</span><span>ROI</span><span>Roadmap</span></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ MÉTODO (sticky pinned, estilo Apple) ═══════════════ -->
+<section class="pin" id="metodo">
+  <div class="pin-track" id="pinTrack">
+    <div class="pin-stage">
+      <div class="wrap">
+        <div class="pin-grid">
+          <div class="pin-steps" style="min-height:300px">
+            <div class="pin-step active" data-step="0">
+              <span class="kicker">Cómo trabajamos · 01</span>
+              <h3>Entendemos tu negocio antes que tu tecnología.</h3>
+              <p>Empezamos por el problema de negocio, no por la herramienta. Un assessment honesto para saber dónde está el valor y dónde el riesgo.</p>
+            </div>
+            <div class="pin-step" data-step="1">
+              <span class="kicker">Cómo trabajamos · 02</span>
+              <h3>Diseñamos la solución con equipos senior.</h3>
+              <p>Arquitectos y consultores con décadas de oficio definen una solución a medida sobre paquetes de clase mundial. Sin juniors aprendiendo a tu costa.</p>
+            </div>
+            <div class="pin-step" data-step="2">
+              <span class="kicker">Cómo trabajamos · 03</span>
+              <h3>Entregamos en modelo nearshore.</h3>
+              <p>Equipos en España y Latinoamérica, misma zona horaria, mismo idioma. Talento experto a un coste más eficiente que las grandes consultoras.</p>
+            </div>
+            <div class="pin-step" data-step="3">
+              <span class="kicker">Cómo trabajamos · 04</span>
+              <h3>Acompañamos y medimos el valor.</h3>
+              <p>No desaparecemos tras el go-live. Damos soporte, evolucionamos la solución y medimos el ROI real para que la inversión se sostenga.</p>
+            </div>
+          </div>
+          <div class="pin-visual" aria-hidden="true">
+            <div class="pin-orbit"></div>
+            <div class="pin-num" id="pinNum">01</div>
+          </div>
+        </div>
+        <div class="pin-progress" id="pinProgress">
+          <i class="on"></i><i></i><i></i><i></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SECTORES ═══════════════ -->
+<section class="sec sec-mist" id="sectores">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Sectores</span>
+      <h2 class="h2">Experiencia donde el error cuesta caro.</h2>
+      <p class="lede">Hemos trabajado para algunas de las mayores compañías del mundo: una de las 10 mayores compañías de alimentación, una de las principales instituciones financieras globales, Weatherford, Abertis/Autopistas del Oeste y Banco Itaú.</p>
+    </div>
+    <div class="sectors">
+      <div class="sector reveal"><div class="si">🏦</div><h4>Banca &amp; Finanzas</h4><p>Core bancario, modernización de legacy y desarrollo crítico para la industria financiera.</p></div>
+      <div class="sector reveal" data-d="1"><div class="si">🛒</div><h4>Gran Consumo &amp; Alimentación</h4><p>ERP, cadena de suministro y trazabilidad para grandes compañías de consumo.</p></div>
+      <div class="sector reveal" data-d="2"><div class="si">⚡</div><h4>Energía &amp; Servicios</h4><p>Sistemas de gestión, integración y automatización para sectores energéticos e industriales.</p></div>
+      <div class="sector reveal"><div class="si">🛣️</div><h4>Infraestructuras</h4><p>Soluciones para operadores de infraestructuras y concesiones como Abertis/Autopistas del Oeste.</p></div>
+      <div class="sector reveal" data-d="1"><div class="si">🏭</div><h4>Industria &amp; Manufactura</h4><p>JD&nbsp;Edwards, logística (WMS) y planificación para entornos de producción.</p></div>
+      <div class="sector reveal" data-d="2"><div class="si">🛢️</div><h4>Oil &amp; Gas / Energía</h4><p>Proyectos para compañías globales del sector como Weatherford.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ POR QUÉ TEGEVE (vs Big Four) ═══════════════ -->
+<section class="sec sec-dark" id="porque">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Por qué TEGEVE</span>
+      <h2 class="h2" style="color:#fff">La profundidad de una gran consultora. La cercanía de un socio.</h2>
+      <p class="lede">Compites con las Big Four por talento y rigor, pero sin su distancia, su rotación ni su sobrecoste. Esto es lo que nos diferencia.</p>
+    </div>
+    <div class="diff">
+      <div class="diff-item reveal"><div class="ck">✓</div><div><h4>Equipos senior y estables</h4><p>Trabajas con los expertos, no con un ejército rotativo de juniors. El conocimiento de tu proyecto se queda en casa.</p></div></div>
+      <div class="diff-item reveal" data-d="1"><div class="ck">✓</div><div><h4>Modelo nearshore eficiente</h4><p>Talento de España y LatAm, misma franja horaria e idioma, a un coste sensiblemente menor que una Big Four.</p></div></div>
+      <div class="diff-item reveal"><div class="ck">✓</div><div><h4>+30 años de oficio real</h4><p>Especialización técnica profunda en SAP, JD&nbsp;Edwards, IA y legacy. Hemos visto —y resuelto— casi todo.</p></div></div>
+      <div class="diff-item reveal" data-d="1"><div class="ck">✓</div><div><h4>Trato directo, sin capas</h4><p>Hablas con quien diseña y ejecuta. Decisiones rápidas, flexibilidad y foco en tu resultado, no en facturar horas.</p></div></div>
+      <div class="diff-item reveal"><div class="ck">✓</div><div><h4>IA que llega a producción</h4><p>Implantamos IA con gobernanza y ROI medible. Nada de pilotos eternos que nunca escalan.</p></div></div>
+      <div class="diff-item reveal" data-d="1"><div class="ck">✓</div><div><h4>Visión de negocio, no solo técnica</h4><p>Cada proyecto arranca con un assessment de valor: invertimos donde mueve la aguja del negocio.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FAQ ═══════════════ -->
+<section class="sec sec-light" id="faq">
+  <div class="wrap">
+    <div class="sec-head reveal" style="margin-bottom:40px">
+      <span class="eyebrow">Preguntas frecuentes</span>
+      <h2 class="h2">Todo lo que hace TEGEVE, respondido.</h2>
+      <p class="lede">¿Tienes una pregunta que no está aquí? Pregúntale a <button class="ai-open-link" style="background:none;border:0;color:var(--accent-2);font:inherit;font-weight:700;cursor:pointer;padding:0;text-decoration:underline">nuestro asistente con IA</button> abajo a la derecha.</p>
+    </div>
+    <div class="faq-layout">
+      <div>
+        <div class="faq-cats" id="faqCats">
+          <button class="faq-cat active" data-cat="all">Todas</button>
+          <button class="faq-cat" data-cat="empresa">Empresa</button>
+          <button class="faq-cat" data-cat="servicios">Servicios</button>
+          <button class="faq-cat" data-cat="sap">SAP / ERP</button>
+          <button class="faq-cat" data-cat="ia">IA</button>
+          <button class="faq-cat" data-cat="modelo">Modelo &amp; precio</button>
+        </div>
+        <div class="faq-aside" style="display:none"></div>
+      </div>
+
+      <div class="faq-list" id="faqList">
+        <!-- Cada item: data-cat para filtro, data-keywords para el asistente IA -->
+        <div class="faq-item" data-cat="empresa" data-keywords="que es tegeve tgv quien sois compania empresa historia">
+          <button class="faq-q">¿Qué es TEGEVE? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">TEGEVE —también conocida como <b>TGV</b>— es una consultora tecnológica con <b>más de 30 años de trayectoria</b> que ayuda a empresas medianas y grandes a transformar sus procesos con tecnología. Tenemos oficinas en España, Argentina y Estados Unidos, presencia comercial en México, y hemos ejecutado proyectos en más de 16 países. Nuestras áreas core son SAP, Oracle JD&nbsp;Edwards, IA Empresarial, desarrollo a medida, modernización de legacy y assessment de valor de negocio.</div></div>
+        </div>
+        <div class="faq-item" data-cat="servicios" data-keywords="servicios que ofrece haceis catalogo soluciones">
+          <button class="faq-q">¿Qué servicios ofrece TEGEVE? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Ofrecemos seis servicios principales: <b>1)</b> Consultoría SAP; <b>2)</b> Consultoría e implementación de Oracle JD&nbsp;Edwards; <b>3)</b> IA Empresarial (agentes de IA, RPA y automatización); <b>4)</b> Desarrollo e integración de aplicaciones a medida; <b>5)</b> Modernización de sistemas legacy y desarrollo para la industria financiera; y <b>6)</b> Business Value Assessment para priorizar inversiones tecnológicas.</div></div>
+        </div>
+        <div class="faq-item" data-cat="empresa" data-keywords="paises oficinas donde estais espana argentina mexico usa estados unidos presencia internacional sedes">
+          <button class="faq-q">¿En qué países y ciudades opera TEGEVE? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Tenemos oficinas en <b>España</b> (Málaga), <b>Argentina</b> (Buenos Aires) y <b>Estados Unidos</b>, además de presencia comercial en <b>México</b>. Hemos realizado proyectos en <b>más de 16 países</b> y operamos con un modelo nearshore que combina equipos de España y Latinoamérica.</div></div>
+        </div>
+        <div class="faq-item" data-cat="empresa" data-keywords="anos experiencia trayectoria cuanto tiempo fundacion antiguedad">
+          <button class="faq-q">¿Cuántos años de experiencia tiene TEGEVE? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Contamos con <b>más de 30 años de trayectoria</b> en consultoría y servicios de software, transformando los proyectos tecnológicos más desafiantes en soluciones innovadoras para grandes organizaciones.</div></div>
+        </div>
+        <div class="faq-item" data-cat="modelo" data-keywords="nearshore modelo trabajo deslocalizacion offshore equipos remoto">
+          <button class="faq-q">¿Qué es el modelo nearshore y por qué importa? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Nuestro <b>modelo nearshore</b> combina equipos en España y Latinoamérica que trabajan en <b>zonas horarias compatibles</b> y en <b>español</b>. Te damos talento técnico cualificado a un coste más eficiente que las grandes consultoras, con cercanía cultural y comunicación fluida — sin las fricciones del offshore lejano.</div></div>
+        </div>
+        <div class="faq-item" data-cat="sap" data-keywords="sap s4hana s/4hana hana migracion erp implantacion implementacion ecc">
+          <button class="faq-q">¿Trabaja TEGEVE con SAP S/4HANA? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Sí. Acompañamos a nuestros clientes en la <b>implementación de SAP</b> y en la <b>migración a SAP S/4HANA</b> desde versiones anteriores, además de evolución funcional y soporte. Somos parte del ecosistema SAP con más de 30 años de experiencia en proyectos ERP de misión crítica.</div></div>
+        </div>
+        <div class="faq-item" data-cat="sap" data-keywords="jd edwards jde oracle enterpriseone world upgrade">
+          <button class="faq-q">¿Qué hacen con Oracle JD&nbsp;Edwards? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Implementamos, actualizamos (upgrades) y damos soporte a <b>Oracle JD&nbsp;Edwards EnterpriseOne y World</b>. Tenemos experiencia en módulos financieros, distribución, manufactura y logística (WMS), como partner del ecosistema Oracle/IBM.</div></div>
+        </div>
+        <div class="faq-item" data-cat="ia" data-keywords="ia inteligencia artificial agentes rpa automatizacion machine learning chatbot copilot">
+          <button class="faq-q">¿Cómo aborda TEGEVE los proyectos de inteligencia artificial? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Diseñamos soluciones de <b>IA Empresarial</b> centradas en casos de uso concretos: <b>agentes de IA</b>, <b>RPA</b> y <b>automatización de procesos</b>. Ponemos el foco en la gobernanza, la seguridad del dato y el <b>ROI medible</b>, evitando pilotos que no escalan, e integramos la IA en los procesos y sistemas que ya tienes.</div></div>
+        </div>
+        <div class="faq-item" data-cat="ia" data-keywords="agente ia que es agente automatizar tareas">
+          <button class="faq-q">¿Qué tipo de soluciones de IA pueden implementar? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Desde <b>agentes de IA</b> que atienden consultas y ejecutan tareas, hasta <b>RPA</b> para automatizar procesos repetitivos (conciliaciones, alta de datos, reporting), pasando por copilotos internos y automatización inteligente sobre tus sistemas SAP, JD&nbsp;Edwards o aplicaciones a medida. Siempre con gobernanza y medición de resultados.</div></div>
+        </div>
+        <div class="faq-item" data-cat="servicios" data-keywords="desarrollo software a medida aplicaciones integracion apis java net">
+          <button class="faq-q">¿Desarrollan software a medida? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Sí. Desarrollamos <b>aplicaciones a medida</b> e integramos sistemas en <b>Java&nbsp;J2EE</b>, <b>.NET</b> y arquitecturas modernas. Conectamos tus aplicaciones (ERP, CRM, sistemas propios) para que la información fluya end-to-end y elimines silos.</div></div>
+        </div>
+        <div class="faq-item" data-cat="servicios" data-keywords="legacy modernizacion cobol as400 as/400 db2 mainframe migracion sistemas antiguos">
+          <button class="faq-q">¿Qué tecnologías dominan para modernizar sistemas legacy? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Modernizamos sistemas legacy construidos sobre <b>COBOL</b>, <b>AS/400 (IBM i)</b>, <b>DB2</b> y <b>MS&nbsp;SQL Server</b>, y desarrollamos en <b>Java&nbsp;J2EE</b> y arquitecturas modernas. Tenemos experiencia específica en la <b>industria financiera</b>, donde la fiabilidad y la continuidad del negocio son críticas.</div></div>
+        </div>
+        <div class="faq-item" data-cat="servicios" data-keywords="business value assessment diagnostico roi auditoria evaluacion valor negocio">
+          <button class="faq-q">¿Qué es el Business Value Assessment? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Es un <b>diagnóstico de valor de negocio</b> con el que priorizamos dónde invertir en tecnología con criterio. Conectamos cada iniciativa con su impacto financiero y operativo, para que el roadmap tecnológico esté alineado con los objetivos de la empresa y no con modas.</div></div>
+        </div>
+        <div class="faq-item" data-cat="empresa" data-keywords="sectores industrias clientes referencias casos banca alimentacion energia">
+          <button class="faq-q">¿A qué sectores prestan servicio? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Tenemos experiencia en <b>banca y finanzas</b>, <b>gran consumo y alimentación</b>, <b>energía</b>, <b>infraestructuras</b>, <b>retail</b> e <b>industria</b>. Entre nuestras referencias hay una de las 10 mayores compañías de alimentación del mundo, una de las principales instituciones financieras globales, Weatherford, Abertis/Autopistas del Oeste y Banco Itaú.</div></div>
+        </div>
+        <div class="faq-item" data-cat="modelo" data-keywords="diferencia big four big4 deloitte pwc ey kpmg accenture competencia mejor que">
+          <button class="faq-q">¿En qué se diferencia TEGEVE de una Big Four? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Te damos <b>equipos senior y estables</b> (sin rotación constante de juniors), <b>trato directo</b> con los expertos, un <b>modelo nearshore</b> más eficiente en coste y <b>más de 30 años</b> de especialización técnica real. Frente a una Big Four aportamos mayor cercanía, foco y flexibilidad <b>sin perder profundidad técnica</b>.</div></div>
+        </div>
+        <div class="faq-item" data-cat="modelo" data-keywords="precio coste presupuesto cuanto cuesta tarifa honorarios contratar">
+          <button class="faq-q">¿Cómo es el modelo de contratación y precio? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Trabajamos por <b>proyecto cerrado</b> o por <b>equipo dedicado</b> (staff augmentation / nearshore), según lo que mejor encaje contigo. El precio depende del alcance, pero nuestro modelo nearshore suele ser <b>sensiblemente más eficiente</b> que el de las grandes consultoras. Lo definimos juntos tras un primer diagnóstico sin compromiso.</div></div>
+        </div>
+        <div class="faq-item" data-cat="modelo" data-keywords="empezar comenzar primer paso contacto reunion como empiezo proyecto nuevo">
+          <button class="faq-q">¿Cómo empezamos a trabajar juntos? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Empezamos con una <b>conversación de diagnóstico</b> sin compromiso para entender tu reto. A partir de ahí proponemos un enfoque (assessment, prueba de concepto o proyecto) con alcance y plazos claros. Escríbenos a <a href="mailto:info@tegeve.es">info@tegeve.es</a> o desde la <a href="#contacto">sección de contacto</a>.</div></div>
+        </div>
+        <div class="faq-item" data-cat="servicios" data-keywords="soporte mantenimiento despues go-live post produccion acompanamiento">
+          <button class="faq-q">¿Dan soporte después del go-live? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Sí. No desaparecemos tras la puesta en marcha: ofrecemos <b>soporte y mantenimiento</b>, evolucionamos la solución y medimos el <b>ROI real</b> para que la inversión se sostenga en el tiempo. La continuidad de tu negocio es parte del servicio.</div></div>
+        </div>
+        <div class="faq-item" data-cat="empresa" data-keywords="contacto contactar telefono email correo hablar llamar">
+          <button class="faq-q">¿Cómo puedo contactar con TEGEVE? <span class="pm"></span></button>
+          <div class="faq-a"><div class="faq-a-inner">Según tu región: <b>España</b> <a href="mailto:info@tegeve.es">info@tegeve.es</a> · +34 952 569 582 — <b>Argentina</b> <a href="mailto:info@tgv.com.ar">info@tgv.com.ar</a> · +54 11 5767-7477 — <b>México</b> <a href="mailto:info@tgv-group.com">info@tgv-group.com</a> · +52 81 2092 2323 — <b>USA</b> <a href="mailto:info@tgvamericas.net">info@tgvamericas.net</a> · +1 561 306-5121.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ CONTACTO ═══════════════ -->
+<section class="sec sec-dark" id="contacto">
+  <div class="wrap">
+    <div class="contact-grid">
+      <div class="reveal">
+        <span class="eyebrow">Hablemos</span>
+        <h2 class="h2" style="color:#fff;margin:14px 0 16px">¿Tienes un reto tecnológico?<br>Démosle forma.</h2>
+        <p class="lede">Cuéntanos tu desafío y te propondremos un camino con alcance y plazos claros. Sin compromiso, con foco en el valor de negocio.</p>
+        <div style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap">
+          <a href="mailto:info@tegeve.es" class="btn btn-primary">Escríbenos <span class="btn-arrow">→</span></a>
+          <button class="btn btn-ghost ai-open-link">Pregúntale a la IA</button>
+        </div>
+      </div>
+      <div class="reveal" data-d="1">
+        <div class="offices">
+          <div class="office"><div class="flag">🇪🇸</div><h4>España</h4><a href="mailto:info@tegeve.es">info@tegeve.es</a><a href="tel:+34952569582">+34 952 569 582</a></div>
+          <div class="office"><div class="flag">🇦🇷</div><h4>Argentina</h4><a href="mailto:info@tgv.com.ar">info@tgv.com.ar</a><a href="tel:+541157677477">+54 11 5767-7477</a></div>
+          <div class="office"><div class="flag">🇲🇽</div><h4>México</h4><a href="mailto:info@tgv-group.com">info@tgv-group.com</a><a href="tel:+528120922323">+52 81 2092 2323</a></div>
+          <div class="office"><div class="flag">🇺🇸</div><h4>USA</h4><a href="mailto:info@tgvamericas.net">info@tgvamericas.net</a><a href="tel:+15613065121">+1 561 306-5121</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-col" style="max-width:300px">
+        <a href="#top" class="brand" style="color:#fff;margin-bottom:14px"><span class="mark">T</span> TEGEVE</a>
+        <p style="font-size:.92rem;line-height:1.7">Soluciones inteligentes para tu empresa. Consultoría tecnológica con +30 años: SAP, JD&nbsp;Edwards, IA Empresarial y desarrollo a medida.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Servicios</h5>
+        <a href="#servicios">Consultoría SAP</a>
+        <a href="#servicios">Oracle JD&nbsp;Edwards</a>
+        <a href="#servicios">IA Empresarial</a>
+        <a href="#servicios">Desarrollo a medida</a>
+        <a href="#servicios">Modernización legacy</a>
+      </div>
+      <div class="foot-col">
+        <h5>Empresa</h5>
+        <a href="#metodo">Cómo trabajamos</a>
+        <a href="#sectores">Sectores</a>
+        <a href="#porque">Por qué TEGEVE</a>
+        <a href="#faq">FAQ</a>
+        <a href="intel.html">TGV Intel (herramienta)</a>
+      </div>
+      <div class="foot-col">
+        <h5>Contacto</h5>
+        <a href="mailto:info@tegeve.es">info@tegeve.es</a>
+        <a href="tel:+34952569582">+34 952 569 582</a>
+        <a href="https://www.tegeve.es" target="_blank" rel="noopener">tegeve.es</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="year">2026</span> TEGEVE · TGV. Todos los derechos reservados.</span>
+      <span>España · Argentina · México · USA</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ═══════════════ ASISTENTE IA ═══════════════ -->
+<button class="ai-fab" id="aiFab" aria-label="Abrir asistente con IA">
+  <span class="spark"></span>
+  <span class="av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.4"/></svg></span>
+  <span class="txt">Pregúntale a la IA</span>
+</button>
+
+<div class="ai-panel" id="aiPanel" role="dialog" aria-label="Asistente con IA de TEGEVE">
+  <div class="ai-head">
+    <div class="av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3m0 12v3M3 12h3m12 0h3"/><circle cx="12" cy="12" r="3.4"/></svg></div>
+    <div>
+      <h4>Asistente TEGEVE</h4>
+      <div class="st">En línea · responde sobre TEGEVE</div>
+    </div>
+    <button class="ai-close" id="aiClose" aria-label="Cerrar">×</button>
+  </div>
+  <div class="ai-body" id="aiBody"></div>
+  <div class="ai-disc">Asistente basado en la información pública de TEGEVE.</div>
+  <div class="ai-foot">
+    <input id="aiInput" type="text" placeholder="Escribe tu pregunta…" autocomplete="off" aria-label="Tu pregunta">
+    <button class="ai-send" id="aiSend" aria-label="Enviar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   1) NAV — fondo al hacer scroll + menú móvil
+   ════════════════════════════════════════════════════════════ */
+const nav = document.getElementById('nav');
+const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 40);
+onScroll(); window.addEventListener('scroll', onScroll, {passive:true});
+
+const burger = document.getElementById('burger'), navLinks = document.getElementById('navLinks');
+burger.addEventListener('click', () => {
+  const show = navLinks.classList.toggle('show');
+  burger.setAttribute('aria-expanded', show);
+});
+navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('show')));
+
+document.getElementById('year').textContent = new Date().getFullYear();
+
+/* ════════════════════════════════════════════════════════════
+   2) REVEAL on scroll (Intersection Observer)
+   ════════════════════════════════════════════════════════════ */
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+}, {threshold:.14, rootMargin:'0px 0px -8% 0px'});
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+/* ════════════════════════════════════════════════════════════
+   3) CONTADORES animados
+   ════════════════════════════════════════════════════════════ */
+const counters = document.querySelectorAll('[data-count]');
+const cio = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target, target = +el.dataset.count, suffix = el.dataset.suffix || '';
+    let cur = 0; const step = Math.max(1, Math.ceil(target/40));
+    const tick = () => { cur = Math.min(target, cur+step); el.textContent = cur+suffix; if (cur<target) requestAnimationFrame(tick); };
+    tick(); cio.unobserve(el);
+  });
+}, {threshold:.6});
+counters.forEach(el => cio.observe(el));
+
+/* ════════════════════════════════════════════════════════════
+   4) HERO — parallax sutil de las blobs
+   ════════════════════════════════════════════════════════════ */
+const blobs = document.querySelectorAll('.blob');
+let ticking = false;
+window.addEventListener('scroll', () => {
+  if (ticking) return; ticking = true;
+  requestAnimationFrame(() => {
+    const y = window.scrollY;
+    if (y < window.innerHeight) blobs.forEach(b => { b.style.transform = `translateY(${y * (+b.dataset.speed||0.1)}px)`; });
+    ticking = false;
+  });
+}, {passive:true});
+
+/* ════════════════════════════════════════════════════════════
+   5) MÉTODO — escena fijada estilo Apple (scroll-driven)
+   ════════════════════════════════════════════════════════════ */
+const pinTrack = document.getElementById('pinTrack');
+const steps = [...document.querySelectorAll('.pin-step')];
+const pinNum = document.getElementById('pinNum');
+const pinBars = [...document.querySelectorAll('#pinProgress i')];
+let lastStep = -1;
+function updatePin(){
+  const r = pinTrack.getBoundingClientRect();
+  const total = r.height - window.innerHeight;
+  const p = Math.min(1, Math.max(0, -r.top / total));
+  const idx = Math.min(steps.length-1, Math.floor(p * steps.length));
+  if (idx !== lastStep){
+    lastStep = idx;
+    steps.forEach((s,i)=>s.classList.toggle('active', i===idx));
+    pinBars.forEach((b,i)=>b.classList.toggle('on', i<=idx));
+    pinNum.style.opacity = 0;
+    setTimeout(()=>{ pinNum.textContent = '0'+(idx+1); pinNum.style.opacity = 1; }, 180);
   }
+}
+window.addEventListener('scroll', updatePin, {passive:true});
+updatePin();
 
-  out += '▌ OBJETIVO DE ESTA INVESTIGACIÓN\n';
-  out += '───────────────────────────────────────────────────────────────\n';
-  out += `Generar inteligencia comercial accionable sobre ${company} para:\n`;
-  out += '  1. Entender su contexto estratégico y momento de negocio\n';
-  out += '  2. Mapear su stack tecnológico actual con evidencia pública\n';
-  out += '  3. Detectar señales de dolor y señales de compra activas\n';
-  out += '  4. Identificar decision makers clave con quién contactar\n';
-  out += '  5. Formular 3 hipótesis de desafío + ángulo comercial TGV\n';
-  out += '  6. Redactar un email de primer contacto personalizado y accionable\n\n';
+/* ════════════════════════════════════════════════════════════
+   6) MARQUEE — duplicar para loop infinito
+   ════════════════════════════════════════════════════════════ */
+const mq = document.getElementById('marquee');
+mq.innerHTML += mq.innerHTML;
 
-  out += '▌ DATOS DEL TARGET\n';
-  out += '───────────────────────────────────────────────────────────────\n';
-  out += `  EMPRESA : ${company}\n`;
-  out += `  WEB     : ${url}\n`;
-  out += `  PAÍS    : ${country.name}\n`;
-  out += `  FECHA   : ${today}\n\n`;
-
-  out += '▌ INSTRUCCIONES GENERALES DE EJECUCIÓN\n';
-  out += '───────────────────────────────────────────────────────────────\n';
-  out += 'Ejecutá este trabajo en 6 fases secuenciales. Para cada hallazgo usá\n';
-  out += 'web_search con las queries sugeridas (adaptá si no dan resultados) y\n';
-  out += 'web_fetch cuando el snippet no sea suficiente.\n\n';
-  out += 'REGLAS NO NEGOCIABLES:\n';
-  out += '  ✓ Cada afirmación DEBE llevar URL real del resultado de búsqueda\n';
-  out += '  ✗ NO inventes URLs. Solo URLs que aparezcan en resultados reales\n';
-  out += '  ✓ Si no hay evidencia, escribilo: "Sin evidencia pública"\n';
-  out += '  ✓ Marcá "convergente" cuando un dato aparezca en 2+ fuentes\n';
-  out += '  ✓ Priorizá fuentes primarias (empresa, proveedor, comunicado oficial)\n';
-  out += '  ✓ Incluí fecha de publicación cuando esté disponible\n';
-  out += '  ✗ No asumas usos ni tecnologías sin evidencia directa\n\n';
-
-  out += '═══════════════════════════════════════════════════════════════\n';
-  out += '  FASE 1 — CONTEXTO ESTRATÉGICO Y MOMENTUM\n';
-  out += '═══════════════════════════════════════════════════════════════\n\n';
-  out += 'Antes de tocar tecnología, establecé con evidencia:\n';
-  out += '  • Sector, subsegmento, tamaño (empleados, facturación, sedes)\n';
-  out += '  • Presencia geográfica y mercados principales\n';
-  out += '  • Estructura societaria (grupo matriz, filiales, private equity)\n';
-  out += '  • Momento de negocio: crecimiento, M&A, IPO, reestructuración, dificultades\n';
-  out += '  • Prioridades estratégicas públicas (últimos 12-18 meses)\n';
-  out += '  • 2-3 competidores directos y posicionamiento\n';
-  out += '  • Regulación aplicable (NIS2, DORA, sectorial) si relevante\n\n';
-  out += 'Queries sugeridas:\n';
-  out += `  • "${company}" facturación empleados sede\n`;
-  out += `  • "${company}" estrategia 2025 plan transformación\n`;
-  out += `  • "${company}" adquisición fusión inversión\n`;
-  out += `  • "${company}" competidores mercado sector\n`;
-  out += `  • site:${domain} quienes somos\n`;
-  out += `  • "${company}" (${country.press})\n\n`;
-
-  out += '═══════════════════════════════════════════════════════════════\n';
-  out += `  FASE 2 — RADIOGRAFÍA TECNOLÓGICA (${pCount} áreas priorizadas + ${sCount} secundarias)\n`;
-  out += '═══════════════════════════════════════════════════════════════\n\n';
-  out += 'Para cada área, extraé no solo "qué tecnología usa" sino también:\n';
-  out += '  → Antigüedad estimada del stack (legacy vs moderno)\n';
-  out += '  → Partner/consultora implementadora (si es visible)\n';
-  out += '  → Señales de limitación o fricción (migraciones en curso,\n';
-  out += '    vacantes repetidas, incidentes públicos, quejas en foros)\n';
-  out += '  → Gap vs mejores prácticas del sector\n\n';
-
-  priorities.forEach((key, i) => {
-    const cat = CATS[key];
-    out += `─── MICRO-AGENTE #${i + 1}: ${cat.name}  ⚡ PRIORITARIO ───\n`;
-    out += `Keywords: ${cat.kws}\n`;
-    out += `Dolores típicos a buscar: ${cat.pain}\n`;
-    out += 'Profundidad: PROFUNDA (7 queries, cruzar fuentes)\n';
-    out += 'Queries sugeridas para web_search:\n';
-    buildDeepQueries(company, cat, country.press).forEach(q => {
-      out += `  • ${q}\n`;
+/* ════════════════════════════════════════════════════════════
+   7) FAQ — acordeón + filtros por categoría
+   ════════════════════════════════════════════════════════════ */
+const faqItems = [...document.querySelectorAll('.faq-item')];
+faqItems.forEach(item => {
+  const q = item.querySelector('.faq-q'), a = item.querySelector('.faq-a');
+  q.addEventListener('click', () => {
+    const open = item.classList.contains('open');
+    faqItems.forEach(o => { o.classList.remove('open'); o.querySelector('.faq-a').style.maxHeight = null; });
+    if (!open){ item.classList.add('open'); a.style.maxHeight = a.scrollHeight + 'px'; }
+  });
+});
+document.querySelectorAll('.faq-cat').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.faq-cat').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const cat = btn.dataset.cat;
+    faqItems.forEach(item => {
+      const show = cat === 'all' || item.dataset.cat === cat;
+      item.style.display = show ? '' : 'none';
+      item.classList.remove('open'); item.querySelector('.faq-a').style.maxHeight = null;
     });
-    out += '\n';
   });
+});
 
-  secondary.forEach((key, i) => {
-    const cat = CATS[key];
-    out += `─── MICRO-AGENTE #${pCount + i + 1}: ${cat.name}  [ESTÁNDAR] ───\n`;
-    out += `Keywords: ${cat.kws}\n`;
-    out += 'Profundidad: BÁSICA (1 query de rastreo)\n';
-    out += `  • ${buildBasicQuery(company, cat)}\n\n`;
+/* ════════════════════════════════════════════════════════════
+   8) ASISTENTE IA — base de conocimiento construida desde el FAQ
+      (fuente única de verdad = el FAQ del DOM, óptimo para GEO)
+   ════════════════════════════════════════════════════════════ */
+const KB = faqItems.map(item => ({
+  q: item.querySelector('.faq-q').textContent.replace('+','').trim(),
+  a: item.querySelector('.faq-a-inner').innerHTML.trim(),
+  kw: (item.dataset.keywords || '') + ' ' + item.querySelector('.faq-q').textContent.toLowerCase()
+}));
+
+// Sinónimos para mejorar el emparejamiento
+const SYN = {
+  'precio':'coste cuanto vale cuesta tarifa presupuesto','coste':'precio cuanto vale',
+  'sap':'erp s4hana hana','ia':'inteligencia artificial agente rpa','jde':'jd edwards oracle',
+  'donde':'paises ubicacion oficinas ciudad','contacto':'telefono email correo escribir',
+  'big4':'big four deloitte pwc ey kpmg accenture','legacy':'cobol as400 mainframe antiguo',
+  'empezar':'comenzar contratar primer paso iniciar'
+};
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9ñ\s]/g,' ');
+const STOP = new Set('de la el en y a los las un una que es para con por su tu mi se lo del al como mas o e'.split(' '));
+
+function expand(q){
+  let toks = norm(q).split(/\s+/).filter(t => t.length>1 && !STOP.has(t));
+  let extra = [];
+  toks.forEach(t => { if (SYN[t]) extra.push(...norm(SYN[t]).split(/\s+/)); });
+  return [...toks, ...extra];
+}
+function search(q){
+  const toks = expand(q);
+  if (!toks.length) return null;
+  let best = null, bestScore = 0;
+  KB.forEach(item => {
+    const hay = norm(item.kw + ' ' + item.q);
+    let score = 0;
+    toks.forEach(t => { if (hay.includes(t)) score += (item.q.toLowerCase().includes(t) ? 2 : 1); });
+    score = score / Math.sqrt(toks.length);
+    if (score > bestScore){ bestScore = score; best = item; }
   });
-
-  out += '─── AUXILIAR: Stack web pública (BuiltWith-style) ───\n';
-  out += `  • builtwith ${domain}\n`;
-  out += `  • wappalyzer ${domain}\n`;
-  out += `  • "${company}" tecnología web frontend\n`;
-  out += `  Analizar: ${url} — HTML source, JS, headers, subdominios, CMS\n\n`;
-
-  out += '═══════════════════════════════════════════════════════════════\n';
-  out += '  FASE 3 — SEÑALES DE COMPRA Y TRIGGERS\n';
-  out += '═══════════════════════════════════════════════════════════════\n\n';
-  out += 'Buscá evidencia de que la empresa está "en movimiento" tecnológico.\n';
-  out += 'Las señales más potentes son:\n\n';
-  out += '  ► VACANTES IT RECIENTES (últimos 3-6 meses)\n';
-  out += '    Qué skills piden = qué tecnología tienen o están adoptando.\n';
-  out += '    Vacantes repetidas = dolor persistente.\n';
-  out += `    • "${company}" vacante tecnología ${country.portalSites}\n`;
-  out += `    • "${company}" hiring IT site:linkedin.com/jobs\n`;
-  out += `    • site:${domain} carreras empleo tecnología\n\n`;
-  out += '  ► MEMORIAS / REPORTES CORPORATIVOS (últimos 2 años)\n';
-  out += '    Inversiones tech declaradas, roadmap digital, sostenibilidad tech.\n';
-  out += `    • "${company}" ("memoria integrada" OR "informe sostenibilidad" OR "cuentas anuales")\n`;
-  out += `    • "${company}" transformación digital inversión tecnología 2024 2025\n`;
-  out += `    • site:${domain} reporte sostenibilidad tecnología\n\n`;
-  out += '  ► CAMBIOS DIRECTIVOS (nuevo CIO/CTO/CDO = ventana de 90 días)\n';
-  out += `    • "${company}" nombramiento CIO CTO CDO director tecnología\n`;
-  out += `    • "${company}" new CIO CTO appointment 2025 2026\n\n`;
-  out += '  ► NOTICIAS Y PROYECTOS PÚBLICOS\n';
-  out += `    • "${company}" (implementará OR migrará OR modernizará OR seleccionará) 2025\n`;
-  out += `    • "${company}" RFP licitación tecnología\n`;
-  out += `    • "${company}" ransomware ciberataque incidente\n`;
-  out += `    • "${company}" NIS2 DORA compliance\n\n`;
-
-  out += '═══════════════════════════════════════════════════════════════\n';
-  out += '  FASE 4 — DECISION MAKERS Y MAPA DE PODER IT\n';
-  out += '═══════════════════════════════════════════════════════════════\n\n';
-  out += 'Identificá con nombre, cargo exacto y URL de LinkedIn verificable:\n';
-  out += '  • CIO / IT Director / Director de Sistemas\n';
-  out += '  • CTO / Director de Arquitectura\n';
-  out += '  • CDO / Director de Transformación Digital\n';
-  out += '  • CISO / Responsable de Ciberseguridad\n';
-  out += '  • CFO (clave en decisiones SAP/ERP)\n';
-  out += '  • COO / Director de Operaciones (si hay dolor logístico/producción)\n';
-  out += '  • Responsables de compra IT / Procurement\n\n';
-  out += 'Queries:\n';
-  out += `  • site:linkedin.com/in "${company}" (CIO OR CTO OR "Director de Sistemas" OR "Director de Tecnología")\n`;
-  out += `  • site:linkedin.com/in "${company}" (CISO OR CDO OR "Transformación Digital")\n`;
-  out += `  • site:linkedin.com/in "${company}" arquitecto SAP Oracle\n`;
-  out += `  • "${company}" organigrama dirección tecnología\n\n`;
-  out += 'Para cada persona identificada, anotá:\n';
-  out += '  → Nombre + cargo exacto + URL LinkedIn\n';
-  out += '  → Antigüedad en el puesto (señal de ventana de compra)\n';
-  out += '  → Posts/actividad pública reciente que revele prioridades\n';
-  out += '  → Consultora de origen si es ex-Big4 (abre/cierra puertas)\n\n';
-
-  out += '═══════════════════════════════════════════════════════════════\n';
-  out += '  FASE 5 — HIPÓTESIS DE DOLOR + ÁNGULO COMERCIAL TGV\n';
-  out += '═══════════════════════════════════════════════════════════════\n\n';
-  out += 'Sintetizá todo lo anterior en un análisis accionable:\n\n';
-  out += 'A) TOP 3 DESAFÍOS PROBABLES DE LA EMPRESA\n';
-  out += '   Para cada uno documentá:\n';
-  out += '     - Descripción del desafío (1-2 líneas)\n';
-  out += '     - Evidencia que lo sustenta (con URL)\n';
-  out += '     - Severidad estimada (alta/media/baja) y justificación\n';
-  out += '     - Impacto de negocio (financiero, operativo, regulatorio, reputacional)\n\n';
-  out += 'B) MAPEO DESAFÍO → SERVICIO TGV\n';
-  out += '   Para cada desafío, indicá:\n';
-  out += '     - Qué servicio TGV lo resuelve (SAP, JDE, IA, Desarrollo, Assessment)\n';
-  out += '     - Por qué TGV vs Big4 (diferencial nearshore, experiencia sectorial)\n';
-  out += '     - Referencia de caso análogo si aplica (pharma, finance, retail, etc.)\n\n';
-  out += 'C) ÁNGULO DE ATAQUE RECOMENDADO\n';
-  out += '   - ¿Cuál de los 3 desafíos es el mejor punto de entrada?\n';
-  out += '   - Timing: ¿por qué ahora y no en 6 meses?\n';
-  out += '   - Decision maker prioritario a contactar primero\n';
-  out += '   - Canal recomendado: email, LinkedIn, intro común\n\n';
-
-  out += '═══════════════════════════════════════════════════════════════\n';
-  out += '  FASE 6 — OUTPUT ACCIONABLE\n';
-  out += '═══════════════════════════════════════════════════════════════\n\n';
-  out += 'Entregá los siguientes artefactos en este orden:\n\n';
-
-  out += '┌─ 1. DOSSIER EJECUTIVO (1 página, formato markdown) ──────────┐\n';
-  out += '│  • Snapshot: sector, tamaño, momentum                        │\n';
-  out += '│  • Stack tecnológico resumido (áreas clave)                  │\n';
-  out += '│  • Top 3 desafíos con severidad                              │\n';
-  out += '│  • Decision maker prioritario                                │\n';
-  out += '│  • Ángulo de ataque recomendado                              │\n';
-  out += '└──────────────────────────────────────────────────────────────┘\n\n';
-
-  out += '┌─ 2. TABLA CONSOLIDADA TECNOLÓGICA ───────────────────────────┐\n';
-  out += '│  | Área | Tecnología | Partner | Antigüedad | Desafío |      │\n';
-  out += '│  | Servicio TGV aplicable | Fuente URL |                     │\n';
-  out += '└──────────────────────────────────────────────────────────────┘\n\n';
-
-  out += '┌─ 3. EMAIL COMERCIAL DE PRIMER CONTACTO ──────────────────────┐\n';
-  out += '│  Requisitos del email:                                       │\n';
-  out += '│    - Asunto máx 50 caracteres, que provoque apertura         │\n';
-  out += '│    - Apertura con dato específico verificable del target     │\n';
-  out += '│      (NO elogio genérico, NO "vi que sois líderes en...")    │\n';
-  out += '│    - Hipótesis del desafío en tono humilde, no asertivo      │\n';
-  out += '│      ("imagino que / es probable que")                       │\n';
-  out += '│    - Valor específico que TGV aporta (concreto, no genérico) │\n';
-  out += '│    - CTA de baja fricción (NO "llamada sin compromiso")      │\n';
-  out += '│    - Dejar placeholder de firma: [Nombre, cargo, email]      │\n';
-  out += '│    - Máximo 120 palabras de cuerpo                           │\n';
-  out += '│    - Tono: consultor senior, NO vendedor                     │\n';
-  out += '│    - Castellano de España neutro, sin argentinismos          │\n';
-  out += '│  Entregá 2 variantes con ángulos distintos (elegir A/B test) │\n';
-  out += '└──────────────────────────────────────────────────────────────┘\n\n';
-
-  out += '┌─ 4. MENSAJE LINKEDIN (alternativa al email) ─────────────────┐\n';
-  out += '│  Mismo ángulo pero adaptado a connection note (300 caracteres)│\n';
-  out += '│  O InMail largo (máx 200 palabras) si es Premium             │\n';
-  out += '└──────────────────────────────────────────────────────────────┘\n\n';
-
-  out += '┌─ 5. PREGUNTAS PARA DISCOVERY CALL ───────────────────────────┐\n';
-  out += '│  5 preguntas estratégicas (NO técnicas) que validen la       │\n';
-  out += '│  hipótesis de dolor y abran al prospect a conversación real. │\n';
-  out += '└──────────────────────────────────────────────────────────────┘\n\n';
-
-  out += '┌─ 6. ÁREAS SIN EVIDENCIA = OPORTUNIDADES DE DISCOVERY ────────┐\n';
-  out += '│  Listá los micro-agentes que no arrojaron evidencia pública. │\n';
-  out += '│  Son preguntas abiertas para formular en la conversación.    │\n';
-  out += '└──────────────────────────────────────────────────────────────┘\n\n';
-
-  out += '┌─ 7. LIMITACIONES Y CAVEATS ──────────────────────────────────┐\n';
-  out += '│  Declará honestamente qué no se pudo verificar y qué se      │\n';
-  out += '│  asume. Esto protege la credibilidad de la pieza.            │\n';
-  out += '└──────────────────────────────────────────────────────────────┘\n\n';
-
-  out += '═══════════════════════════════════════════════════════════════\n';
-  out += '  CHECKLIST FINAL ANTES DE ENTREGAR\n';
-  out += '═══════════════════════════════════════════════════════════════\n';
-  out += '  □ ¿Cada afirmación tiene URL verificable?\n';
-  out += '  □ ¿Los 3 desafíos están priorizados por severidad × match-TGV?\n';
-  out += '  □ ¿El email referencia datos específicos del target?\n';
-  out += '  □ ¿Hay una única acción clara solicitada al prospect?\n';
-  out += '  □ ¿Se evitaron clichés ("transformación digital", "sinergias")?\n';
-  out += '  □ ¿Se declararon las limitaciones del análisis?\n';
-
-  return out;
+  return bestScore >= 1 ? best : null;
 }
 
-function App() {
-  const [company, setCompany] = useState('Mahou');
-  const [url, setUrl] = useState('https://www.mahou.es/');
-  const [country, setCountry] = useState('ES');
-  const [priorities, setPriorities] = useState(DEFAULT_PRIORITIES);
-  const [customContext, setCustomContext] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [dragIdx, setDragIdx] = useState(null);
+const aiFab = document.getElementById('aiFab'), aiPanel = document.getElementById('aiPanel'),
+      aiClose = document.getElementById('aiClose'), aiBody = document.getElementById('aiBody'),
+      aiInput = document.getElementById('aiInput'), aiSend = document.getElementById('aiSend');
+let aiStarted = false;
 
-  const available = Object.keys(CATS).filter(k => !priorities.includes(k));
+function openAI(){
+  aiPanel.classList.add('open'); aiFab.style.display = 'none';
+  if (!aiStarted){ aiStarted = true; greet(); }
+  setTimeout(()=>aiInput.focus(), 350);
+}
+function closeAI(){ aiPanel.classList.remove('open'); aiFab.style.display = 'flex'; }
+aiFab.addEventListener('click', openAI);
+aiClose.addEventListener('click', closeAI);
+document.querySelectorAll('.ai-open-link').forEach(b => b.addEventListener('click', openAI));
 
-  const movePrio = (idx, dir) => {
-    const next = [...priorities];
-    const j = idx + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[idx], next[j]] = [next[j], next[idx]];
-    setPriorities(next);
-  };
-
-  const removePrio = (idx) => setPriorities(priorities.filter((_, i) => i !== idx));
-  const addPrio = (key) => setPriorities([...priorities, key]);
-
-  const prompt = useMemo(
-    () => generatePrompt(company || '[empresa]', url || '[url]', country, priorities, customContext),
-    [company, url, country, priorities, customContext]
-  );
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(prompt);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e) {
-      const ta = document.createElement('textarea');
-      ta.value = prompt;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+function addMsg(html, who){
+  const m = document.createElement('div'); m.className = 'msg ' + who; m.innerHTML = html;
+  aiBody.appendChild(m); aiBody.scrollTop = aiBody.scrollHeight; return m;
+}
+function addChips(items){
+  const c = document.createElement('div'); c.className = 'chips';
+  items.forEach(t => {
+    const b = document.createElement('button'); b.className = 'chip'; b.textContent = t;
+    b.addEventListener('click', () => { ask(t); });
+    c.appendChild(b);
+  });
+  aiBody.appendChild(c); aiBody.scrollTop = aiBody.scrollHeight;
+}
+function typing(){
+  const t = document.createElement('div'); t.className = 'typing'; t.innerHTML = '<i></i><i></i><i></i>';
+  aiBody.appendChild(t); aiBody.scrollTop = aiBody.scrollHeight; return t;
+}
+function greet(){
+  addMsg('👋 Hola, soy el asistente de <b>TEGEVE</b>. Puedo contarte qué hacemos: SAP, JD&nbsp;Edwards, IA Empresarial, desarrollo a medida y más. ¿Qué te gustaría saber?', 'bot');
+  addChips(['¿Qué servicios ofrecen?', '¿Trabajan con SAP S/4HANA?', '¿Qué es el modelo nearshore?', '¿En qué se diferencian de una Big Four?']);
+}
+function ask(q){
+  addMsg(q.replace(/</g,'&lt;'), 'user');
+  aiInput.value = '';
+  const t = typing();
+  setTimeout(() => {
+    t.remove();
+    const hit = search(q);
+    if (hit){
+      addMsg(hit.a, 'bot');
+      // sugerir preguntas relacionadas
+      const others = KB.filter(k => k !== hit).sort(()=>0.5-Math.random()).slice(0,3).map(k=>k.q);
+      addChips(others);
+    } else {
+      addMsg('No tengo una respuesta exacta para eso, pero el equipo de TEGEVE sí. Escríbenos a <a href="mailto:info@tegeve.es">info@tegeve.es</a> y te ayudamos. Mientras tanto, ¿te interesa alguna de estas?', 'bot');
+      addChips(['¿Qué servicios ofrecen?', '¿Cómo empezamos a trabajar juntos?', '¿Cómo puedo contactar con TEGEVE?']);
     }
-  };
-
-  const downloadTxt = () => {
-    const blob = new Blob([prompt], { type: 'text/plain;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `tgv-intel-${(company || 'empresa').toLowerCase().replace(/\s+/g, '-')}.txt`;
-    a.click();
-  };
-
-  const onDragStart = (idx) => setDragIdx(idx);
-  const onDragOver = (e) => e.preventDefault();
-  const onDrop = (idx) => {
-    if (dragIdx === null || dragIdx === idx) return;
-    const next = [...priorities];
-    const [moved] = next.splice(dragIdx, 1);
-    next.splice(idx, 0, moved);
-    setPriorities(next);
-    setDragIdx(null);
-  };
-
-  return h('div', { className: 'min-h-screen', style: { backgroundColor: TGV.bg } }, [
-    // Top bar
-    h('div', { key: 'topbar', className: 'w-full', style: { backgroundColor: TGV.primary } },
-      h('div', { className: 'max-w-5xl mx-auto px-4 md:px-6 py-4 flex items-center gap-3' }, [
-        h('div', { key: 'icon', className: 'p-2 rounded-md', style: { backgroundColor: TGV.highlight } },
-          h(Target, { size: 20, color: 'white' })),
-        h('div', { key: 'title', className: 'flex-1' }, [
-          h('h1', { key: 't', className: 'text-white text-lg font-bold tracking-tight' }, 'TGV Intel — Tech Radar Builder'),
-          h('p', { key: 's', className: 'text-xs', style: { color: '#94B3D1' } }, 'Inteligencia comercial B2B para prospección consultiva'),
-        ]),
-        h('span', { key: 'v', className: 'hidden md:inline-block text-xs px-2 py-1 rounded', style: { color: TGV.primary, backgroundColor: '#CBD5E1' } }, 'v2.0'),
-      ])),
-
-    h('div', { key: 'main', className: 'max-w-5xl mx-auto px-4 md:px-6 py-6' }, [
-      // Datos target
-      h('section', { key: 'datos', className: 'rounded-xl border p-5 mb-4', style: { backgroundColor: TGV.card, borderColor: TGV.border } }, [
-        h('h2', { key: 'h', className: 'flex items-center gap-2 text-sm font-bold mb-4', style: { color: TGV.textPrimary } }, [
-          h(Building2, { key: 'i', size: 16, style: { color: TGV.accent } }),
-          ' Datos del target'
-        ]),
-        h('div', { key: 'grid', className: 'grid md:grid-cols-2 gap-4' }, [
-          h('div', { key: 'c1' }, [
-            h('label', { key: 'l', className: 'block text-xs font-semibold mb-1.5', style: { color: TGV.textSecondary } }, 'Nombre de la organización'),
-            h('input', { key: 'i', type: 'text', value: company, onChange: (e) => setCompany(e.target.value),
-              className: 'w-full px-3 py-2 rounded-md text-sm outline-none',
-              style: { backgroundColor: TGV.bg, border: `1px solid ${TGV.border}`, color: TGV.textPrimary },
-              onFocus: (e) => e.target.style.borderColor = TGV.highlight,
-              onBlur: (e) => e.target.style.borderColor = TGV.border,
-              placeholder: 'Ej: Mahou' }),
-          ]),
-          h('div', { key: 'c2' }, [
-            h('label', { key: 'l', className: 'flex items-center gap-1 text-xs font-semibold mb-1.5', style: { color: TGV.textSecondary } }, [
-              h(Link2, { key: 'i', size: 12 }), ' URL corporativa'
-            ]),
-            h('input', { key: 'i', type: 'text', value: url, onChange: (e) => setUrl(e.target.value),
-              className: 'w-full px-3 py-2 rounded-md text-sm outline-none',
-              style: { backgroundColor: TGV.bg, border: `1px solid ${TGV.border}`, color: TGV.textPrimary },
-              onFocus: (e) => e.target.style.borderColor = TGV.highlight,
-              onBlur: (e) => e.target.style.borderColor = TGV.border,
-              placeholder: 'https://...' }),
-          ]),
-          h('div', { key: 'c3', className: 'md:col-span-2' }, [
-            h('label', { key: 'l', className: 'flex items-center gap-1 text-xs font-semibold mb-1.5', style: { color: TGV.textSecondary } }, [
-              h(Globe, { key: 'i', size: 12 }), ' País principal'
-            ]),
-            h('select', { key: 's', value: country, onChange: (e) => setCountry(e.target.value),
-              className: 'w-full px-3 py-2 rounded-md text-sm outline-none',
-              style: { backgroundColor: TGV.bg, border: `1px solid ${TGV.border}`, color: TGV.textPrimary } },
-              Object.entries(COUNTRIES).map(([k, v]) => h('option', { key: k, value: k }, v.name))),
-            h('p', { key: 'p', className: 'text-xs mt-1.5', style: { color: TGV.textMuted } }, `Portales: ${COUNTRIES[country].portals}`),
-          ]),
-        ]),
-        h('div', { key: 'ctx', className: 'mt-4' }, [
-          h('label', { key: 'l', className: 'block text-xs font-semibold mb-1.5', style: { color: TGV.textSecondary } },
-            'Contexto adicional (opcional) — brief, relación previa, angle específico'),
-          h('textarea', { key: 't', value: customContext, onChange: (e) => setCustomContext(e.target.value), rows: 2,
-            className: 'w-full px-3 py-2 rounded-md text-sm outline-none resize-y',
-            style: { backgroundColor: TGV.bg, border: `1px solid ${TGV.border}`, color: TGV.textPrimary },
-            placeholder: 'Ej: Contacto referido por X. Acaban de abrir fábrica en Toledo. Queremos abrirles con JDE WMS...' }),
-        ]),
-      ]),
-
-      // Prioridades
-      h('section', { key: 'prio', className: 'rounded-xl border p-5 mb-4', style: { backgroundColor: TGV.card, borderColor: TGV.border } }, [
-        h('label', { key: 'l', className: 'block text-sm font-bold mb-1', style: { color: TGV.textPrimary } }, [
-          'Prioridades de propuesta de valor ',
-          h('span', { key: 's', className: 'text-xs font-normal', style: { color: TGV.textMuted } }, '(orden = relevancia)')
-        ]),
-        h('p', { key: 'desc', className: 'text-xs mb-3', style: { color: TGV.textMuted } },
-          'Las áreas priorizadas reciben 7 queries profundas + búsqueda de dolores específicos. Las demás, 1 query de rastreo.'),
-        h('div', { key: 'list', className: 'space-y-2 mb-4' },
-          priorities.length === 0
-            ? h('div', { className: 'text-center py-6 text-sm rounded-lg', style: { color: TGV.textMuted, border: `2px dashed ${TGV.border}` } },
-                'Agregá al menos una categoría prioritaria desde abajo')
-            : priorities.map((key, idx) =>
-                h('div', { key, draggable: true,
-                  onDragStart: () => onDragStart(idx),
-                  onDragOver,
-                  onDrop: () => onDrop(idx),
-                  className: `flex items-center gap-2 rounded-lg px-3 py-2.5 transition ${dragIdx === idx ? 'opacity-50' : ''}`,
-                  style: { backgroundColor: TGV.card, border: `1px solid ${TGV.border}` } }, [
-                  h(GripVertical, { key: 'g', size: 16, className: 'cursor-move flex-shrink-0', style: { color: TGV.textMuted } }),
-                  h('span', { key: 'n', className: 'font-bold text-sm w-8 flex-shrink-0', style: { color: TGV.highlight } }, `#${idx + 1}`),
-                  h('span', { key: 't', className: 'text-sm flex-1', style: { color: TGV.textPrimary } }, CATS[key].name),
-                  h('button', { key: 'u', onClick: () => movePrio(idx, -1), disabled: idx === 0,
-                    className: 'p-1 rounded disabled:opacity-30',
-                    style: { color: TGV.textSecondary } },
-                    h(ChevronUp, { size: 16 })),
-                  h('button', { key: 'd', onClick: () => movePrio(idx, 1), disabled: idx === priorities.length - 1,
-                    className: 'p-1 rounded disabled:opacity-30',
-                    style: { color: TGV.textSecondary } },
-                    h(ChevronDown, { size: 16 })),
-                  h('button', { key: 'x', onClick: () => removePrio(idx),
-                    className: 'p-1 rounded',
-                    style: { color: TGV.textSecondary },
-                    onMouseEnter: (e) => { e.currentTarget.style.backgroundColor = '#FEE2E2'; e.currentTarget.style.color = '#DC2626'; },
-                    onMouseLeave: (e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = TGV.textSecondary; } },
-                    h(X, { size: 16 })),
-                ]))),
-        available.length > 0 && h('div', { key: 'avail', className: 'flex flex-wrap gap-2' },
-          available.map(key =>
-            h('button', { key, onClick: () => addPrio(key),
-              className: 'inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full transition',
-              style: { backgroundColor: TGV.bg, color: TGV.textSecondary, border: `1px solid ${TGV.border}` },
-              onMouseEnter: (e) => { e.currentTarget.style.backgroundColor = TGV.highlightSoft; e.currentTarget.style.color = TGV.primary; e.currentTarget.style.borderColor = TGV.highlight; },
-              onMouseLeave: (e) => { e.currentTarget.style.backgroundColor = TGV.bg; e.currentTarget.style.color = TGV.textSecondary; e.currentTarget.style.borderColor = TGV.border; } }, [
-              h(Plus, { key: 'p', size: 12 }),
-              ' ', CATS[key].name
-            ]))),
-      ]),
-
-      // Acciones
-      h('section', { key: 'act', className: 'rounded-xl border p-5 mb-4', style: { backgroundColor: TGV.card, borderColor: TGV.border } }, [
-        h('div', { key: 'btns', className: 'flex flex-wrap gap-2 mb-4' }, [
-          h('button', { key: 'copy', onClick: copyToClipboard,
-            className: 'inline-flex items-center gap-2 text-white text-sm font-semibold px-4 py-2 rounded-md transition',
-            style: { backgroundColor: copied ? TGV.success : TGV.accent } },
-            copied ? [h(Check, { key: 'i', size: 16 }), ' Copiado'] : [h(Copy, { key: 'i', size: 16 }), ' Copiar prompt']),
-          h('button', { key: 'dl', onClick: downloadTxt,
-            className: 'inline-flex items-center gap-2 text-white text-sm font-semibold px-4 py-2 rounded-md transition',
-            style: { backgroundColor: TGV.primary } }, [
-            h(FileText, { key: 'i', size: 16 }), ' Descargar .txt'
-          ]),
-          h('button', { key: 'prev', onClick: () => setShowPreview(!showPreview),
-            className: 'inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md transition ml-auto',
-            style: { backgroundColor: TGV.bg, color: TGV.textSecondary, border: `1px solid ${TGV.border}` } },
-            `${showPreview ? 'Ocultar' : 'Ver'} preview`),
-        ]),
-        h('div', { key: 'stats', className: 'flex flex-wrap gap-4 text-xs', style: { color: TGV.textMuted } }, [
-          h('span', { key: 's1' }, [h('b', { style: { color: TGV.highlight } }, '●'), ` ${priorities.length} áreas priorizadas × 7 queries`]),
-          h('span', { key: 's2' }, [h('b', { style: { color: TGV.accent } }, '●'), ` ${Object.keys(CATS).length - priorities.length} secundarias × 1 query`]),
-          h('span', { key: 's3' }, [h('b', { style: { color: TGV.primary } }, '●'), ' 6 fases · dossier · email']),
-          h('span', { key: 's4' }, `${prompt.length.toLocaleString('es-ES')} caracteres`),
-        ]),
-      ]),
-
-      // Preview
-      showPreview && h('section', { key: 'preview', className: 'rounded-xl p-5 mb-4 overflow-hidden fade-in', style: { backgroundColor: TGV.primary } }, [
-        h('div', { key: 'lbl', className: 'text-xs mb-2', style: { color: TGV.highlight, fontFamily: 'monospace' } }, '▶ PREVIEW'),
-        h('pre', { key: 'p', className: 'text-xs overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto leading-relaxed', style: { color: '#E2E8F0' } }, prompt),
-      ]),
-
-      h('p', { key: 'foot', className: 'text-xs text-center mt-4', style: { color: TGV.textMuted } }, [
-        'TGV Intel · Pegá el prompt en Claude / GPT con web_search · ',
-        h('a', { key: 'a', href: 'https://www.tegeve.es', target: '_blank', rel: 'noopener', style: { color: TGV.accent } }, 'tegeve.es')
-      ]),
-    ]),
-  ]);
+  }, 480 + Math.random()*420);
 }
-
-createRoot(document.getElementById('root')).render(h(App));
+aiSend.addEventListener('click', () => { const v = aiInput.value.trim(); if (v) ask(v); });
+aiInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = aiInput.value.trim(); if (v) ask(v); } });
 </script>
 </body>
 </html>
