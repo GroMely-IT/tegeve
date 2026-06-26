@@ -189,6 +189,51 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 .nav-ai{display:inline-flex;align-items:center;gap:7px;font-size:.9rem;font-weight:600;font-family:inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;cursor:pointer;transition:.25s}
 .nav-ai:hover{border-color:var(--red);color:var(--red);box-shadow:0 8px 20px -12px rgba(227,6,19,.55);transform:translateY(-1px)}
 .nav-ai .sp{width:18px;height:18px;color:var(--red);flex:none}
+
+.nav-group{position:relative;display:flex;align-items:center}
+.nav-drop-t{display:inline-flex;align-items:center;gap:5px;font-size:.94rem;font-weight:500;font-family:inherit;color:var(--t2);background:none;border:0;cursor:pointer;padding:0;transition:color .25s}
+.nav-group:hover .nav-drop-t,.nav-group:focus-within .nav-drop-t{color:var(--ink)}
+.nav-drop-t .caret{width:14px;height:14px;opacity:.6;transition:transform .25s}
+.nav-group:hover .nav-drop-t .caret,.nav-group:focus-within .nav-drop-t .caret{transform:rotate(180deg)}
+.nav-drop{position:absolute;top:100%;left:50%;margin-top:14px;min-width:214px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:0 26px 52px -24px rgba(20,22,30,.45);display:flex;flex-direction:column;gap:1px;opacity:0;visibility:hidden;transform:translate(-50%,8px);transition:opacity .22s,transform .22s;z-index:60}
+.nav-drop::before{content:"";position:absolute;left:0;right:0;top:-14px;height:14px}
+.nav-group:hover .nav-drop,.nav-group:focus-within .nav-drop{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.nav-drop a{font-size:.9rem;font-weight:500;color:var(--t1);padding:9px 12px;border-radius:9px;white-space:nowrap;transition:background .18s,color .18s}
+.nav-drop a:hover{background:var(--red-soft);color:var(--red)}
+
+/* Casos de éxito */
+.cases-tools{display:flex;flex-direction:column;gap:18px;margin:0 auto 40px;max-width:880px}
+.cases-search{position:relative}
+.cases-search svg{position:absolute;left:18px;top:50%;transform:translateY(-50%);width:19px;height:19px;color:var(--t3);pointer-events:none}
+.cases-search input{width:100%;border:1px solid var(--line);border-radius:999px;padding:15px 20px 15px 48px;font-size:1rem;font-family:inherit;color:var(--t1);background:#fff;outline:none;transition:border-color .25s,box-shadow .25s}
+.cases-search input:focus{border-color:var(--red);box-shadow:0 0 0 4px var(--red-tint)}
+.cf-chips{display:flex;flex-wrap:wrap;gap:9px;justify-content:center}
+.cf-chip{font-size:.86rem;font-weight:600;font-family:inherit;color:var(--t2);background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer;transition:.2s}
+.cf-chip:hover{border-color:var(--red);color:var(--red)}
+.cf-chip.on{background:var(--red);border-color:var(--red);color:#fff}
+.cases-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:start}
+.case{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;transition:transform .3s,box-shadow .3s,border-color .3s}
+.case:hover{transform:translateY(-4px);box-shadow:0 28px 56px -30px rgba(20,22,30,.4);border-color:rgba(227,6,19,.25)}
+.case>summary{list-style:none;cursor:pointer;padding:24px;display:flex;flex-direction:column;align-items:flex-start}
+.case>summary::-webkit-details-marker{display:none}
+.case-top{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.case-svc{font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--red);background:var(--red-soft);padding:5px 9px;border-radius:7px}
+.case-sector{font-size:.7rem;font-weight:600;color:var(--t3);background:var(--mist);padding:5px 9px;border-radius:7px}
+.case h3{font-size:1.1rem;line-height:1.32;margin:0 0 8px;color:var(--ink);font-weight:700}
+.case-client{font-size:.86rem;font-weight:600;color:var(--t2)}
+.case-metric{margin-top:16px;font-size:.92rem;font-weight:700;color:var(--red);display:inline-flex;align-items:center;gap:7px}
+.case-metric svg{width:15px;height:15px;flex:none}
+.case-more{margin-top:16px;font-size:.82rem;font-weight:700;color:var(--t2);display:inline-flex;align-items:center;gap:6px;transition:color .2s}
+.case:hover .case-more{color:var(--red)}
+.case-more svg{width:15px;height:15px;transition:transform .25s}
+.case[open] .case-more svg{transform:rotate(180deg)}
+.case-detail{padding:18px 24px 24px;display:flex;flex-direction:column;gap:12px;font-size:.92rem;color:var(--t2);line-height:1.55;border-top:1px solid var(--line)}
+.case-detail p{margin:0}
+.case-detail b{color:var(--ink);font-weight:700}
+.case-dtags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.case-dtag{font-size:.72rem;color:var(--t3);background:var(--mist);padding:4px 9px;border-radius:6px}
+.cases-empty{display:none;text-align:center;color:var(--t2);padding:30px;font-size:1rem}
+@media(max-width:1010px){.cases-grid{grid-template-columns:repeat(2,1fr)}}
 .burger{display:none;margin-left:auto;background:none;border:0;cursor:pointer;width:44px;height:44px;color:var(--ink)}
 
 /* Hero (light, on-brand) */
@@ -394,6 +439,13 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
   .nav-links.show .nav-ai{align-self:flex-start;margin:12px 0}
   .nav-links.show{display:flex;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);padding:8px 24px 18px;border-bottom:1px solid var(--line)}
   .nav-links.show a{color:var(--t1);padding:12px 0;border-bottom:1px solid var(--line)}
+
+  .nav-group{flex-direction:column;align-items:flex-start;width:100%}
+  .nav-drop-t{width:100%;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);color:var(--t1);font-weight:500}
+  .nav-drop-t .caret{display:none}
+  .nav-drop{position:static;transform:none;opacity:1;visibility:visible;box-shadow:none;border:0;border-radius:0;padding:0 0 0 14px;margin:0;min-width:0;background:none;z-index:auto}
+  .nav-drop::before{display:none}
+  .cases-grid{grid-template-columns:1fr}
   .stats-grid{grid-template-columns:repeat(2,1fr);gap:30px}
   .cards{grid-template-columns:1fr}
   .pin-grid{grid-template-columns:1fr;gap:30px}
@@ -426,6 +478,148 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .hero-inner{pointer-events:none}
 .hero-inner>*{pointer-events:auto}
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Casos de éxito de TeGeVe (TGV)",
+  "description": "Proyectos de TeGeVe en SAP, Oracle JD Edwards, IA Empresarial, desarrollo a medida, integración y assessment.",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "IA que convierte cuatro días de conciliación de FCI en cuestión de horas",
+        "about": "IA Empresarial",
+        "description": "El equipo de finanzas necesitaba agilizar la consolidación de sus distintos fondos comunes de inversión (FCI) para el cálculo de impuestos y su imputación",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "IA que automatiza la planificación logística diaria y reemplaza el Excel manual",
+        "about": "IA Empresarial",
+        "description": "La empresa planificaba su operación logística diaria de forma manual con hojas de Excel: procesaba pedidos, completaba datos faltantes y definía recorridos",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Doce años de acompañamiento sobre JD Edwards: un ERP que crece con el negocio agroindustrial",
+        "about": "Oracle JD Edwards",
+        "description": "Una multinacional productora de equipamiento agrícola necesitaba un ERP robusto, capaz de adaptar con rapidez sus procesos ante los cambios de coyuntura y",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 4,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Seguridad robusta en Oracle JD Edwards: un modelo de acceso confiable para un líder del agro",
+        "about": "Oracle JD Edwards",
+        "description": "Tras un assessment interno en el área de IT, Nutrien, el mayor proveedor de insumos y servicios para cultivos de la región, identificó la necesidad de revi",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 5,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Monitor de integraciones SAP: datos de empleados unificados y en tiempo real",
+        "about": "SAP",
+        "description": "Los equipos de soporte afrontaban errores de integración entre sistemas, sobre todo con los datos de empleados repartidos entre servidores propios y plataf",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 6,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Soporte SAP continuo que reduce costes y blinda la operación frente a la rotación",
+        "about": "SAP",
+        "description": "Una de las principales empresas agroindustriales de Argentina necesitaba soporte funcional continuo sobre su sistema SAP, abarcando la resolución de incide",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 7,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Decisiones basadas en datos para anticipar tendencias de consumo",
+        "about": "Business Intelligence",
+        "description": "Como líder mundial en productos de higiene, Kimberly-Clark necesitaba detectar tendencias de consumo y anticipar distintos escenarios para definir estrateg",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 8,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Un sistema de rating crediticio unificado y web que reduce costes de mantenimiento",
+        "about": "Desarrollo a medida",
+        "description": "El banco necesitaba actualizar su aplicativo de cálculo del rating, la calificación crediticia para personas físicas y jurídicas, junto con la interfaz de",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 9,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Una Software Factory que mantiene a una aseguradora líder al ritmo de su negocio",
+        "about": "Desarrollo a medida",
+        "description": "Una aseguradora de referencia necesitaba adaptar su plataforma de gestión a los cambios constantes de la operativa del negocio, sin renunciar a calidad, es",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 10,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Migración a tarjetas con chip EMV: transacciones más seguras y menos fraude",
+        "about": "Desarrollo a medida",
+        "description": "First Data, proveedor global de soluciones de pagos, necesitaba adaptar sus procesos para habilitar la operatividad de tarjetas con chip (EMV). El objetivo",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 11,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Sistemas legacy al servicio de nuevas estrategias de negocio en medios de pago",
+        "about": "Integración",
+        "description": "First Data, entidad financiera licenciataria de MasterCard, necesitaba incorporar a sus sistemas nuevas prestaciones que acompañaran sus estrategias de mar",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 12,
+      "item": {
+        "@type": "CreativeWork",
+        "name": "Business Value Assessment: la decisión de ERP de Motta Internacional, basada en datos",
+        "about": "Assessment",
+        "description": "Motta Internacional operaba con múltiples sistemas ERP antiguos e independientes que ya no respondían a las necesidades cambiantes del grupo. La compañía n",
+        "creator": {"@type": "Organization", "name": "TeGeVe"}
+      }
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <div id="intro" aria-hidden="true"><img src="assets/logo-tight.png" alt="TeGeVe"></div>
@@ -439,10 +633,17 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
     </button>
     <div class="nav-links" id="navLinks">
       <a href="#servicios">Servicios</a>
-      <a href="#metodo">Cómo trabajamos</a>
-      <a href="#sectores">Sectores</a>
-      <a href="#porque">Por qué elegirnos</a>
-      <a href="#faq">FAQ</a>
+      <a href="#casos">Casos de éxito</a>
+      <div class="nav-group">
+        <button class="nav-drop-t" type="button" aria-haspopup="true">Compañía<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="nav-drop">
+          <a href="#metodo">Cómo trabajamos</a>
+          <a href="#sectores">Sectores</a>
+          <a href="#porque">Por qué elegirnos</a>
+          <a href="#clientes">Clientes</a>
+          <a href="#faq">FAQ</a>
+        </div>
+      </div>
       <button class="nav-ai ai-open-link" aria-label="Abrir asistente con IA Tevi"><svg class="sp" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.7 4.8L18.5 8.5l-4.8 1.7L12 15l-1.7-4.8L5.5 8.5l4.8-1.7L12 2z"/><circle cx="18.6" cy="16.6" r="1.5"/><circle cx="6" cy="17.4" r="1.1"/></svg>Tevi</button>
       <a href="#contacto" class="nav-cta">Contáctanos</a>
     </div>
@@ -600,6 +801,212 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
       <div class="sector reveal" data-d="1"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20.5h18M4.8 20.5V11M9 20.5V11M15 20.5V11M19.2 20.5V11M3.4 11 12 5.2 20.6 11"/></svg></div><h4>Sector Público</h4><p>Proyectos con organismos gubernamentales en distintos países de nuestra trayectoria internacional.</p></div>
       <div class="sector reveal" data-d="2"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6.4" rx="6.5" ry="2.8"/><path d="M5.5 6.4V12c0 1.55 2.9 2.8 6.5 2.8s6.5-1.25 6.5-2.8V6.4M5.5 12c0 1.55 2.9 2.8 6.5 2.8s6.5-1.25 6.5-2.8"/></svg></div><h4>Servicios Financieros</h4><p>Automatización inteligente de procesos, como la conciliación de fondos de inversión.</p></div>
     </div>
+  </div>
+</section>
+
+<!-- Casos de éxito -->
+<section class="sec sec-light" id="casos">
+  <div class="wrap">
+    <div class="sec-head reveal" style="text-align:center;margin:0 auto 38px;max-width:62ch">
+      <span class="eyebrow">Casos de éxito</span>
+      <h2 class="h2" style="margin:14px 0 14px">Resultados reales, en producción.</h2>
+      <p class="lede">Proyectos de SAP, Oracle JD&nbsp;Edwards, IA Empresarial, desarrollo a medida e integración para líderes de banca, agro, gran consumo, energía y medios de pago. Filtra por servicio o busca por palabra clave.</p>
+    </div>
+    <div class="cases-tools reveal">
+      <div class="cases-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="caseSearch" type="search" autocomplete="off" placeholder="Busca por cliente, tecnología o sector: SAP, IA, banca, ruteo, EMV…" aria-label="Buscar casos de éxito">
+      </div>
+      <div class="cf-chips" id="caseChips" role="group" aria-label="Filtrar por servicio">
+        <button class="cf-chip on" data-f="">Todos</button>
+        <button class="cf-chip" data-f="sap">SAP</button>
+        <button class="cf-chip" data-f="oracle jd edwards">Oracle JD Edwards</button>
+        <button class="cf-chip" data-f="ia empresarial">IA Empresarial</button>
+        <button class="cf-chip" data-f="desarrollo a medida">Desarrollo a medida</button>
+        <button class="cf-chip" data-f="business intelligence">Business Intelligence</button>
+        <button class="cf-chip" data-f="integracion">Integración</button>
+        <button class="cf-chip" data-f="assessment">Assessment</button>
+      </div>
+    </div>
+    <div class="cases-grid" id="casesGrid">
+    <details class="case" data-svc="ia empresarial" data-text="operadora de la mayor red de gasoductos de argentina ia que convierte cuatro dias de conciliacion de fci en cuestion de horas servicios financieros ia empresarial ia empresarial ai builder power automate fci conciliacion sap automatizacion servicios financieros microsoft excel online el equipo de finanzas necesitaba agilizar la consolidacion de sus distintos fondos comunes de inversion (fci) para el calculo de impuestos y su imputacion en sap. el procesamiento manual consumia varios dias de trabajo de una persona, con alto coste operativo y elevado riesgo de errores. tegeve desarrollo una aplicacion sobre la plataforma de microsoft con inteligencia artificial que lee e interpreta automaticamente los documentos pdf de los bancos, vuelca los datos en excel estructurado por fci y consolida los resultados. el sistema calcula saldos e impuestos, notifica por outlook y alerta sobre cualquier incidencia. la solucion reduce el procesamiento de cuatro dias a cuestion de horas, minimiza los errores y ofrece resultados inmediatos. simplifica la gestion de grandes volumenes de informacion y es escalable a nuevos fondos y bancos.">
+      <summary>
+        <div class="case-top"><span class="case-svc">IA Empresarial</span><span class="case-sector">Servicios financieros</span></div>
+        <h3>IA que convierte cuatro días de conciliación de FCI en cuestión de horas</h3>
+        <div class="case-client">Operadora de la mayor red de gasoductos de Argentina</div>
+      <div class="case-metric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 6-8"/><path d="M17 7h4v4"/></svg>De 4 días a horas</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> El equipo de finanzas necesitaba agilizar la consolidación de sus distintos fondos comunes de inversión (FCI) para el cálculo de impuestos y su imputación en SAP. El procesamiento manual consumía varios días de trabajo de una persona, con alto coste operativo y elevado riesgo de errores.</p>
+        <p><b>Solución.</b> TeGeVe desarrolló una aplicación sobre la plataforma de Microsoft con inteligencia artificial que lee e interpreta automáticamente los documentos PDF de los bancos, vuelca los datos en Excel estructurado por FCI y consolida los resultados. El sistema calcula saldos e impuestos, notifica por Outlook y alerta sobre cualquier incidencia.</p>
+        <p><b>Resultado.</b> La solución reduce el procesamiento de cuatro días a cuestión de horas, minimiza los errores y ofrece resultados inmediatos. Simplifica la gestión de grandes volúmenes de información y es escalable a nuevos fondos y bancos.</p>
+        <div class="case-dtags"><span class="case-dtag">ia empresarial</span><span class="case-dtag">ai builder</span><span class="case-dtag">power automate</span><span class="case-dtag">fci</span><span class="case-dtag">conciliacion</span><span class="case-dtag">sap</span><span class="case-dtag">automatizacion</span><span class="case-dtag">servicios financieros</span><span class="case-dtag">microsoft</span><span class="case-dtag">excel online</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="ia empresarial" data-text="empresa del sector oil &amp; gas ia que automatiza la planificacion logistica diaria y reemplaza el excel manual logistica (oil &amp; gas) ia empresarial ia empresarial logistica oil &amp; gas ruteo de vehiculos optimizacion de flota automatizacion python fastapi google or-tools planificacion logistica la empresa planificaba su operacion logistica diaria de forma manual con hojas de excel: procesaba pedidos, completaba datos faltantes y definia recorridos segun la flota disponible. era un proceso complejo y exigente, con alto riesgo de error y fuerte dependencia del conocimiento del programador logistico, que debia gestionar a mano multiples restricciones (carga correcta de cisternas, estabilidad de los camiones, separacion de combustibles y eficiencia de las rutas). tegeve desarrollo una aplicacion con ia que automatiza la planificacion logistica replicando la logica del programador. la solucion integra los pedidos de distintas fuentes, completa automaticamente los datos faltantes, optimiza la carga de las cisternas y resuelve el problema de ruteo de vehiculos respetando todas las reglas del negocio, generando los recorridos diarios y la documentacion de envio de forma automatica. el equipo automatizo la planificacion logistica, redujo los tiempos del proceso y elimino los errores manuales. la solucion optimiza el uso de la flota, mejora la eficiencia de los recorridos y estandariza la operacion, ademas de sentar una base solida para escalar capacidades de ia mas avanzadas. el cliente valoro el proyecto con la maxima puntuacion (5/5).">
+      <summary>
+        <div class="case-top"><span class="case-svc">IA Empresarial</span><span class="case-sector">Logística (Oil &amp; Gas)</span></div>
+        <h3>IA que automatiza la planificación logística diaria y reemplaza el Excel manual</h3>
+        <div class="case-client">Empresa del sector Oil &amp; Gas</div>
+      <div class="case-metric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 6-8"/><path d="M17 7h4v4"/></svg>Valoración del cliente: 5/5</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> La empresa planificaba su operación logística diaria de forma manual con hojas de Excel: procesaba pedidos, completaba datos faltantes y definía recorridos según la flota disponible. Era un proceso complejo y exigente, con alto riesgo de error y fuerte dependencia del conocimiento del programador logístico, que debía gestionar a mano múltiples restricciones (carga correcta de cisternas, estabilidad de los camiones, separación de combustibles y eficiencia de las rutas).</p>
+        <p><b>Solución.</b> TeGeVe desarrolló una aplicación con IA que automatiza la planificación logística replicando la lógica del programador. La solución integra los pedidos de distintas fuentes, completa automáticamente los datos faltantes, optimiza la carga de las cisternas y resuelve el problema de ruteo de vehículos respetando todas las reglas del negocio, generando los recorridos diarios y la documentación de envío de forma automática.</p>
+        <p><b>Resultado.</b> El equipo automatizó la planificación logística, redujo los tiempos del proceso y eliminó los errores manuales. La solución optimiza el uso de la flota, mejora la eficiencia de los recorridos y estandariza la operación, además de sentar una base sólida para escalar capacidades de IA más avanzadas. El cliente valoró el proyecto con la máxima puntuación (5/5).</p>
+        <div class="case-dtags"><span class="case-dtag">ia empresarial</span><span class="case-dtag">logistica</span><span class="case-dtag">oil &amp; gas</span><span class="case-dtag">ruteo de vehiculos</span><span class="case-dtag">optimizacion de flota</span><span class="case-dtag">automatizacion</span><span class="case-dtag">python</span><span class="case-dtag">fastapi</span><span class="case-dtag">google or-tools</span><span class="case-dtag">planificacion logistica</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="oracle jd edwards" data-text="fabricante multinacional de equipamiento agricola doce anos de acompanamiento sobre jd edwards: un erp que crece con el negocio agroindustrial industria / agro oracle jd edwards oracle jd edwards jd edwards enterpriseone erp agro industria equipamiento agricola manufactura argentina escalabilidad soporte continuo una multinacional productora de equipamiento agricola necesitaba un erp robusto, capaz de adaptar con rapidez sus procesos ante los cambios de coyuntura y lo suficientemente escalable para acompanar su crecimiento. el desafio incluia ajustar el sistema a la realidad local sin desviarse de los estandares regionales. tegeve fue seleccionada en 2010 para apoyar la implementacion de jd edwards enterpriseone en argentina, abarcando la migracion de datos y la instalacion, sobre un modelo definido a partir del diseno adoptado en brasil. desde 2012, el equipo brinda un acompanamiento continuo, adaptando funcionalidades ante nuevos negocios como los derivados de la adquisicion de precision planting. el cliente gestiona de forma centralizada la produccion, la venta y la exportacion, junto con la administracion integral de cobranzas, pagos y facturas, y dispone de informacion en tiempo real de multiples sectores. la compania gano eficiencia y calidad en sus procesos de fabricacion gracias a una solucion escalable que evoluciona con el negocio.">
+      <summary>
+        <div class="case-top"><span class="case-svc">Oracle JD Edwards</span><span class="case-sector">Industria / Agro</span></div>
+        <h3>Doce años de acompañamiento sobre JD Edwards: un ERP que crece con el negocio agroindustrial</h3>
+        <div class="case-client">Fabricante multinacional de equipamiento agrícola</div>
+      <div class="case-metric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 6-8"/><path d="M17 7h4v4"/></svg>+12 años · 92.000 h/hombre</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> Una multinacional productora de equipamiento agrícola necesitaba un ERP robusto, capaz de adaptar con rapidez sus procesos ante los cambios de coyuntura y lo suficientemente escalable para acompañar su crecimiento. El desafío incluía ajustar el sistema a la realidad local sin desviarse de los estándares regionales.</p>
+        <p><b>Solución.</b> TeGeVe fue seleccionada en 2010 para apoyar la implementación de JD Edwards EnterpriseOne en Argentina, abarcando la migración de datos y la instalación, sobre un modelo definido a partir del diseño adoptado en Brasil. Desde 2012, el equipo brinda un acompañamiento continuo, adaptando funcionalidades ante nuevos negocios como los derivados de la adquisición de Precision Planting.</p>
+        <p><b>Resultado.</b> El cliente gestiona de forma centralizada la producción, la venta y la exportación, junto con la administración integral de cobranzas, pagos y facturas, y dispone de información en tiempo real de múltiples sectores. La compañía ganó eficiencia y calidad en sus procesos de fabricación gracias a una solución escalable que evoluciona con el negocio.</p>
+        <div class="case-dtags"><span class="case-dtag">oracle</span><span class="case-dtag">jd edwards</span><span class="case-dtag">jd edwards enterpriseone</span><span class="case-dtag">erp</span><span class="case-dtag">agro</span><span class="case-dtag">industria</span><span class="case-dtag">equipamiento agricola</span><span class="case-dtag">manufactura</span><span class="case-dtag">argentina</span><span class="case-dtag">escalabilidad</span><span class="case-dtag">soporte continuo</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="oracle jd edwards" data-text="nutrien seguridad robusta en oracle jd edwards: un modelo de acceso confiable para un lider del agro agro (insumos y servicios) oracle jd edwards oracle jd edwards erp seguridad agro insumos agricolas control de accesos assessment as is to be nutrien tras un assessment interno en el area de it, nutrien, el mayor proveedor de insumos y servicios para cultivos de la region, identifico la necesidad de revisar el modelo de seguridad de su erp y formalizar los niveles de acceso de los usuarios en sus operaciones de chile, uruguay y argentina. tegeve llevo a cabo una evaluacion integral del erp oracle jd edwards e1 9.2: diagnostico el estado actual (as is) del modelo de seguridad, definio el modelo objetivo (to be) y especifico las estrategias de adecuacion, con documentacion completa y recomendaciones para su implementacion. la seguridad paso a formar parte del enfoque estrategico de la compania. se optimizaron las protecciones del erp, se formalizaron los procesos sensibles de gestion de usuarios y se establecio un plan de mantenimiento con objetivos medibles, reforzando las practicas de seguridad mediante una colaboracion conjunta.">
+      <summary>
+        <div class="case-top"><span class="case-svc">Oracle JD Edwards</span><span class="case-sector">Agro (insumos y servicios)</span></div>
+        <h3>Seguridad robusta en Oracle JD Edwards: un modelo de acceso confiable para un líder del agro</h3>
+        <div class="case-client">Nutrien</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> Tras un assessment interno en el área de IT, Nutrien, el mayor proveedor de insumos y servicios para cultivos de la región, identificó la necesidad de revisar el modelo de seguridad de su ERP y formalizar los niveles de acceso de los usuarios en sus operaciones de Chile, Uruguay y Argentina.</p>
+        <p><b>Solución.</b> TeGeVe llevó a cabo una evaluación integral del ERP Oracle JD Edwards E1 9.2: diagnosticó el estado actual (As Is) del modelo de seguridad, definió el modelo objetivo (To Be) y especificó las estrategias de adecuación, con documentación completa y recomendaciones para su implementación.</p>
+        <p><b>Resultado.</b> La seguridad pasó a formar parte del enfoque estratégico de la compañía. Se optimizaron las protecciones del ERP, se formalizaron los procesos sensibles de gestión de usuarios y se estableció un plan de mantenimiento con objetivos medibles, reforzando las prácticas de seguridad mediante una colaboración conjunta.</p>
+        <div class="case-dtags"><span class="case-dtag">oracle jd edwards</span><span class="case-dtag">erp</span><span class="case-dtag">seguridad</span><span class="case-dtag">agro</span><span class="case-dtag">insumos agricolas</span><span class="case-dtag">control de accesos</span><span class="case-dtag">assessment</span><span class="case-dtag">as is to be</span><span class="case-dtag">nutrien</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="sap" data-text="empresa de consumo masivo monitor de integraciones sap: datos de empleados unificados y en tiempo real consumo masivo sap sap sap fiori sap btp successfactors hcm cpi integracion rrhh consumo masivo monitorizacion los equipos de soporte afrontaban errores de integracion entre sistemas, sobre todo con los datos de empleados repartidos entre servidores propios y plataformas en la nube, lo que generaba inconsistencias en los estados de actualizacion. un equipo dedicado debia revisar, clasificar y abrir tickets de error de forma manual varias veces al dia. tegeve desarrollo un monitor de errores de integracion en sap fiori, dentro de la plataforma sap btp del cliente, que se conecta con hcm (onpremise) y successfactors a traves de cpi para consolidar la informacion en un unico punto y mostrarla en linea. el personal administrativo accede a la informacion en tiempo real y el equipo antes dedicado a la revision manual quedo liberado para otras tareas. la parametrizacion de tendencias reduce el volumen de tickets y aligera la carga de los equipos de soporte. el trabajo conjunto con el cliente permitio incorporar funcionalidades adicionales no previstas inicialmente, como una pantalla de errores frecuentes con navegacion hacia sus soluciones.">
+      <summary>
+        <div class="case-top"><span class="case-svc">SAP</span><span class="case-sector">Consumo masivo</span></div>
+        <h3>Monitor de integraciones SAP: datos de empleados unificados y en tiempo real</h3>
+        <div class="case-client">Empresa de consumo masivo</div>
+      <div class="case-metric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 6-8"/><path d="M17 7h4v4"/></svg>8 profesionales · 17.379 h</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> Los equipos de soporte afrontaban errores de integración entre sistemas, sobre todo con los datos de empleados repartidos entre servidores propios y plataformas en la nube, lo que generaba inconsistencias en los estados de actualización. Un equipo dedicado debía revisar, clasificar y abrir tickets de error de forma manual varias veces al día.</p>
+        <p><b>Solución.</b> TeGeVe desarrolló un monitor de errores de integración en SAP Fiori, dentro de la plataforma SAP BTP del cliente, que se conecta con HCM (OnPremise) y SuccessFactors a través de CPI para consolidar la información en un único punto y mostrarla en línea.</p>
+        <p><b>Resultado.</b> El personal administrativo accede a la información en tiempo real y el equipo antes dedicado a la revisión manual quedó liberado para otras tareas. La parametrización de tendencias reduce el volumen de tickets y aligera la carga de los equipos de soporte. El trabajo conjunto con el cliente permitió incorporar funcionalidades adicionales no previstas inicialmente, como una pantalla de errores frecuentes con navegación hacia sus soluciones.</p>
+        <div class="case-dtags"><span class="case-dtag">sap</span><span class="case-dtag">sap fiori</span><span class="case-dtag">sap btp</span><span class="case-dtag">successfactors</span><span class="case-dtag">hcm</span><span class="case-dtag">cpi</span><span class="case-dtag">integracion</span><span class="case-dtag">rrhh</span><span class="case-dtag">consumo masivo</span><span class="case-dtag">monitorizacion</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="sap" data-text="empresa agroindustrial lider en argentina soporte sap continuo que reduce costes y blinda la operacion frente a la rotacion agroindustria sap sap soporte mesa de ayuda sap fi sap co sap mm sap sd sap pp agroindustria soporte remoto reduccion de costes una de las principales empresas agroindustriales de argentina necesitaba soporte funcional continuo sobre su sistema sap, abarcando la resolucion de incidencias, la atencion de consultas de los usuarios y la capacitacion permanente de los nuevos integrantes del equipo. tegeve diseno un modelo de soporte basado en la cercania, la colaboracion y la eficiencia. el equipo puso en marcha una mesa de ayuda funcional de niveles 1 y 2, con herramientas flexibles de gestion de tickets y una base de conocimiento compartida que permitio escalar las soluciones de forma agil. el servicio remoto redujo los costes operativos sin comprometer la calidad y evito los impactos derivados de la rotacion de personal. la asignacion flexible de recursos permitio ajustar los costes a las necesidades del negocio, con una valoracion del cliente de 5 sobre 5.">
+      <summary>
+        <div class="case-top"><span class="case-svc">SAP</span><span class="case-sector">Agroindustria</span></div>
+        <h3>Soporte SAP continuo que reduce costes y blinda la operación frente a la rotación</h3>
+        <div class="case-client">Empresa agroindustrial líder en Argentina</div>
+      <div class="case-metric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 6-8"/><path d="M17 7h4v4"/></svg>5/5 · Soporte N1 y N2</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> Una de las principales empresas agroindustriales de Argentina necesitaba soporte funcional continuo sobre su sistema SAP, abarcando la resolución de incidencias, la atención de consultas de los usuarios y la capacitación permanente de los nuevos integrantes del equipo.</p>
+        <p><b>Solución.</b> TeGeVe diseñó un modelo de soporte basado en la cercanía, la colaboración y la eficiencia. El equipo puso en marcha una mesa de ayuda funcional de niveles 1 y 2, con herramientas flexibles de gestión de tickets y una base de conocimiento compartida que permitió escalar las soluciones de forma ágil.</p>
+        <p><b>Resultado.</b> El servicio remoto redujo los costes operativos sin comprometer la calidad y evitó los impactos derivados de la rotación de personal. La asignación flexible de recursos permitió ajustar los costes a las necesidades del negocio, con una valoración del cliente de 5 sobre 5.</p>
+        <div class="case-dtags"><span class="case-dtag">sap</span><span class="case-dtag">soporte</span><span class="case-dtag">mesa de ayuda</span><span class="case-dtag">sap fi</span><span class="case-dtag">sap co</span><span class="case-dtag">sap mm</span><span class="case-dtag">sap sd</span><span class="case-dtag">sap pp</span><span class="case-dtag">agroindustria</span><span class="case-dtag">soporte remoto</span><span class="case-dtag">reduccion de costes</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="business intelligence" data-text="kimberly-clark decisiones basadas en datos para anticipar tendencias de consumo gran consumo business intelligence business intelligence snowflake power bi sap bw sap hana tableau data cloud analitica en la nube gran consumo tendencias de consumo toma de decisiones como lider mundial en productos de higiene, kimberly-clark necesitaba detectar tendencias de consumo y anticipar distintos escenarios para definir estrategias seguras. para ello requeria acceso a informacion actualizada en tiempo real desde sus filiales, con la flexibilidad y escalabilidad necesarias para sostener el crecimiento del analisis. tegeve acompano la evolucion de la plataforma analitica del cliente, migrando primero de sap bw a sap hana y tableau, y posteriormente adoptando snowflake (data cloud) y power bi en la nube. el equipo habilito asi un entorno escalable que consolida informacion de las distintas filiales y la pone a disposicion de forma actualizada. el seguimiento estadistico de indicadores propios y de mercado a nivel local, regional y global permite optimizar las acciones de produccion, logistica y exhibicion en gondola. ademas, la generacion de informes facilita redefinir objetivos estrategicos y tomar decisiones fundamentadas a partir de multiples variables.">
+      <summary>
+        <div class="case-top"><span class="case-svc">Business Intelligence</span><span class="case-sector">Gran consumo</span></div>
+        <h3>Decisiones basadas en datos para anticipar tendencias de consumo</h3>
+        <div class="case-client">Kimberly-Clark</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> Como líder mundial en productos de higiene, Kimberly-Clark necesitaba detectar tendencias de consumo y anticipar distintos escenarios para definir estrategias seguras. Para ello requería acceso a información actualizada en tiempo real desde sus filiales, con la flexibilidad y escalabilidad necesarias para sostener el crecimiento del análisis.</p>
+        <p><b>Solución.</b> TeGeVe acompañó la evolución de la plataforma analítica del cliente, migrando primero de SAP BW a SAP HANA y Tableau, y posteriormente adoptando Snowflake (Data Cloud) y Power BI en la nube. El equipo habilitó así un entorno escalable que consolida información de las distintas filiales y la pone a disposición de forma actualizada.</p>
+        <p><b>Resultado.</b> El seguimiento estadístico de indicadores propios y de mercado a nivel local, regional y global permite optimizar las acciones de producción, logística y exhibición en góndola. Además, la generación de informes facilita redefinir objetivos estratégicos y tomar decisiones fundamentadas a partir de múltiples variables.</p>
+        <div class="case-dtags"><span class="case-dtag">business intelligence</span><span class="case-dtag">snowflake</span><span class="case-dtag">power bi</span><span class="case-dtag">sap bw</span><span class="case-dtag">sap hana</span><span class="case-dtag">tableau</span><span class="case-dtag">data cloud</span><span class="case-dtag">analitica en la nube</span><span class="case-dtag">gran consumo</span><span class="case-dtag">tendencias de consumo</span><span class="case-dtag">toma de decisiones</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="desarrollo a medida" data-text="banco comafi un sistema de rating crediticio unificado y web que reduce costes de mantenimiento banca desarrollo a medida banca rating crediticio calificacion crediticia desarrollo a medida portal web angular java spring sql server usabilidad el banco necesitaba actualizar su aplicativo de calculo del rating, la calificacion crediticia para personas fisicas y juridicas, junto con la interfaz de carga de informacion asociada. tegeve realizo la parametrizacion del calculo del rating, centralizo la funcionalidad en una unica aplicacion y migro la herramienta a un portal web disenado con foco en la usabilidad. el nuevo desarrollo aporta mayor trazabilidad del funcionamiento y un soporte evolutivo de calidad que facilita la adaptacion a futuros requerimientos. al unificar la solucion en una sola aplicacion, se redujeron los costes de mantenimiento y mejoro la experiencia de usuario.">
+      <summary>
+        <div class="case-top"><span class="case-svc">Desarrollo a medida</span><span class="case-sector">Banca</span></div>
+        <h3>Un sistema de rating crediticio unificado y web que reduce costes de mantenimiento</h3>
+        <div class="case-client">Banco Comafi</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> El banco necesitaba actualizar su aplicativo de cálculo del rating, la calificación crediticia para personas físicas y jurídicas, junto con la interfaz de carga de información asociada.</p>
+        <p><b>Solución.</b> TeGeVe realizó la parametrización del cálculo del rating, centralizó la funcionalidad en una única aplicación y migró la herramienta a un portal web diseñado con foco en la usabilidad.</p>
+        <p><b>Resultado.</b> El nuevo desarrollo aporta mayor trazabilidad del funcionamiento y un soporte evolutivo de calidad que facilita la adaptación a futuros requerimientos. Al unificar la solución en una sola aplicación, se redujeron los costes de mantenimiento y mejoró la experiencia de usuario.</p>
+        <div class="case-dtags"><span class="case-dtag">banca</span><span class="case-dtag">rating crediticio</span><span class="case-dtag">calificacion crediticia</span><span class="case-dtag">desarrollo a medida</span><span class="case-dtag">portal web</span><span class="case-dtag">angular</span><span class="case-dtag">java</span><span class="case-dtag">spring</span><span class="case-dtag">sql server</span><span class="case-dtag">usabilidad</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="desarrollo a medida" data-text="aseguradora lider del sector una software factory que mantiene a una aseguradora lider al ritmo de su negocio seguros desarrollo a medida seguros software factory desarrollo a medida java spring mvc hibernate sql server jboss mantenimiento evolutivo ciclo de vida una aseguradora de referencia necesitaba adaptar su plataforma de gestion a los cambios constantes de la operativa del negocio, sin renunciar a calidad, estabilidad ni a tiempos de respuesta agiles. tegeve puso en marcha una software factory con un equipo de analistas, desarrolladores y testers que da soporte a todo el ciclo de vida de las herramientas, actualizando la plataforma de forma continua. el cliente logro adaptar su sistema a la evolucion de la operativa con calidad y rapidez, lo que le permite sostener su posicion como uno de los lideres mas relevantes de su industria.">
+      <summary>
+        <div class="case-top"><span class="case-svc">Desarrollo a medida</span><span class="case-sector">Seguros</span></div>
+        <h3>Una Software Factory que mantiene a una aseguradora líder al ritmo de su negocio</h3>
+        <div class="case-client">Aseguradora líder del sector</div>
+      <div class="case-metric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 6-8"/><path d="M17 7h4v4"/></svg>22 expertos · 32.000 h/año</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> Una aseguradora de referencia necesitaba adaptar su plataforma de gestión a los cambios constantes de la operativa del negocio, sin renunciar a calidad, estabilidad ni a tiempos de respuesta ágiles.</p>
+        <p><b>Solución.</b> TeGeVe puso en marcha una Software Factory con un equipo de analistas, desarrolladores y testers que da soporte a todo el ciclo de vida de las herramientas, actualizando la plataforma de forma continua.</p>
+        <p><b>Resultado.</b> El cliente logró adaptar su sistema a la evolución de la operativa con calidad y rapidez, lo que le permite sostener su posición como uno de los líderes más relevantes de su industria.</p>
+        <div class="case-dtags"><span class="case-dtag">seguros</span><span class="case-dtag">software factory</span><span class="case-dtag">desarrollo a medida</span><span class="case-dtag">java</span><span class="case-dtag">spring mvc</span><span class="case-dtag">hibernate</span><span class="case-dtag">sql server</span><span class="case-dtag">jboss</span><span class="case-dtag">mantenimiento evolutivo</span><span class="case-dtag">ciclo de vida</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="desarrollo a medida" data-text="first data (soluciones globales de pagos) migracion a tarjetas con chip emv: transacciones mas seguras y menos fraude servicios financieros desarrollo a medida servicios financieros emv tarjetas con chip medios de pago integracion testing cobol mainframe antifraude certificacion ic first data, proveedor global de soluciones de pagos, necesitaba adaptar sus procesos para habilitar la operatividad de tarjetas con chip (emv). el objetivo era actualizar su tecnologia para dar soporte simultaneo a tarjetas con chip y de banda magnetica. tegeve ofrecio servicios de integracion, soporte, implementacion y testing sobre el entorno de pagos del cliente. el equipo adapto el modelo de datos para diferenciar las tarjetas con chip de las de banda magnetica y trabajo sobre los sistemas de autorizacion y pagos internacionales. se mejoro la seguridad de las transacciones y se redujo el fraude, habilitando la operatividad tanto con banda magnetica como con chip. ademas, se logro la certificacion de tarjetas ic y mejoras en los sistemas de autorizacion y de pagos internacionales.">
+      <summary>
+        <div class="case-top"><span class="case-svc">Desarrollo a medida</span><span class="case-sector">Servicios financieros</span></div>
+        <h3>Migración a tarjetas con chip EMV: transacciones más seguras y menos fraude</h3>
+        <div class="case-client">First Data (soluciones globales de pagos)</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> First Data, proveedor global de soluciones de pagos, necesitaba adaptar sus procesos para habilitar la operatividad de tarjetas con chip (EMV). El objetivo era actualizar su tecnología para dar soporte simultáneo a tarjetas con chip y de banda magnética.</p>
+        <p><b>Solución.</b> TeGeVe ofreció servicios de integración, soporte, implementación y testing sobre el entorno de pagos del cliente. El equipo adaptó el modelo de datos para diferenciar las tarjetas con chip de las de banda magnética y trabajó sobre los sistemas de autorización y pagos internacionales.</p>
+        <p><b>Resultado.</b> Se mejoró la seguridad de las transacciones y se redujo el fraude, habilitando la operatividad tanto con banda magnética como con chip. Además, se logró la certificación de tarjetas IC y mejoras en los sistemas de autorización y de pagos internacionales.</p>
+        <div class="case-dtags"><span class="case-dtag">servicios financieros</span><span class="case-dtag">emv</span><span class="case-dtag">tarjetas con chip</span><span class="case-dtag">medios de pago</span><span class="case-dtag">integracion</span><span class="case-dtag">testing</span><span class="case-dtag">cobol</span><span class="case-dtag">mainframe</span><span class="case-dtag">antifraude</span><span class="case-dtag">certificacion ic</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="integracion" data-text="first data (licenciataria de mastercard en argentina) sistemas legacy al servicio de nuevas estrategias de negocio en medios de pago finanzas / medios de pago integracion integracion sistemas legacy mainframe finanzas medios de pago mastercard cobol java db2 first data, entidad financiera licenciataria de mastercard, necesitaba incorporar a sus sistemas nuevas prestaciones que acompanaran sus estrategias de marketing y elevaran la calidad de servicios como masterassist, los prestamos en linea y los resumenes de gastos con informacion mas detallada. tegeve integro los sistemas legacy con nuevas funcionalidades y modificaciones para ampliar y mejorar las plataformas de masterassist, prestamos, el programa de fidelizacion, las campanas y las cuentas corrientes, sobre un entorno mainframe. la entidad amplio y mejoro su oferta de servicios, reforzando su posicionamiento de mercado. se incorporaron datos al servicio de asistencia medica, se habilito una nueva interfaz web en la plataforma de call center y se unifico la presentacion de bonificaciones en los resumenes de cuenta.">
+      <summary>
+        <div class="case-top"><span class="case-svc">Integración</span><span class="case-sector">Finanzas / Medios de pago</span></div>
+        <h3>Sistemas legacy al servicio de nuevas estrategias de negocio en medios de pago</h3>
+        <div class="case-client">First Data (licenciataria de MasterCard en Argentina)</div>
+      <div class="case-metric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 6-8"/><path d="M17 7h4v4"/></svg>16 profesionales · 21.600 h</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> First Data, entidad financiera licenciataria de MasterCard, necesitaba incorporar a sus sistemas nuevas prestaciones que acompañaran sus estrategias de marketing y elevaran la calidad de servicios como MasterAssist, los préstamos en línea y los resúmenes de gastos con información más detallada.</p>
+        <p><b>Solución.</b> TeGeVe integró los sistemas legacy con nuevas funcionalidades y modificaciones para ampliar y mejorar las plataformas de MasterAssist, préstamos, el programa de fidelización, las campañas y las cuentas corrientes, sobre un entorno mainframe.</p>
+        <p><b>Resultado.</b> La entidad amplió y mejoró su oferta de servicios, reforzando su posicionamiento de mercado. Se incorporaron datos al servicio de asistencia médica, se habilitó una nueva interfaz web en la plataforma de Call Center y se unificó la presentación de bonificaciones en los resúmenes de cuenta.</p>
+        <div class="case-dtags"><span class="case-dtag">integracion</span><span class="case-dtag">sistemas legacy</span><span class="case-dtag">mainframe</span><span class="case-dtag">finanzas</span><span class="case-dtag">medios de pago</span><span class="case-dtag">mastercard</span><span class="case-dtag">cobol</span><span class="case-dtag">java</span><span class="case-dtag">db2</span></div>
+      </div>
+    </details>
+    <details class="case" data-svc="assessment" data-text="motta internacional business value assessment: la decision de erp de motta internacional, basada en datos distribucion, retail y logistica assessment business value assessment erp assessment retail distribucion logistica modernizacion tecnologica seleccion de erp roadmap motta internacional motta internacional operaba con multiples sistemas erp antiguos e independientes que ya no respondian a las necesidades cambiantes del grupo. la compania necesitaba unificar su infraestructura tecnologica y tomar una decision de inversion fundamentada sobre que plataforma adoptar. el equipo de tegeve llevo a cabo un business value assessment: mapeo los procesos y el ecosistema tecnologico para construir un modelo as is, diseno un modelo multidimensional de evaluacion a medida y, sobre esa base, realizo un analisis comparativo de dos opciones de erp world-class. motta internacional obtuvo informacion objetiva y fundada para seleccionar el erp mas conveniente para el grupo, junto con un roadmap de acciones concretas a ejecutar antes de la implementacion. la decision de inversion dejo de basarse en percepciones para apoyarse en evidencia estructurada.">
+      <summary>
+        <div class="case-top"><span class="case-svc">Assessment</span><span class="case-sector">Distribución, retail y logística</span></div>
+        <h3>Business Value Assessment: la decisión de ERP de Motta Internacional, basada en datos</h3>
+        <div class="case-client">Motta Internacional</div>
+      <div class="case-metric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-6 4 4 6-8"/><path d="M17 7h4v4"/></svg>14 profesionales · ≈1.600 h</div>
+        <span class="case-more">Ver caso<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+      </summary>
+      <div class="case-detail">
+        <p><b>Reto.</b> Motta Internacional operaba con múltiples sistemas ERP antiguos e independientes que ya no respondían a las necesidades cambiantes del grupo. La compañía necesitaba unificar su infraestructura tecnológica y tomar una decisión de inversión fundamentada sobre qué plataforma adoptar.</p>
+        <p><b>Solución.</b> El equipo de TeGeVe llevó a cabo un Business Value Assessment: mapeó los procesos y el ecosistema tecnológico para construir un modelo As Is, diseñó un modelo multidimensional de evaluación a medida y, sobre esa base, realizó un análisis comparativo de dos opciones de ERP world-class.</p>
+        <p><b>Resultado.</b> Motta Internacional obtuvo información objetiva y fundada para seleccionar el ERP más conveniente para el grupo, junto con un roadmap de acciones concretas a ejecutar antes de la implementación. La decisión de inversión dejó de basarse en percepciones para apoyarse en evidencia estructurada.</p>
+        <div class="case-dtags"><span class="case-dtag">business value assessment</span><span class="case-dtag">erp</span><span class="case-dtag">assessment</span><span class="case-dtag">retail</span><span class="case-dtag">distribucion</span><span class="case-dtag">logistica</span><span class="case-dtag">modernizacion tecnologica</span><span class="case-dtag">seleccion de erp</span><span class="case-dtag">roadmap</span><span class="case-dtag">motta internacional</span></div>
+      </div>
+    </details>
+    </div>
+    <p class="cases-empty" id="casesEmpty">No hay casos que coincidan con tu búsqueda. Prueba con otra palabra clave o quita los filtros.</p>
   </div>
 </section>
 
@@ -1010,6 +1417,40 @@ async function ask(q){
   setTimeout(() => { t.remove(); localAnswer(q); }, 480 + Math.random()*420);
 }
 aiSend.addEventListener('click', () => { const v = aiInput.value.trim(); if (v) ask(v); });
+
+/* Filtro de casos de éxito */
+(function(){
+  var grid = document.getElementById('casesGrid');
+  if(!grid) return;
+  var search = document.getElementById('caseSearch');
+  var chipsBox = document.getElementById('caseChips');
+  var empty = document.getElementById('casesEmpty');
+  var cards = Array.prototype.slice.call(grid.querySelectorAll('.case'));
+  var activeSvc = '';
+  function norm(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+  function apply(){
+    var q = norm(search.value.trim());
+    var toks = q ? q.split(/\s+/) : [];
+    var shown = 0;
+    cards.forEach(function(c){
+      var okSvc = !activeSvc || c.getAttribute('data-svc') === activeSvc;
+      var txt = c.getAttribute('data-text') || '';
+      var okTxt = toks.every(function(t){ return txt.indexOf(t) !== -1; });
+      var ok = okSvc && okTxt;
+      c.style.display = ok ? '' : 'none';
+      if(ok) shown++;
+    });
+    empty.style.display = shown ? 'none' : 'block';
+  }
+  search.addEventListener('input', apply);
+  chipsBox.addEventListener('click', function(e){
+    var b = e.target.closest('.cf-chip'); if(!b) return;
+    chipsBox.querySelectorAll('.cf-chip').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    activeSvc = b.getAttribute('data-f') || '';
+    apply();
+  });
+})();
 aiInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = aiInput.value.trim(); if (v) ask(v); } });
 </script>
 
