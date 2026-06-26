@@ -38,4 +38,4 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
-Sitemap: https://www.tegeve.es/sitemap.xml
+Sitemap: https://tegevem.es/sitemap.xml

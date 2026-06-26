@@ -32,7 +32,7 @@ Banca y finanzas, gran consumo, energía y oil & gas, infraestructuras, sector p
 - Business Intelligence: plataforma analítica (SAP BW/HANA, Tableau, Snowflake, Power BI) para Kimberly-Clark.
 - Desarrollo a medida: rating crediticio web para Banco Comafi; Software Factory para una aseguradora líder (32.000 h/año); migración a tarjetas con chip EMV para First Data.
 - Integración y assessment: integración de sistemas legacy en medios de pago (MasterCard/First Data); Business Value Assessment de ERP para Motta Internacional.
-- Disponibles y filtrables por servicio o palabra clave en https://www.tegeve.es/#casos
+- Disponibles y filtrables por servicio o palabra clave en https://tegevem.es/#casos
 
 ## Fortalezas de TeGeVe
 Equipos senior cualificados y estables, trato directo, modalidad nearshore eficiente en costes, más de 30 años de especialización técnica e IA que llega a producción con casos reales.
@@ -44,6 +44,6 @@ Equipos senior cualificados y estables, trato directo, modalidad nearshore efici
 - USA: info@tgvamericas.net · +1 561 306-5121
 
 ## Recursos
-- Web principal: https://www.tegeve.es/
-- Preguntas frecuentes: https://www.tegeve.es/#faq
-- Herramienta TGV Intel (radar tecnológico B2B): https://www.tegeve.es/intel.html
+- Web principal: https://tegevem.es/
+- Preguntas frecuentes: https://tegevem.es/#faq
+- Herramienta TGV Intel (radar tecnológico B2B): https://tegevem.es/intel.html

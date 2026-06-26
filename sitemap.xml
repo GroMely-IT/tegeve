@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.tegeve.es/</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://www.tegeve.es/servicios/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.tegeve.es/casos/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.tegeve.es/nosotros/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.tegeve.es/contacto/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://tegevem.es/</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://tegevem.es/servicios/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://tegevem.es/casos/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://tegevem.es/nosotros/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://tegevem.es/contacto/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>

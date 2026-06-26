@@ -52,7 +52,7 @@ ${kb}`;
 // Orígenes permitidos (CORS)
 const ALLOW = [
   "https://gagrosso.github.io",
-  "https://www.tegeve.es",
+  "https://tegevem.es",
   "https://tegeve.es",
   "http://localhost:4178",
   "http://localhost:8000",
