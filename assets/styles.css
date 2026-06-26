@@ -184,13 +184,6 @@ section{position:relative}
 .card .tags{margin-top:16px;display:flex;flex-wrap:wrap;gap:7px}
 .card .tags span{font-size:.74rem;font-weight:600;color:var(--red-700);background:var(--red-tint);padding:4px 10px;border-radius:999px}
 
-/* En LinkedIn / Novedades */
-.li-foot{margin-top:40px;display:flex;justify-content:center}
-.btn-li{background:#0A66C2;color:#fff;box-shadow:0 12px 30px -10px rgba(10,102,194,.5)}
-.btn-li:hover{background:#085296;transform:translateY(-2px) scale(1.015);box-shadow:0 18px 44px -12px rgba(10,102,194,.6)}
-.li-embed{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--paper);box-shadow:var(--shadow)}
-.li-embed iframe{display:block;width:100%;border:0}
-
 /* Pinned scene */
 .pin{position:relative;background:var(--ink);color:#fff}
 .pin-track{height:400vh}
@@ -632,3 +625,9 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .svc-case h3{font-size:1.08rem;letter-spacing:-.01em;color:var(--ink);margin:2px 0}
 .svc-case .svc-case-meta{color:var(--t2);font-size:.92rem}
 .svc-case .svc-case-metric{color:var(--red);font-weight:700;font-size:.92rem}
+
+/* Hero de página de servicio: sin "pinned", centrado vertical (una pantalla) */
+.svc-feature.svc-hero{min-height:100vh}
+.svc-feature.svc-hero .svc-bg-sticky{position:absolute;inset:0;height:100%}
+.svc-feature.svc-hero .svc-inner{margin-top:0;min-height:100vh;display:flex;align-items:center;padding:104px 0 60px}
+@media(max-width:900px){.svc-feature.svc-hero{min-height:auto}.svc-feature.svc-hero .svc-inner{min-height:auto;padding:96px 0 54px}}
