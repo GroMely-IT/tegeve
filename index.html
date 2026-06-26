@@ -186,7 +186,7 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 .blob.b3{width:36vw;height:36vw;left:34vw;bottom:-18vw;background:radial-gradient(circle,rgba(227,6,19,.12),transparent 62%)}
 .grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(39,43,54,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(39,43,54,.045) 1px,transparent 1px);background-size:62px 62px;mask-image:radial-gradient(120% 80% at 50% 0%,#000 25%,transparent 78%)}
 .hero-inner{position:relative;z-index:2;max-width:var(--max);margin:0 auto;padding:0 24px;width:100%}
-.hero3d{position:absolute;top:0;right:0;width:54%;height:100%;z-index:1;pointer-events:none}
+.hero3d{position:absolute;top:0;right:0;width:54%;height:100%;z-index:1;pointer-events:auto;touch-action:none;cursor:grab}
 .hero3d::before{content:"";position:absolute;inset:0;background:radial-gradient(46% 46% at 62% 47%,rgba(227,6,19,.10),rgba(39,43,54,.06) 45%,transparent 72%)}
 .hero3d canvas{display:block}
 @media(max-width:900px){.hero3d{display:none}}
@@ -383,9 +383,20 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
   *{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
   .reveal{opacity:1;transform:none}
 }
+
+/* Intro logo a pantalla completa */
+#intro{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:radial-gradient(62% 62% at 50% 45%,#ffffff,#EEF2F7)}
+#intro img{width:min(74vw,640px);height:auto;opacity:0;transform:scale(.85);animation:introIn .7s var(--ease-out) forwards}
+#intro.out{animation:introOut .7s var(--ease-out) forwards;pointer-events:none}
+@keyframes introIn{to{opacity:1;transform:scale(1)}}
+@keyframes introOut{to{opacity:0;transform:scale(1.07)}}
+.hero3d::before{pointer-events:none}
+.hero-inner{pointer-events:none}
+.hero-inner>*{pointer-events:auto}
 </style>
 </head>
 <body>
+<div id="intro" aria-hidden="true"><img src="assets/logo.png" alt="TeGeVe"></div>
 <a class="skip" href="#servicios">Saltar al contenido</a>
 
 <nav class="nav" id="nav">
@@ -748,6 +759,7 @@ const burger = document.getElementById('burger'), navLinks = document.getElement
 burger.addEventListener('click', () => { const show = navLinks.classList.toggle('show'); burger.setAttribute('aria-expanded', String(show)); });
 navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('show')));
 document.getElementById('year').textContent = new Date().getFullYear();
+(function(){var i=document.getElementById('intro');if(!i)return;var rm=matchMedia('(prefers-reduced-motion: reduce)').matches;if(sessionStorage.getItem('tgvIntro')||rm){i.remove();return;}sessionStorage.setItem('tgvIntro','1');var c=function(){i.classList.add('out');setTimeout(function(){i.remove();},700);};setTimeout(c,1500);i.addEventListener('click',c);})();
 
 const io = new IntersectionObserver((entries) => {
   entries.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
@@ -922,7 +934,7 @@ import * as THREE from 'three';
   if (!host) return;
   let started = false;
   function start(){
-    if (started || host.clientWidth < 60) return;   // 0 cuando está oculto en móvil (display:none)
+    if (started || host.clientWidth < 60) return;
     started = true;
     try {
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -934,111 +946,150 @@ import * as THREE from 'three';
       renderer.setSize(W(), H()); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
       host.appendChild(renderer.domElement);
 
-      const R = 1, RED = 0xE30613;
-      const root = new THREE.Group();
-      root.rotation.z = 0.41;   // inclinación axial ~23.4°
-      root.rotation.x = -0.18;
-      scene.add(root);
-      const spin = new THREE.Group(); root.add(spin);
+      const R=1, RED=0xE30613;
+      const redCol=new THREE.Color(RED), grayCol=new THREE.Color(0x565C68);
+      const root=new THREE.Group(); root.rotation.z=0.41; scene.add(root);
+      const baseX=-0.18; let pitch=0;
+      const spin=new THREE.Group(); root.add(spin);
 
-      // planeta de cristal (muy tenue) + halo
       spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*0.99,48,48), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.05 })));
-      spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.005,48,48), new THREE.MeshBasicMaterial({ color:0x272B36, transparent:true, opacity:0.05, side:THREE.BackSide })));
+      // atmósfera (halo rojo, fresnel)
+      root.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.14,48,48), new THREE.ShaderMaterial({
+        transparent:true, side:THREE.BackSide, depthWrite:false,
+        uniforms:{ c:{ value:new THREE.Color(RED) } },
+        vertexShader:'varying vec3 vN; void main(){ vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+        fragmentShader:'varying vec3 vN; uniform vec3 c; void main(){ float i=pow(clamp(0.74-dot(vN,vec3(0.0,0.0,1.0)),0.0,1.0),2.4); gl_FragColor=vec4(c, i*0.30); }'
+      })));
 
-      const ll = (lat,lng,r)=>{ const phi=(90-lat)*Math.PI/180, th=(lng+180)*Math.PI/180;
+      const ll=(lat,lng,r)=>{ const phi=(90-lat)*Math.PI/180, th=(lng+180)*Math.PI/180;
         return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(th), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(th)); };
 
-      // Sedes TeGeVe (rojo grande + halo): ES, MX, US, AR
-      const OFFICES = [ [40.4,-3.7], [19.4,-99.1], [38.0,-97.0], [-34.6,-58.4] ];
-      const mRed = new THREE.MeshBasicMaterial({ color:RED });
-      OFFICES.forEach(([la,lo])=>{ const p=ll(la,lo,R*1.014);
+      const OFFICES=[[40.4,-3.7],[19.4,-99.1],[38.0,-97.0],[-34.6,-58.4]];   // ES, MX, US, AR
+      const oPos=OFFICES.map(([la,lo])=>ll(la,lo,R));
+      const mRed=new THREE.MeshBasicMaterial({ color:RED });
+      const pings=[];
+      OFFICES.forEach(([la,lo],k)=>{ const p=ll(la,lo,R*1.014);
         const m=new THREE.Mesh(new THREE.SphereGeometry(0.034,16,16),mRed); m.position.copy(p); spin.add(m);
-        const g=new THREE.Mesh(new THREE.SphereGeometry(0.085,16,16), new THREE.MeshBasicMaterial({color:RED,transparent:true,opacity:0.16})); g.position.copy(p); spin.add(g); });
-
-      // Regiones cubiertas (sus puntos de continente se tiñen de rojo)
-      function covered(lat,lng){
-        if(lat>=36 && lat<=72 && lng>=-26 && lng<=46) return true;      // Europa (desde España)
-        if(lat>=7 && lat<=49.5 && lng>=-125 && lng<=-77) return true;   // EE.UU. + México + Centroamérica
-        if(lat>=-56 && lat<=13 && lng>=-82 && lng<=-34) return true;    // Sudamérica (desde Argentina)
-        return false;
-      }
-
-      // Conexiones animadas (cometa viajero) entre las 4 sedes
-      const conns = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
-      const SEG=64, WIN=10;
-      const baseMat = new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.18 });
-      const cometMat = new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.9 });
-      const headMat = new THREE.MeshBasicMaterial({ color:0xff4d57 });
-      const arcs = conns.map(([ai,bi])=>{
-        const A = ll(OFFICES[ai][0], OFFICES[ai][1], R), B = ll(OFFICES[bi][0], OFFICES[bi][1], R);
-        const mid = A.clone().add(B).multiplyScalar(0.5).normalize().multiplyScalar(R*(1.14 + A.distanceTo(B)*0.17));
-        const curve = new THREE.QuadraticBezierCurve3(A, mid, B);
-        const pts = curve.getPoints(SEG);
-        spin.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), baseMat));
-        const comet = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cometMat); comet.geometry.setDrawRange(0,0); spin.add(comet);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.02,8,8), headMat); spin.add(head);
-        return { curve, comet, head, t: Math.random()*1.18, speed: 0.0035 + Math.random()*0.0025 };
+        const g=new THREE.Mesh(new THREE.SphereGeometry(0.085,16,16),new THREE.MeshBasicMaterial({color:RED,transparent:true,opacity:0.16})); g.position.copy(p); spin.add(g);
+        const ringMat=new THREE.MeshBasicMaterial({color:RED,transparent:true,opacity:0.55,side:THREE.DoubleSide,depthWrite:false});
+        const ring=new THREE.Mesh(new THREE.RingGeometry(0.05,0.063,40),ringMat); ring.position.copy(p); ring.lookAt(p.clone().multiplyScalar(2)); spin.add(ring);
+        pings.push({ ring, mat:ringMat, phase:k*0.55 });
       });
 
-      // Continentes: puntos sobre tierra (gris) y rojos en las regiones cubiertas
-      function addPoints(arr, color, size, opacity){
-        if(!arr.length) return;
-        const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr),3));
-        spin.add(new THREE.Points(g, new THREE.PointsMaterial({ color, size, sizeAttenuation:true, transparent:true, opacity })));
+      function covered(lat,lng){
+        if(lat>=36&&lat<=72&&lng>=-26&&lng<=46) return 0;     // Europa -> ES
+        if(lat>=7&&lat<=49.5&&lng>=-125&&lng<=-77) return 1;  // Norte/Centroamérica -> MX/US
+        if(lat>=-56&&lat<=13&&lng>=-82&&lng<=-34) return 2;   // Sudamérica -> AR
+        return -1;
       }
-      function fallbackSphere(){
-        const N=2200, a=[], gr=Math.PI*(1+Math.sqrt(5));
-        for(let i=0;i<N;i++){ const t=i/(N-1), inc=Math.acos(1-2*t), az=gr*i;
-          a.push(R*Math.sin(inc)*Math.cos(az), R*Math.cos(inc), R*Math.sin(inc)*Math.sin(az)); }
-        addPoints(a, 0x5A5F6B, 0.014, 0.7); frame();
+
+      // Conexiones sutiles oficina -> países que atiende
+      const TARGETS=[
+        [0,51.5,-0.12],[0,48.85,2.35],[0,52.52,13.40],[0,41.9,12.5],[0,38.72,-9.14],[0,52.37,4.9],[0,52.23,21.0],[0,59.33,18.07],[0,48.21,16.37],
+        [2,40.71,-74.0],[2,41.88,-87.63],[2,34.05,-118.24],[2,29.76,-95.37],[2,25.76,-80.19],[2,47.61,-122.33],[2,39.74,-104.99],
+        [1,14.6,-90.5],[1,13.69,-89.22],[1,14.07,-87.19],[1,12.13,-86.25],[1,9.93,-84.08],[1,8.98,-79.52],[1,21.16,-86.85],
+        [3,-33.45,-70.66],[3,-12.05,-77.04],[3,4.71,-74.07],[3,-23.55,-46.63],[3,10.49,-66.88],[3,-0.18,-78.47],[3,-16.5,-68.15],[3,-34.9,-56.16],[3,-25.28,-57.63]
+      ];
+      const SEG=48, WIN=8, delay=[1.6,2.2,2.2,2.8];
+      const paintStart=[delay[0]+1.2, delay[1]+1.2, delay[2]+1.2, delay[3]+1.2];
+      const baseMat=new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.1 });
+      const cometMat=new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.7 });
+      const headMat=new THREE.MeshBasicMaterial({ color:0xff4d57 });
+      const conns=TARGETS.map(([oi,la,lo])=>{
+        const A=oPos[oi], B=ll(la,lo,R);
+        const mid=A.clone().add(B).multiplyScalar(0.5).normalize().multiplyScalar(R*(1.1+A.distanceTo(B)*0.18));
+        const curve=new THREE.QuadraticBezierCurve3(A,mid,B);
+        const pts=curve.getPoints(SEG);
+        spin.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), baseMat));
+        const comet=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cometMat); comet.geometry.setDrawRange(0,0); spin.add(comet);
+        const head=new THREE.Mesh(new THREE.SphereGeometry(0.016,8,8), headMat); head.visible=false; spin.add(head);
+        return { curve, comet, head, start: delay[oi]+Math.random()*0.3 };
+      });
+
+      // Continentes con color por vértice + pintado radial desde cada sede
+      let colAttr=null, dotSrc=null, dotT0=null, dotDone=null, painting=false;
+      function buildDots(positions, srcArr, t0Arr){
+        const n=positions.length/3;
+        const g=new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions),3));
+        const cols=new Float32Array(n*3);
+        for(let i=0;i<n;i++){ cols[i*3]=grayCol.r; cols[i*3+1]=grayCol.g; cols[i*3+2]=grayCol.b; }
+        g.setAttribute('color', new THREE.BufferAttribute(cols,3));
+        colAttr=g.getAttribute('color'); dotSrc=srcArr; dotT0=t0Arr; dotDone=new Uint8Array(n);
+        if(reduce){ for(let i=0;i<n;i++) if(dotSrc[i]>=0) dotT0[i]=-1; }
+        spin.add(new THREE.Points(g, new THREE.PointsMaterial({ size:0.014, sizeAttenuation:true, transparent:true, opacity:0.78, vertexColors:true })));
+        painting=true; frame();
       }
-      const img = new Image();
-      img.onload = () => { try {
-        const sw=img.width, sh=img.height;
-        const cv=document.createElement('canvas'); cv.width=sw; cv.height=sh;
-        const cx=cv.getContext('2d'); cx.drawImage(img,0,0);
-        const d=cx.getImageData(0,0,sw,sh).data;
-        const px=(u,v)=>d[((((v%sh)+sh)%sh)*sw + (((u%sw)+sw)%sw))*4];
+      function fallback(){
+        const N=2200,a=[],src=[],t0=[],gr=Math.PI*(1+Math.sqrt(5));
+        for(let i=0;i<N;i++){ const t=i/(N-1),inc=Math.acos(1-2*t),az=gr*i;
+          a.push(R*Math.sin(inc)*Math.cos(az),R*Math.cos(inc),R*Math.sin(inc)*Math.sin(az)); src.push(-1); t0.push(Infinity); }
+        buildDots(a,src,t0);
+      }
+      const img=new Image();
+      img.onload=()=>{ try{
+        const sw=img.width, sh=img.height; const cv=document.createElement('canvas'); cv.width=sw; cv.height=sh;
+        const cx=cv.getContext('2d'); cx.drawImage(img,0,0); const d=cx.getImageData(0,0,sw,sh).data;
+        const px=(u,v)=>d[((((v%sh)+sh)%sh)*sw+(((u%sw)+sw)%sw))*4];
         const uv=(lat,lng)=>[Math.round((lng+180)/360*sw), Math.round((90-lat)/180*sh)];
-        const af=uv(8,21), pa=uv(0,-150);
-        const landDark = px(af[0],af[1]) < px(pa[0],pa[1]);
-        const isLand=(u,v)=> landDark ? px(u,v)<110 : px(u,v)>145;
-        const gray=[], red=[], STEP=2, DENS=0.92;
-        for(let v=0; v<sh; v+=STEP){
-          const lat=90-(v/sh)*180;
-          if(lat<-58 || lat>84) continue;
-          const w=Math.cos(lat*Math.PI/180);
-          for(let u=0; u<sw; u+=STEP){
-            if(!isLand(u,v)) continue;
-            if(Math.random() > w*DENS) continue;
-            const lng=(u/sw)*360-180;
+        const af=uv(8,21), pa=uv(0,-150); const landDark=px(af[0],af[1])<px(pa[0],pa[1]);
+        const isLand=(u,v)=>landDark?px(u,v)<110:px(u,v)>145;
+        const pos=[],src=[],t0=[],STEP=2,DENS=0.92;
+        for(let v=0;v<sh;v+=STEP){ const lat=90-(v/sh)*180; if(lat<-58||lat>84) continue; const w=Math.cos(lat*Math.PI/180);
+          for(let u=0;u<sw;u+=STEP){ if(!isLand(u,v)) continue; if(Math.random()>w*DENS) continue;
+            const lng=(u/sw)*360-180; const reg=covered(lat,lng);
             const p=ll(lat+(Math.random()-0.5), lng+(Math.random()-0.5), R*0.999);
-            (covered(lat,lng)?red:gray).push(p.x,p.y,p.z);
+            pos.push(p.x,p.y,p.z);
+            if(reg<0){ src.push(-1); t0.push(Infinity); }
+            else { const oi = reg===0?0 : reg===2?3 : (p.distanceTo(oPos[1])<p.distanceTo(oPos[2])?1:2);
+              src.push(oi); t0.push(paintStart[oi] + p.distanceTo(oPos[oi])*0.9); }
           }
         }
-        addPoints(gray, 0x565C68, 0.014, 0.72);   // continentes (gris oscuro, más visibles)
-        addPoints(red,  RED,      0.017, 0.95);   // regiones cubiertas (rojo de marca)
-        frame();
-      } catch(e){ fallbackSphere(); } };
-      img.onerror = fallbackSphere;
-      img.src = 'assets/earth-mask.png';
+        buildDots(pos,src,t0);
+      }catch(e){ fallback(); } };
+      img.onerror=fallback;
+      img.src='assets/earth-mask.png';
 
-      let mx=0,my=0,tx=0,ty=0,running=true;
-      addEventListener('mousemove', e=>{ mx=e.clientX/innerWidth-0.5; my=e.clientY/innerHeight-0.5; }, {passive:true});
+      // Arrastrar para girar (tipo Google Earth) + inercia
+      const dom=renderer.domElement; dom.style.cursor='grab';
+      let dragging=false, lx=0, ly=0, velY=0, velX=0;
+      dom.addEventListener('pointerdown', e=>{ dragging=true; lx=e.clientX; ly=e.clientY; velY=velX=0; dom.style.cursor='grabbing'; try{dom.setPointerCapture(e.pointerId);}catch(_){} });
+      dom.addEventListener('pointermove', e=>{ if(!dragging) return; const dx=e.clientX-lx, dy=e.clientY-ly; lx=e.clientX; ly=e.clientY;
+        spin.rotation.y += dx*0.006; velY=dx*0.006;
+        pitch=Math.max(-1.0,Math.min(0.55, pitch+dy*0.005)); velX=dy*0.005; if(reduce) frame(); });
+      const up=()=>{ if(!dragging) return; dragging=false; dom.style.cursor='grab'; };
+      dom.addEventListener('pointerup', up); dom.addEventListener('pointercancel', up);
+
       const resize=()=>{ camera.aspect=W()/H(); camera.updateProjectionMatrix(); renderer.setSize(W(),H()); };
       addEventListener('resize', resize, {passive:true});
 
+      const clock=performance.now(); let running=true;
       function frame(){
-        if(!reduce) spin.rotation.y += 0.0013;
-        tx+=(mx*0.32-tx)*0.05; ty+=(my*0.2-ty)*0.05;
-        root.rotation.y=tx; root.rotation.x=-0.18+ty;
-        arcs.forEach(arc=>{
-          arc.t=(arc.t+arc.speed)%1.18;
-          const live = arc.t<=1, startSeg=Math.floor(Math.min(arc.t,1)*(SEG-WIN));
-          arc.comet.geometry.setDrawRange(startSeg, live?WIN:0);
-          arc.head.visible = live;
-          if(live) arc.head.position.copy(arc.curve.getPoint(Math.min(0.999,(startSeg+WIN)/SEG)));
+        const now=(performance.now()-clock)/1000;
+        if(!dragging){ spin.rotation.y += (reduce?0:0.0011) + velY; velY*=0.94; pitch += velX; velX*=0.9; pitch=Math.max(-1.0,Math.min(0.55,pitch)); }
+        root.rotation.x = baseX + pitch;
+        conns.forEach(c=>{ const local=now-c.start;
+          if(local<0){ c.comet.geometry.setDrawRange(0,0); c.head.visible=false; return; }
+          const cyc=local%1.9, tt=Math.min(cyc,1), live=cyc<=1, s=Math.floor(tt*(SEG-WIN));
+          c.comet.geometry.setDrawRange(s, live?WIN:0); c.head.visible=live;
+          if(live) c.head.position.copy(c.curve.getPoint(Math.min(0.999,(s+WIN)/SEG)));
         });
+        pings.forEach(pg=>{ const p=((now+pg.phase)%2.2)/2.2; pg.ring.scale.setScalar(1+p*3.2); pg.mat.opacity=0.5*(1-p); });
+        if(painting && colAttr){
+          let any=false, allDone=true;
+          for(let i=0;i<dotSrc.length;i++){
+            if(dotDone[i]) continue;
+            if(dotSrc[i]<0){ dotDone[i]=1; continue; }
+            const ts=dotT0[i]; if(now<ts){ allDone=false; continue; }
+            const p=Math.min(1,(now-ts)/0.7);
+            colAttr.array[i*3]=grayCol.r+(redCol.r-grayCol.r)*p;
+            colAttr.array[i*3+1]=grayCol.g+(redCol.g-grayCol.g)*p;
+            colAttr.array[i*3+2]=grayCol.b+(redCol.b-grayCol.b)*p;
+            any=true; if(p<1) allDone=false; else dotDone[i]=1;
+          }
+          if(any) colAttr.needsUpdate=true;
+          if(allDone) painting=false;
+        }
         renderer.render(scene,camera);
       }
       function loop(){ if(!running) return; frame(); requestAnimationFrame(loop); }
