@@ -168,7 +168,7 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 .nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:background .4s var(--ease),backdrop-filter .4s,border-color .4s,box-shadow .4s}
 .nav-inner{max-width:var(--max);margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:28px}
 .brand{display:flex;align-items:center;gap:10px}
-.brand img{height:38px;width:auto}
+.brand img{height:50px;width:auto}
 .nav-links{display:flex;gap:26px;margin-left:auto;align-items:center}
 .nav-links a{font-size:.94rem;font-weight:500;color:var(--t2);transition:color .25s}
 .nav-links a:hover{color:var(--ink)}
@@ -312,7 +312,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .foot-grid a:hover{color:#fff}
 .foot-col h5{color:#fff;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
 .foot-logo{display:inline-block;background:#fff;border-radius:12px;padding:8px 10px;margin-bottom:14px}
-.foot-logo img{height:34px}
+.foot-logo img{height:44px}
 .foot-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:.84rem;color:var(--t3d)}
 
 .reveal{opacity:0;transform:translateY(34px);transition:opacity .8s var(--ease-out),transform .8s var(--ease-out)}
@@ -914,7 +914,7 @@ aiSend.addEventListener('click', () => { const v = aiInput.value.trim(); if (v) 
 aiInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = aiInput.value.trim(); if (v) ask(v); } });
 </script>
 
-<!-- ════════ Objeto 3D de la portada — globo de red TeGeVe (Three.js) ════════ -->
+<!-- ════════ Objeto 3D de la portada — planeta TeGeVe (Three.js) ════════ -->
 <script type="module">
 import * as THREE from 'three';
 (function(){
@@ -925,70 +925,129 @@ import * as THREE from 'three';
     if (started || host.clientWidth < 60) return;   // 0 cuando está oculto en móvil (display:none)
     started = true;
     try {
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const W = () => host.clientWidth || 1, H = () => host.clientHeight || 1;
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(42, W()/H(), 0.1, 100);
-    camera.position.z = 3.6;
-    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'low-power' });
-    renderer.setSize(W(), H());
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    host.appendChild(renderer.domElement);
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const W = () => host.clientWidth || 1, H = () => host.clientHeight || 1;
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(40, W()/H(), 0.1, 100);
+      camera.position.z = 3.55;
+      const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'low-power' });
+      renderer.setSize(W(), H()); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      host.appendChild(renderer.domElement);
 
-    const R = 1;
-    const root = new THREE.Group(); root.rotation.x = -0.42; root.rotation.z = 0.10; scene.add(root);
-    const spin = new THREE.Group(); root.add(spin);
+      const R = 1, RED = 0xE30613;
+      const root = new THREE.Group();
+      root.rotation.z = 0.41;   // inclinación axial ~23.4°
+      root.rotation.x = -0.18;
+      scene.add(root);
+      const spin = new THREE.Group(); root.add(spin);
 
-    // Esfera de puntos (distribución de Fibonacci)
-    const N = 1700, arr = new Float32Array(N*3), golden = Math.PI*(1+Math.sqrt(5));
-    for (let i=0;i<N;i++){
-      const t=i/(N-1), inc=Math.acos(1-2*t), az=golden*i;
-      arr[i*3]=R*Math.sin(inc)*Math.cos(az); arr[i*3+1]=R*Math.cos(inc); arr[i*3+2]=R*Math.sin(inc)*Math.sin(az);
-    }
-    const dGeo = new THREE.BufferGeometry(); dGeo.setAttribute('position', new THREE.BufferAttribute(arr,3));
-    spin.add(new THREE.Points(dGeo, new THREE.PointsMaterial({ color:0x9aa1ad, size:0.018, sizeAttenuation:true, transparent:true, opacity:0.55 })));
-    spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*0.985,48,48), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.04 })));
+      // planeta de cristal (muy tenue) + halo
+      spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*0.992,48,48), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.05 })));
+      spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.004,48,48), new THREE.MeshBasicMaterial({ color:0x272B36, transparent:true, opacity:0.05, side:THREE.BackSide })));
 
-    const RED = 0xE30613;
-    const ll = (lat,lng,r)=>{ const phi=(90-lat)*Math.PI/180, th=(lng+180)*Math.PI/180;
-      return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(th), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(th)); };
-    const LOC = { ES:[40.4,-3.7], AR:[-34.6,-58.4], MX:[19.4,-99.1], US:[38.9,-77.0] };
+      const ll = (lat,lng,r)=>{ const phi=(90-lat)*Math.PI/180, th=(lng+180)*Math.PI/180;
+        return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(th), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(th)); };
 
-    const mMat = new THREE.MeshBasicMaterial({ color:RED }), gMat = new THREE.MeshBasicMaterial({ color:RED, transparent:true, opacity:0.2 });
-    Object.values(LOC).forEach(([la,lo])=>{ const p=ll(la,lo,R*1.005);
-      const m=new THREE.Mesh(new THREE.SphereGeometry(0.022,12,12),mMat); m.position.copy(p); spin.add(m);
-      const g=new THREE.Mesh(new THREE.SphereGeometry(0.05,12,12),gMat); g.position.copy(p); spin.add(g); });
+      // Sedes TeGeVe (rojo grande + halo) y nodos de cobertura (América + Europa)
+      const OFFICES = [ [40.4,-3.7], [19.4,-99.1], [25.8,-80.2], [-34.6,-58.4] ];      // ES, MX, US(Miami), AR
+      const NODES = [ [51.5,-0.12],[48.85,2.35],[50.11,8.68],[38.72,-9.14],[45.46,9.19],[52.37,4.9],   // Europa
+                      [40.71,-74.0],[43.65,-79.38],[8.98,-79.52],[4.71,-74.07],[-12.05,-77.04],[-23.55,-46.63],[-33.45,-70.66],[25.67,-100.31] ]; // América
 
-    const aMat = new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.7 }), travelers=[];
-    [['ES','US'],['ES','MX'],['ES','AR']].forEach(([a,b],i)=>{
-      const A=ll(LOC[a][0],LOC[a][1],R), B=ll(LOC[b][0],LOC[b][1],R);
-      const mid=A.clone().add(B).multiplyScalar(0.5).normalize().multiplyScalar(R*(1.2+A.distanceTo(B)*0.16));
-      const curve=new THREE.QuadraticBezierCurve3(A,mid,B);
-      spin.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(64)), aMat));
-      const dot=new THREE.Mesh(new THREE.SphereGeometry(0.027,10,10), new THREE.MeshBasicMaterial({ color:0xff4350 })); spin.add(dot);
-      travelers.push({ curve, dot, t:i*0.33, speed:0.0038+i*0.0006 });
-    });
+      const mRed = new THREE.MeshBasicMaterial({ color:RED });
+      OFFICES.forEach(([la,lo])=>{ const p=ll(la,lo,R*1.012);
+        const m=new THREE.Mesh(new THREE.SphereGeometry(0.032,14,14),mRed); m.position.copy(p); spin.add(m);
+        const g=new THREE.Mesh(new THREE.SphereGeometry(0.075,16,16), new THREE.MeshBasicMaterial({color:RED,transparent:true,opacity:0.16})); g.position.copy(p); spin.add(g); });
+      const nMat = new THREE.MeshBasicMaterial({ color:0xff4350, transparent:true, opacity:0.85 });
+      NODES.forEach(([la,lo])=>{ const m=new THREE.Mesh(new THREE.SphereGeometry(0.013,8,8),nMat); m.position.copy(ll(la,lo,R*1.01)); spin.add(m); });
 
-    let mx=0,my=0,tx=0,ty=0,running=true;
-    addEventListener('mousemove', e=>{ mx=e.clientX/innerWidth-0.5; my=e.clientY/innerHeight-0.5; }, {passive:true});
-    const resize=()=>{ camera.aspect=W()/H(); camera.updateProjectionMatrix(); renderer.setSize(W(),H()); };
-    addEventListener('resize', resize, {passive:true});
+      // Conexiones animadas (cometa viajero): sedes <-> cobertura
+      const conns = [ [0,'o',2],[0,'o',3],[0,'n',0],[0,'n',1],[0,'n',2],[0,'n',3],
+                      [2,'n',6],[2,'n',8],[2,'n',9],[2,'o',1],[2,'n',10],
+                      [1,'n',13],[1,'n',9],[3,'n',11],[3,'n',12] ];
+      const SEG=64, WIN=10;
+      const baseMat = new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.16 });
+      const cometMat = new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.9 });
+      const headMat = new THREE.MeshBasicMaterial({ color:0xff4d57 });
+      const arcs = conns.map(([ai,kind,bi])=>{
+        const A = ll(OFFICES[ai][0], OFFICES[ai][1], R);
+        const tgt = kind==='o' ? OFFICES[bi] : NODES[bi];
+        const B = ll(tgt[0], tgt[1], R);
+        const mid = A.clone().add(B).multiplyScalar(0.5).normalize().multiplyScalar(R*(1.14 + A.distanceTo(B)*0.17));
+        const curve = new THREE.QuadraticBezierCurve3(A, mid, B);
+        const pts = curve.getPoints(SEG);
+        spin.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), baseMat));
+        const comet = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cometMat); comet.geometry.setDrawRange(0,0); spin.add(comet);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.02,8,8), headMat); spin.add(head);
+        return { curve, comet, head, t: Math.random()*1.18, speed: 0.0035 + Math.random()*0.0025 };
+      });
 
-    function frame(){
-      if(!reduce) spin.rotation.y += 0.0016;
-      tx+=(mx*0.5-tx)*0.05; ty+=(my*0.3-ty)*0.05;
-      root.rotation.y=tx; root.rotation.x=-0.42+ty;
-      travelers.forEach(tr=>{ tr.t=(tr.t+tr.speed)%1; tr.dot.position.copy(tr.curve.getPoint(tr.t)); });
-      renderer.render(scene,camera);
-    }
-    function loop(){ if(!running) return; frame(); requestAnimationFrame(loop); }
-    document.addEventListener('visibilitychange', ()=>{ running=!document.hidden; if(running && !reduce) loop(); });
-    resize();
-    reduce ? frame() : loop();
+      // Continentes: puntos sobre tierra muestreados de la máscara equirectangular
+      function addPoints(arr){
+        const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr,3));
+        spin.add(new THREE.Points(g, new THREE.PointsMaterial({ color:0x8b93a0, size:0.013, sizeAttenuation:true, transparent:true, opacity:0.62 })));
+        frame();
+      }
+      function fallbackSphere(){
+        const N=1600, a=new Float32Array(N*3), gr=Math.PI*(1+Math.sqrt(5));
+        for(let i=0;i<N;i++){ const t=i/(N-1), inc=Math.acos(1-2*t), az=gr*i;
+          a[i*3]=R*Math.sin(inc)*Math.cos(az); a[i*3+1]=R*Math.cos(inc); a[i*3+2]=R*Math.sin(inc)*Math.sin(az); }
+        addPoints(a);
+      }
+      const img = new Image();
+      img.onload = () => { try {
+        const sw=img.width, sh=img.height;
+        const cv=document.createElement('canvas'); cv.width=sw; cv.height=sh;
+        const cx=cv.getContext('2d'); cx.drawImage(img,0,0);
+        const d=cx.getImageData(0,0,sw,sh).data;
+        const px=(u,v)=>d[((((v%sh)+sh)%sh)*sw + (((u%sw)+sw)%sw))*4];
+        const uv=(lat,lng)=>[Math.round((lng+180)/360*sw), Math.round((90-lat)/180*sh)];
+        const af=uv(8,21), pa=uv(0,-150);
+        const landDark = px(af[0],af[1]) < px(pa[0],pa[1]);   // tierra = oscuro?
+        const isLand=(u,v)=> landDark ? px(u,v)<110 : px(u,v)>145;
+        const out=[], STEP=2, DENS=0.55;
+        for(let v=0; v<sh; v+=STEP){
+          const lat=90-(v/sh)*180;
+          if(lat<-58 || lat>84) continue;
+          const w=Math.cos(lat*Math.PI/180);
+          for(let u=0; u<sw; u+=STEP){
+            if(!isLand(u,v)) continue;
+            if(Math.random() > w*DENS) continue;
+            const lng=(u/sw)*360-180;
+            const p=ll(lat+(Math.random()-0.5), lng+(Math.random()-0.5), R*0.999);
+            out.push(p.x,p.y,p.z);
+          }
+        }
+        addPoints(new Float32Array(out));
+      } catch(e){ fallbackSphere(); } };
+      img.onerror = fallbackSphere;
+      img.src = 'assets/earth-mask.png';
+
+      let mx=0,my=0,tx=0,ty=0,running=true;
+      addEventListener('mousemove', e=>{ mx=e.clientX/innerWidth-0.5; my=e.clientY/innerHeight-0.5; }, {passive:true});
+      const resize=()=>{ camera.aspect=W()/H(); camera.updateProjectionMatrix(); renderer.setSize(W(),H()); };
+      addEventListener('resize', resize, {passive:true});
+
+      function frame(){
+        if(!reduce) spin.rotation.y += 0.0013;
+        tx+=(mx*0.32-tx)*0.05; ty+=(my*0.2-ty)*0.05;
+        root.rotation.y=tx; root.rotation.x=-0.18+ty;
+        arcs.forEach(arc=>{
+          arc.t=(arc.t+arc.speed)%1.18;
+          const live = arc.t<=1, startSeg=Math.floor(Math.min(arc.t,1)*(SEG-WIN));
+          arc.comet.geometry.setDrawRange(startSeg, live?WIN:0);
+          arc.head.visible = live;
+          if(live) arc.head.position.copy(arc.curve.getPoint(Math.min(0.999,(startSeg+WIN)/SEG)));
+        });
+        renderer.render(scene,camera);
+      }
+      function loop(){ if(!running) return; frame(); requestAnimationFrame(loop); }
+      document.addEventListener('visibilitychange', ()=>{ running=!document.hidden; if(running && !reduce) loop(); });
+      resize();
+      reduce ? frame() : loop();
     } catch(e){ host.style.display='none'; }
   }
   start();
-  if (!started){ const ro = new ResizeObserver(()=>{ start(); if (started) ro.disconnect(); }); ro.observe(host); }
+  if (!started){ const ro=new ResizeObserver(()=>{ start(); if(started) ro.disconnect(); }); ro.observe(host); }
 })();
 </script>
 </body>
