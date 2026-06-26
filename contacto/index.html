@@ -82,10 +82,20 @@
         <span class="eyebrow">Contáctanos</span>
         <h2 class="h2" style="color:#fff;margin:14px 0 16px">¿Tienes un reto tecnológico?<br>Démosle forma.</h2>
         <p class="lede">Cuéntanos tu reto y te propondremos un enfoque con un alcance claro, centrado en el valor de negocio y la optimización de costes.</p>
-        <div style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap">
-          <a href="mailto:info@tegeve.es" class="btn btn-primary">Escríbenos <span class="btn-arrow">→</span></a>
-          <button class="btn btn-ghost-d ai-open-link">Pregúntale a la IA</button>
-        </div>
+        <form class="cform" id="cform" novalidate>
+          <div class="cform-row">
+            <label class="cform-field"><span>Nombre</span><input name="nombre" type="text" required autocomplete="name" maxlength="120"></label>
+            <label class="cform-field"><span>Empresa</span><input name="empresa" type="text" autocomplete="organization" maxlength="160"></label>
+          </div>
+          <label class="cform-field"><span>Email</span><input name="email" type="email" required autocomplete="email" maxlength="200"></label>
+          <label class="cform-field"><span>Cuéntanos tu reto</span><textarea name="reto" rows="4" required maxlength="4000"></textarea></label>
+          <input type="text" name="_gotcha" class="cform-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div class="cform-actions">
+            <button class="btn btn-primary" type="submit" id="cformBtn">Enviar mensaje <span class="btn-arrow">→</span></button>
+            <button class="btn btn-ghost-d ai-open-link" type="button">Pregúntale a la IA</button>
+          </div>
+          <p class="cform-msg" id="cformMsg" role="status" aria-live="polite"></p>
+        </form>
       </div>
       <div class="reveal" data-d="1">
         <div class="offices">

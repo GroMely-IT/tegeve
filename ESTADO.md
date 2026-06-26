@@ -62,6 +62,9 @@ intel.html            herramienta interna (no es parte de la web pública)
 - ✅ Secciones de servicio con **foto anclada (pinned)** estilo Apple. (`22f6066`)
 - ⛔ **Quitadas TODAS las referencias a las Big Four y comparativas** (norma permanente del cliente). (`803eb12`)
 
+**Conversión**
+- ✅ **Formulario de contacto funcional** en `/contacto/` (nombre, empresa, email, reto) con validación, honeypot anti-spam, estados de envío/éxito/error e i18n. Envía por el **Worker `/contact` → Resend** (gratis). Degrada con elegancia a `mailto` si el Worker aún no está desplegado.
+
 **Decisión de diseño (importante):** revisamos el documento externo `MEJORA-TEGEVE.md` (de "Claude Design"). Se **descartó** su rediseño "editorial / Big Four" porque choca con la norma de no comparar/parecerse a las Big Four y arrancaría el "wow" actual. Se eligió **híbrido**: conservar diseño + wow y, como mucho, tomar prestadas ideas editoriales puntuales.
 
 ---
@@ -70,8 +73,8 @@ intel.html            herramienta interna (no es parte de la web pública)
 
 | # | Pendiente | Quién | Notas |
 |---|-----------|-------|-------|
-| 1 | **Desplegar el Worker de IA** | **Tú** | `cd worker && wrangler deploy`. Activa el modelo nuevo (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`) y el guardrail anti-comparativas. Sin esto, Tevi cae al buscador local de FAQ. |
-| 2 | **Formulario de contacto que funcione** (sin backend) | Claude | En `/contacto/`, con Formspree/Netlify Forms o el propio Worker (nombre, empresa, email, reto + honeypot + mensaje de éxito). |
+| 1 | **Desplegar el Worker** (Tevi IA + formulario) | **Tú** | `cd worker && wrangler deploy`. Activa el modelo nuevo de Tevi (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`), el guardrail anti-comparativas y el endpoint `/contact`. **Para el formulario:** crea una cuenta gratis en Resend y `wrangler secret put RESEND_API_KEY` (pasos en `worker/README.md`). Sin esto, Tevi cae al buscador de FAQ y el formulario degrada a `mailto`. |
+| ~~2~~ | ~~Formulario de contacto~~ ✅ HECHO | — | Construido en `/contacto/` (Worker `/contact` + Resend). Solo falta el paso #1. |
 | 3 | **Toques "híbridos" editoriales** | Claude | Cifras gigantes en serif, alguna franja sobria — sin perder el wow. |
 | 4 | **Páginas por servicio individuales** | Claude | Separar SAP/JDE/IA/Desarrollo en `/servicios/<slug>/` (más profundidad para SEO/GEO). |
 | 5 | **/insights (blog)** | Claude | Motor de citabilidad por IA: índice + artículos (S/4HANA, IA en producción, modernizar legacy). |

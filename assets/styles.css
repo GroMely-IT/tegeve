@@ -583,3 +583,20 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .ns-person figcaption b{font-size:.95rem}.ns-person figcaption span{font-size:.8rem;color:var(--t2)}
 @media(max-width:860px){.ns-bento{grid-template-columns:repeat(2,1fr)}.ns-quote{grid-column:span 2;grid-row:auto}.ns-vision{grid-column:span 2}.ns-vgrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.ns-bento{grid-template-columns:1fr}.ns-quote,.ns-num,.ns-vision{grid-column:span 1}.ns-people{grid-template-columns:repeat(2,1fr)}.ns-vgrid{grid-template-columns:1fr}}
+
+/* ===== Formulario de contacto ===== */
+.cform{margin-top:26px;max-width:540px}
+.cform-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cform-field{display:block;margin-bottom:14px}
+.cform-field>span{display:block;font-size:.82rem;font-weight:600;color:rgba(255,255,255,.72);margin-bottom:6px}
+.cform input,.cform textarea{width:100%;font:inherit;font-size:.98rem;color:#fff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:12px 14px;transition:border-color .25s,background .25s;box-sizing:border-box}
+.cform input::placeholder,.cform textarea::placeholder{color:rgba(255,255,255,.4)}
+.cform input:focus,.cform textarea:focus{outline:none;border-color:var(--red);background:rgba(255,255,255,.1)}
+.cform input:user-invalid,.cform textarea:user-invalid{border-color:#ff6b73}
+.cform textarea{resize:vertical;min-height:100px}
+.cform-hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0;pointer-events:none}
+.cform-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
+.cform-msg{margin:14px 0 0;font-size:.92rem;min-height:1.2em;line-height:1.5}
+.cform-msg.ok{color:#7CE0A0}.cform-msg.err{color:#ff8088}
+.cform.sending button[type=submit]{opacity:.6;pointer-events:none}
+@media(max-width:520px){.cform-row{grid-template-columns:1fr}}
