@@ -186,6 +186,15 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 .nav-cta{font-size:.9rem;font-weight:600;padding:.55rem 1.15rem;border-radius:999px;background:var(--red);border:1px solid var(--red);color:#fff;transition:.3s}
 .nav-cta:hover{background:var(--red-700);transform:translateY(-1px)}
 .nav.scrolled{background:rgba(255,255,255,.78);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(39,43,54,.04)}
+/* Menú legible sobre las diapositivas oscuras del carrusel */
+.nav.nav-dark:not(.scrolled){background:linear-gradient(to bottom,rgba(10,12,18,.55),rgba(10,12,18,0))}
+.nav.nav-dark:not(.scrolled) .nav-links a,
+.nav.nav-dark:not(.scrolled) .nav-drop-t{color:#fff;font-weight:700;text-shadow:0 1px 12px rgba(0,0,0,.45)}
+.nav.nav-dark:not(.scrolled) .nav-links a:hover,
+.nav.nav-dark:not(.scrolled) .nav-group:hover .nav-drop-t,
+.nav.nav-dark:not(.scrolled) .nav-group:focus-within .nav-drop-t{color:#fff;opacity:.82}
+.nav.nav-dark:not(.scrolled) .nav-drop-t .caret{opacity:.9}
+.nav.nav-dark:not(.scrolled) .burger{color:#fff}
 .nav-ai{display:inline-flex;align-items:center;gap:7px;font-size:.9rem;font-weight:600;font-family:inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;cursor:pointer;transition:.25s}
 .nav-ai:hover{border-color:var(--red);color:var(--red);box-shadow:0 8px 20px -12px rgba(227,6,19,.55);transform:translateY(-1px)}
 .nav-ai .sp{width:18px;height:18px;color:var(--red);flex:none}
@@ -1771,6 +1780,7 @@ aiSend.addEventListener('click', () => { const v = aiInput.value.trim(); if (v) 
     i = (n + slides.length) % slides.length;
     slides.forEach(function(s,k){ s.classList.toggle('is-active', k===i); });
     dots.forEach(function(d,k){ d.classList.toggle('on', k===i); });
+    var nv=document.getElementById('nav'); if(nv) nv.classList.toggle('nav-dark', slides[i].classList.contains('hc-msg'));
     schedule();
   }
   dots.forEach(function(d,k){ d.addEventListener('click', function(){ paused=false; go(k); }); });
