@@ -5,8 +5,8 @@
   <url><loc>https://tegevem.es/casos/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://tegevem.es/nosotros/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://tegevem.es/contacto/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.tegeve.es/servicios/sap/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.tegeve.es/servicios/oracle-jd-edwards/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.tegeve.es/servicios/ia-empresarial/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.tegeve.es/servicios/desarrollo-a-medida/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://tegevem.es/servicios/sap/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://tegevem.es/servicios/oracle-jd-edwards/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://tegevem.es/servicios/ia-empresarial/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://tegevem.es/servicios/desarrollo-a-medida/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>
