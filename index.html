@@ -283,6 +283,17 @@ section{position:relative}
 .sector .si svg{width:23px;height:23px}
 .sector h4{font-size:1.1rem;letter-spacing:-.01em;margin-bottom:6px;color:var(--ink)}
 .sector p{font-size:.9rem;color:var(--t2)}
+/* Nuestros clientes */
+.clients{padding:clamp(70px,10vw,118px) 0;background:var(--paper);overflow:hidden}
+.cl-row{overflow:hidden;-webkit-mask:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.cl-row + .cl-row{margin-top:20px}
+.cl-track{display:flex;width:max-content;align-items:center}
+.cl-track img{height:62px;width:auto;flex:none;filter:grayscale(1);opacity:.55;transition:filter .45s,opacity .45s}
+.cl-a{animation:scrollx 50s linear infinite}
+.cl-b{animation:scrollx 42s linear infinite reverse}
+.cl-row:hover .cl-track{animation-play-state:paused}
+.cl-row:hover .cl-track img{filter:none;opacity:1}
+@media(max-width:700px){.cl-track img{height:46px}}
 
 /* Diff */
 .diff{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
@@ -326,8 +337,8 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .foot-grid a{color:var(--t2d);font-size:.92rem;line-height:2}
 .foot-grid a:hover{color:#fff}
 .foot-col h5{color:#fff;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
-.foot-logo{display:inline-block;background:#fff;border-radius:12px;padding:8px 10px;margin-bottom:14px}
-.foot-logo img{height:34px}
+.foot-logo{display:inline-block;margin-bottom:16px}
+.foot-logo img{height:44px;filter:brightness(0) invert(1)}
 .foot-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:.84rem;color:var(--t3d)}
 
 .reveal{opacity:0;transform:translateY(34px);transition:opacity .8s var(--ease-out),transform .8s var(--ease-out)}
@@ -590,6 +601,19 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
       <div class="sector reveal" data-d="2"><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6.4" rx="6.5" ry="2.8"/><path d="M5.5 6.4V12c0 1.55 2.9 2.8 6.5 2.8s6.5-1.25 6.5-2.8V6.4M5.5 12c0 1.55 2.9 2.8 6.5 2.8s6.5-1.25 6.5-2.8"/></svg></div><h4>Servicios Financieros</h4><p>Automatización inteligente de procesos, como la conciliación de fondos de inversión.</p></div>
     </div>
   </div>
+</section>
+
+<!-- Nuestros clientes -->
+<section class="clients" id="clientes" aria-label="Nuestros clientes">
+  <div class="wrap">
+    <div class="sec-head reveal" style="text-align:center;margin:0 auto 44px;max-width:64ch">
+      <span class="eyebrow">Nuestros clientes</span>
+      <h2 class="h2" style="margin:14px 0 14px">Grandes organizaciones confían en TeGeVe.</h2>
+      <p class="lede">Hemos acompañado a líderes de banca, telecomunicaciones, gran consumo, energía e industria en Europa y América.</p>
+    </div>
+  </div>
+  <div class="cl-row"><div class="cl-track cl-a"><img src="assets/clients-strip-a.png" alt="Logos de clientes de TeGeVe" loading="lazy"><img src="assets/clients-strip-a.png" alt="" aria-hidden="true" loading="lazy"></div></div>
+  <div class="cl-row"><div class="cl-track cl-b"><img src="assets/clients-strip-b.png" alt="Logos de clientes de TeGeVe" loading="lazy"><img src="assets/clients-strip-b.png" alt="" aria-hidden="true" loading="lazy"></div></div>
 </section>
 
 <!-- Por qué elegirnos -->
