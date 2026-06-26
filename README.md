@@ -14,7 +14,7 @@ Web corporativa de **TEGEVE (TGV)**, consultora tecnológica con +30 años en SA
 | `robots.txt` | Permite rastreadores de buscadores y de IA. |
 | `sitemap.xml` | Mapa del sitio. |
 | `og.svg` | Imagen de previsualización social. |
-| `PLAN-DE-MEJORA.md` | Investigación (Big Four, Globant, GEO) y plan estratégico. |
+| `PLAN-DE-MEJORA.md` | Investigación de mercado y plan estratégico. |
 | `worker/` | Cloudflare Worker (Workers AI) para activar la IA generativa gratis del chatbot. Opcional: ver `worker/README.md`. |
 
 ## Características

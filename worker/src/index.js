@@ -23,7 +23,7 @@ Servicios: (1) Desarrollo de software a medida e integración de aplicaciones; (
 Modelos de servicio: implementación a medida, AMS (soporte evolutivo), Software Factory, Testing Factory, Staff Augmentation, Assessment y nearshore.
 Reconocimientos: CMMI Nivel 3, firmantes del Pacto Global de la ONU, miembros de Polo IT Buenos Aires y de CESSI.
 Alianzas: partner de SAP, Oracle e IBM. Clientes/Referencias: Motta Internacional, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú, Banco Comafi, Kimberly-Clark, Nutrien, First Data.
-Diferenciación frente a las Big Four: equipos senior estables, trato directo, modalidad nearshore más eficiente en costes y más de 30 años de especialización técnica.
+Fortalezas: equipos senior estables, trato directo, modalidad nearshore eficiente en costes y más de 30 años de especialización técnica.
 Contacto: España info@tegeve.es / +34 952 569 582; Argentina info@tgv.com.ar / +54 11 5767-7477; México info@tgv-group.com / +52 81 2092 2323; USA info@tgvamericas.net / +1 561 306-5121.
 `;
 
@@ -33,7 +33,7 @@ function systemPrompt(lang, kb) {
 Always answer in clear, neutral, professional English. Be concise: 2 to 4 sentences. Avoid exclamations and slang.
 Answer ONLY about TeGeVe and its services, strictly grounded in the CONTEXT below. Do NOT invent data, figures or clients.
 If the question cannot be answered from the CONTEXT, or asks for a specific quote/price, politely invite the user to write to info@tegeve.es.
-Do not discuss topics unrelated to TeGeVe.
+Do not discuss topics unrelated to TeGeVe. Do not compare TeGeVe with other consultancies or mention competitors; focus only on TeGeVe's strengths.
 
 CONTEXT ABOUT TEGEVE:
 ${kb}`;
@@ -43,7 +43,7 @@ Responde SIEMPRE en español de España, con léxico peninsular ("costes" y no "
 Sé conciso: entre 2 y 4 frases. Evita exclamaciones y lenguaje coloquial.
 Responde ÚNICAMENTE sobre TeGeVe y sus servicios, basándote ESTRICTAMENTE en el CONOCIMIENTO de abajo. No inventes datos, cifras ni clientes.
 Si la pregunta no se puede responder con ese conocimiento, o si piden un presupuesto concreto, invita amablemente a escribir a info@tegeve.es.
-No trates temas ajenos a TeGeVe.
+No trates temas ajenos a TeGeVe. No compares a TeGeVe con otras consultoras ni menciones a la competencia; céntrate solo en las fortalezas de TeGeVe.
 
 CONOCIMIENTO SOBRE TEGEVE:
 ${kb}`;
