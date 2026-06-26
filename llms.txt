@@ -1,29 +1,30 @@
-# TEGEVE (TGV)
+# TeGeVe (TGV)
 
-> Consultora tecnológica con más de 30 años de trayectoria especializada en SAP, Oracle JD Edwards, IA Empresarial, desarrollo de software a medida, modernización de sistemas legacy y assessment de valor de negocio. Opera con modelo nearshore entre España y Latinoamérica.
+> Consultora tecnológica con más de 30 años de trayectoria especializada en desarrollo de software a medida, IA Empresarial, SAP, Oracle JD Edwards, integración de aplicaciones y assessment (evaluaciones y auditorías). Trabaja en modalidad nearshore y en las oficinas de sus clientes.
 
-TEGEVE —también conocida como TGV o TeGeVe— ayuda a empresas medianas y grandes a transformar sus procesos con tecnología, alineando tecnología y negocio para que crezcan con solidez. Tagline oficial: "Soluciones inteligentes para tu empresa".
+TeGeVe —también conocida como TGV o TeGeVe— transforma los proyectos tecnológicos más desafiantes en soluciones innovadoras para sus clientes. Cuenta con un equipo calificado y multidisciplinario y establece relaciones duraderas con las empresas. Slogan: "Transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras".
 
 ## Datos clave
 - Más de 30 años de trayectoria.
-- Oficinas en España (Málaga), Argentina (Buenos Aires) y Estados Unidos; presencia comercial también en México.
-- Proyectos ejecutados en más de 16 países.
-- Modelo de entrega: nearshore (equipos en España y Latinoamérica) y on-site.
+- Presta servicios desde España (Málaga), Argentina (Buenos Aires) y Estados Unidos; contacto comercial también en México.
+- Proyectos en más de 16 países, con empresas y organismos gubernamentales.
+- Modalidad de entrega: nearshore y en las oficinas del cliente.
 - Partner de los ecosistemas SAP y Oracle/IBM.
+- Identidad de marca: rojo corporativo #E30613, gris oscuro #272B36.
 
 ## Servicios
+- Desarrollo de software a medida e integración de sistemas de múltiple envergadura sobre diferentes plataformas tecnológicas.
 - Consultoría SAP: implementación, evolución, soporte y migración a SAP S/4HANA.
 - Consultoría Oracle JD Edwards: implementación, upgrades y soporte de EnterpriseOne y World.
-- IA Empresarial: agentes de IA, RPA y automatización de procesos con gobernanza y ROI medible.
-- Desarrollo e Integración de Aplicaciones: software a medida e integración en Java J2EE, .NET y arquitecturas modernas.
-- Modernización de Legacy e Industria Financiera: COBOL, AS/400 (IBM i), DB2, MS SQL Server; desarrollo crítico para banca y finanzas.
-- Business Value Assessment: diagnóstico de valor de negocio para priorizar inversiones tecnológicas.
+- IA Empresarial: agentes de IA, RPA y automatización inteligente de procesos (p. ej. conciliación de Fondos Comunes de Inversión).
+- Assessment: evaluaciones y auditorías para conocer las reales necesidades de la empresa y optimizar costos.
+- Industria financiera y legacy: desarrollo crítico para banca y modernización de COBOL, AS/400 y DB2.
 
-## Sectores
-Banca y finanzas, gran consumo y alimentación, energía, infraestructuras, retail e industria. Referencias: una de las 10 mayores compañías de alimentación del mundo, una de las principales instituciones financieras globales, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú.
+## Sectores y referencias
+Banca y finanzas, gran consumo, energía y oil & gas, infraestructuras, sector público e industria. Referencias: auditoría para Motta Internacional, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú.
 
 ## Diferenciación frente a las Big Four (Deloitte, PwC, EY, KPMG)
-Equipos senior y estables (sin rotación constante de juniors), trato directo con los expertos, modelo nearshore más eficiente en coste, más de 30 años de especialización técnica real, e IA que llega a producción con ROI medible.
+Equipos senior calificados y estables, trato directo, modalidad nearshore más eficiente en costos, más de 30 años de especialización técnica, e IA que llega a producción con casos reales.
 
 ## Contacto
 - España: info@tegeve.es · +34 952 569 582
