@@ -31,6 +31,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Heebo:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://unpkg.com">
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
 
 <!-- ════════════════════════════════════════════════════════════
      GEO / DATOS ESTRUCTURADOS — para que los motores generativos
@@ -182,6 +186,10 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 .blob.b3{width:36vw;height:36vw;left:34vw;bottom:-18vw;background:radial-gradient(circle,rgba(227,6,19,.12),transparent 62%)}
 .grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(39,43,54,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(39,43,54,.045) 1px,transparent 1px);background-size:62px 62px;mask-image:radial-gradient(120% 80% at 50% 0%,#000 25%,transparent 78%)}
 .hero-inner{position:relative;z-index:2;max-width:var(--max);margin:0 auto;padding:0 24px;width:100%}
+.hero3d{position:absolute;top:0;right:0;width:54%;height:100%;z-index:1;pointer-events:none}
+.hero3d::before{content:"";position:absolute;inset:0;background:radial-gradient(46% 46% at 62% 47%,rgba(227,6,19,.10),rgba(39,43,54,.06) 45%,transparent 72%)}
+.hero3d canvas{display:block}
+@media(max-width:900px){.hero3d{display:none}}
 .hero h1{max-width:20ch;margin:.7rem 0 1.5rem;color:var(--ink)}
 .hero .lede{max-width:46ch;margin-bottom:2.2rem}
 .hero-ctas{display:flex;gap:14px;flex-wrap:wrap}
@@ -404,6 +412,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
     <div class="blob b3" data-speed="0.16"></div>
     <div class="grid-overlay"></div>
   </div>
+  <div class="hero3d" id="hero3d" aria-hidden="true"></div>
   <div class="hero-inner">
     <span class="hero-badge reveal in"><span class="dot"></span> Consultoría y servicios de software · +30 años</span>
     <h1 class="display reveal in" data-d="1">Transformamos los proyectos tecnológicos más desafiantes en <span class="accent">soluciones innovadoras</span>.</h1>
@@ -903,6 +912,84 @@ async function ask(q){
 }
 aiSend.addEventListener('click', () => { const v = aiInput.value.trim(); if (v) ask(v); });
 aiInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = aiInput.value.trim(); if (v) ask(v); } });
+</script>
+
+<!-- ════════ Objeto 3D de la portada — globo de red TeGeVe (Three.js) ════════ -->
+<script type="module">
+import * as THREE from 'three';
+(function(){
+  const host = document.getElementById('hero3d');
+  if (!host) return;
+  let started = false;
+  function start(){
+    if (started || host.clientWidth < 60) return;   // 0 cuando está oculto en móvil (display:none)
+    started = true;
+    try {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const W = () => host.clientWidth || 1, H = () => host.clientHeight || 1;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, W()/H(), 0.1, 100);
+    camera.position.z = 3.6;
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'low-power' });
+    renderer.setSize(W(), H());
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    host.appendChild(renderer.domElement);
+
+    const R = 1;
+    const root = new THREE.Group(); root.rotation.x = -0.42; root.rotation.z = 0.10; scene.add(root);
+    const spin = new THREE.Group(); root.add(spin);
+
+    // Esfera de puntos (distribución de Fibonacci)
+    const N = 1700, arr = new Float32Array(N*3), golden = Math.PI*(1+Math.sqrt(5));
+    for (let i=0;i<N;i++){
+      const t=i/(N-1), inc=Math.acos(1-2*t), az=golden*i;
+      arr[i*3]=R*Math.sin(inc)*Math.cos(az); arr[i*3+1]=R*Math.cos(inc); arr[i*3+2]=R*Math.sin(inc)*Math.sin(az);
+    }
+    const dGeo = new THREE.BufferGeometry(); dGeo.setAttribute('position', new THREE.BufferAttribute(arr,3));
+    spin.add(new THREE.Points(dGeo, new THREE.PointsMaterial({ color:0x9aa1ad, size:0.018, sizeAttenuation:true, transparent:true, opacity:0.55 })));
+    spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*0.985,48,48), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.04 })));
+
+    const RED = 0xE30613;
+    const ll = (lat,lng,r)=>{ const phi=(90-lat)*Math.PI/180, th=(lng+180)*Math.PI/180;
+      return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(th), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(th)); };
+    const LOC = { ES:[40.4,-3.7], AR:[-34.6,-58.4], MX:[19.4,-99.1], US:[38.9,-77.0] };
+
+    const mMat = new THREE.MeshBasicMaterial({ color:RED }), gMat = new THREE.MeshBasicMaterial({ color:RED, transparent:true, opacity:0.2 });
+    Object.values(LOC).forEach(([la,lo])=>{ const p=ll(la,lo,R*1.005);
+      const m=new THREE.Mesh(new THREE.SphereGeometry(0.022,12,12),mMat); m.position.copy(p); spin.add(m);
+      const g=new THREE.Mesh(new THREE.SphereGeometry(0.05,12,12),gMat); g.position.copy(p); spin.add(g); });
+
+    const aMat = new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.7 }), travelers=[];
+    [['ES','US'],['ES','MX'],['ES','AR']].forEach(([a,b],i)=>{
+      const A=ll(LOC[a][0],LOC[a][1],R), B=ll(LOC[b][0],LOC[b][1],R);
+      const mid=A.clone().add(B).multiplyScalar(0.5).normalize().multiplyScalar(R*(1.2+A.distanceTo(B)*0.16));
+      const curve=new THREE.QuadraticBezierCurve3(A,mid,B);
+      spin.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(64)), aMat));
+      const dot=new THREE.Mesh(new THREE.SphereGeometry(0.027,10,10), new THREE.MeshBasicMaterial({ color:0xff4350 })); spin.add(dot);
+      travelers.push({ curve, dot, t:i*0.33, speed:0.0038+i*0.0006 });
+    });
+
+    let mx=0,my=0,tx=0,ty=0,running=true;
+    addEventListener('mousemove', e=>{ mx=e.clientX/innerWidth-0.5; my=e.clientY/innerHeight-0.5; }, {passive:true});
+    const resize=()=>{ camera.aspect=W()/H(); camera.updateProjectionMatrix(); renderer.setSize(W(),H()); };
+    addEventListener('resize', resize, {passive:true});
+
+    function frame(){
+      if(!reduce) spin.rotation.y += 0.0016;
+      tx+=(mx*0.5-tx)*0.05; ty+=(my*0.3-ty)*0.05;
+      root.rotation.y=tx; root.rotation.x=-0.42+ty;
+      travelers.forEach(tr=>{ tr.t=(tr.t+tr.speed)%1; tr.dot.position.copy(tr.curve.getPoint(tr.t)); });
+      renderer.render(scene,camera);
+    }
+    function loop(){ if(!running) return; frame(); requestAnimationFrame(loop); }
+    document.addEventListener('visibilitychange', ()=>{ running=!document.hidden; if(running && !reduce) loop(); });
+    resize();
+    reduce ? frame() : loop();
+    } catch(e){ host.style.display='none'; }
+  }
+  start();
+  if (!started){ const ro = new ResizeObserver(()=>{ start(); if (started) ro.disconnect(); }); ro.observe(host); }
+})();
 </script>
 </body>
 </html>
