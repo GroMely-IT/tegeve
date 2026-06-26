@@ -137,7 +137,11 @@ document.querySelectorAll('.faq-cat').forEach(btn => {
 /* Asistente IA — base de conocimiento construida desde el FAQ (fuente única de verdad) */
 /* IA generativa GRATIS: pega aquí la URL del Cloudflare Worker (ver carpeta /worker) para
    activarla. Si queda vacío o falla, el asistente responde con búsqueda local sobre el FAQ. */
-const AI_ENDPOINT = 'https://tegeve-asistente.gabrielgrosso.workers.dev';
+// En el Worker unificado (*.workers.dev) la IA va en el mismo origen → sin CORS.
+// En cualquier otro sitio (github.io, localhost) usamos el Worker independiente.
+const AI_ENDPOINT = (typeof location !== 'undefined' && location.hostname.endsWith('.workers.dev'))
+  ? '/api/tevi'
+  : 'https://tegeve-asistente.gabrielgrosso.workers.dev';
 function buildKB(){ return faqItems.map(item => ({
   q: item.querySelector('.faq-q').textContent.replace('+','').trim(),
   a: item.querySelector('.faq-a-inner').innerHTML.trim(),

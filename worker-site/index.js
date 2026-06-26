@@ -1,0 +1,124 @@
+// ════════════════════════════════════════════════════════════════
+//  TeGeVe — Worker UNIFICADO: sirve el sitio estático Y la IA "Tevi"
+//  en el MISMO origen → sin CORS.
+//   • Estáticos: todo el sitio (raíz del repo) vía el binding ASSETS.
+//   • IA: POST /api/tevi  (Workers AI, gratis, sin clave externa).
+//  La lógica de IA es la misma que worker/src/index.js (el Worker
+//  independiente que sigue sirviendo a gagrosso.github.io). Si tocas
+//  el modelo o el prompt aquí, sincronízalo allí (o al revés).
+//  Despliegue:  wrangler deploy   (desde la raíz del repo)
+// ════════════════════════════════════════════════════════════════
+
+const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+
+const FALLBACK_KB = `
+TeGeVe (también conocida como TGV) es una consultora tecnológica con más de 30 años de trayectoria.
+Eslogan: "Transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras".
+Presta servicios desde España (Málaga), Argentina (Buenos Aires) y Estados Unidos; contacto comercial también en México. Proyectos en más de 16 países, con empresas y organismos gubernamentales. Modalidad nearshore y en las oficinas del cliente. Equipo cualificado y multidisciplinar.
+Servicios: (1) Desarrollo de software a medida e integración de aplicaciones; (2) Consultoría SAP, incluido el camino a SAP S/4HANA (BTP, Fiori, HANA, ABAP, CPI); (3) Oracle JD Edwards (EnterpriseOne y World): implementación, upgrades, Orchestrator/IoT y soporte; (4) IA Empresarial y Business Intelligence: agentes de IA, RPA, automatización, BI y analítica (caso real: conciliación de fondos de inversión, de 4 días a horas); (5) Assessment: evaluaciones y auditorías para optimizar costes (caso: Business Value Assessment para Motta Internacional); (6) Industria financiera y modernización de sistemas legacy (COBOL, AS/400, DB2).
+Modelos de servicio: implementación a medida, AMS (soporte evolutivo), Software Factory, Testing Factory, Staff Augmentation, Assessment y nearshore.
+Reconocimientos: CMMI Nivel 3, firmantes del Pacto Global de la ONU, miembros de Polo IT Buenos Aires y de CESSI.
+Alianzas: partner de SAP, Oracle e IBM. Clientes/Referencias: Motta Internacional, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú, Banco Comafi, Kimberly-Clark, Nutrien, First Data.
+Fortalezas: equipos senior estables, trato directo, modalidad nearshore eficiente en costes y más de 30 años de especialización técnica.
+Contacto: España info@tegeve.es / +34 952 569 582; Argentina info@tgv.com.ar / +54 11 5767-7477; México info@tgv-group.com / +52 81 2092 2323; USA info@tgvamericas.net / +1 561 306-5121.
+`;
+
+function systemPrompt(lang, kb) {
+  if (lang === "en") {
+    return `You are "Tevi", the virtual assistant of TeGeVe (TGV), a technology consultancy.
+Always answer in clear, neutral, professional English. Be concise: 2 to 4 sentences. Avoid exclamations and slang.
+Answer ONLY about TeGeVe and its services, strictly grounded in the CONTEXT below. Do NOT invent data, figures or clients.
+If the question cannot be answered from the CONTEXT, or asks for a specific quote/price, politely invite the user to write to info@tegeve.es.
+Do not discuss topics unrelated to TeGeVe. Do not compare TeGeVe with other consultancies or mention competitors; focus only on TeGeVe's strengths.
+
+CONTEXT ABOUT TEGEVE:
+${kb}`;
+  }
+  return `Eres "Tevi", el asistente virtual de TeGeVe (TGV), una consultora tecnológica.
+Responde SIEMPRE en español de España, con léxico peninsular ("costes" y no "costos", "cualificado", "multidisciplinar"), en un tono profesional, sobrio e institucional.
+Sé conciso: entre 2 y 4 frases. Evita exclamaciones y lenguaje coloquial.
+Responde ÚNICAMENTE sobre TeGeVe y sus servicios, basándote ESTRICTAMENTE en el CONOCIMIENTO de abajo. No inventes datos, cifras ni clientes.
+Si la pregunta no se puede responder con ese conocimiento, o si piden un presupuesto concreto, invita amablemente a escribir a info@tegeve.es.
+No trates temas ajenos a TeGeVe. No compares a TeGeVe con otras consultoras ni menciones a la competencia; céntrate solo en las fortalezas de TeGeVe.
+
+CONOCIMIENTO SOBRE TEGEVE:
+${kb}`;
+}
+
+// CORS: mismo origen no lo necesita, pero lo dejamos permisivo para
+// los dominios propios (por si se llama desde otro origen del grupo).
+const ALLOW = [
+  "https://gagrosso.github.io",
+  "https://tegeve.es",
+  "https://www.tegeve.es",
+  "https://tegeve.gabrielgrosso.workers.dev",
+  "http://localhost:4178",
+  "http://localhost:8000",
+];
+function isAllowedOrigin(origin) {
+  if (ALLOW.includes(origin)) return true;
+  return (
+    /^https:\/\/[a-z0-9-]+\.gabrielgrosso\.workers\.dev$/.test(origin) ||
+    /^https:\/\/[a-z0-9-]+\.pages\.dev$/.test(origin)
+  );
+}
+function corsHeaders(origin) {
+  return {
+    "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : ALLOW[0],
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  };
+}
+const json = (data, status, headers) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
+  });
+
+async function handleTevi(request, env) {
+  const origin = request.headers.get("Origin") || "";
+  const h = corsHeaders(origin);
+  if (request.method === "OPTIONS") return new Response(null, { headers: h });
+  if (request.method !== "POST") return json({ error: "Use POST." }, 405, h);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "Invalid JSON." }, 400, h);
+  }
+
+  const question = String(body.question || "").trim().slice(0, 600);
+  if (!question) return json({ error: "Empty question." }, 400, h);
+
+  const lang = body.lang === "en" ? "en" : "es";
+  const ctx = String(body.context || "").trim().slice(0, 24000) || FALLBACK_KB;
+
+  try {
+    const result = await env.AI.run(MODEL, {
+      messages: [
+        { role: "system", content: systemPrompt(lang, ctx) },
+        { role: "user", content: question },
+      ],
+      max_tokens: 400,
+      temperature: 0.2,
+    });
+    return json({ answer: (result.response || "").trim() }, 200, h);
+  } catch (err) {
+    return json({ error: "AI service unavailable.", detail: String(err) }, 502, h);
+  }
+}
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    // API de Tevi (mismo origen → sin problemas de CORS)
+    if (url.pathname === "/api/tevi" || url.pathname === "/api/tevi/") {
+      return handleTevi(request, env);
+    }
+    // Todo lo demás: el sitio estático (lo sirve el binding ASSETS).
+    return env.ASSETS.fetch(request);
+  },
+};

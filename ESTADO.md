@@ -27,7 +27,10 @@ assets/styles.css     TODO el CSS (compartido por todas las páginas)
 assets/app.js         TODO el JS: nav, carrusel, reveal, Tevi, filtro de casos, i18n, red neuronal…
 assets/*.jpg|png|mp4  imágenes/vídeo (fotos del equipo, fondos, logos)
 sitemap.xml           5 URLs · robots.txt · llms.txt (GEO)
-worker/               Cloudflare Worker (IA generativa de Tevi)
+wrangler.jsonc        Worker UNIFICADO "tegeve": sirve el sitio + IA en /api/tevi
+worker-site/index.js  código de ese Worker (estáticos vía ASSETS + IA de Tevi)
+.assetsignore         qué NO se sirve como estático (worker/, *.md, .github…)
+worker/               Worker INDEPENDIENTE de Tevi (lo usa gagrosso.github.io)
 intel.html            herramienta interna (no es parte de la web pública)
 ```
 
@@ -73,7 +76,7 @@ intel.html            herramienta interna (no es parte de la web pública)
 
 | # | Pendiente | Quién | Notas |
 |---|-----------|-------|-------|
-| 1 | **Desplegar el Worker de Tevi** | **Tú** | `cd worker && wrangler deploy`. Activa el modelo nuevo (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`) y el guardrail anti-comparativas. Sin esto, Tevi cae al buscador de FAQ. |
+| 1 | **Desplegar el Worker UNIFICADO** (sitio + IA) | **Tú** | Desde la raíz del repo: `npx wrangler deploy`. Despliega el Worker `tegeve` (sirve el sitio estático + la IA de Tevi en `/api/tevi`, mismo origen → sin CORS). Si tu conexión Cloudflare↔GitHub ya hace build, debería detectar `wrangler.jsonc` y desplegarlo solo al hacer push; si no, usa el comando. Necesita Workers AI activado (gratis) en la cuenta. **Avísame al desplegar y lo verifico.** |
 | 2 | **Activar el formulario** (1 clic, sin código) | **Tú** | El formulario de `/contacto/` usa **FormSubmit** y entrega a **info@tegeve.es**. La PRIMERA vez que alguien envíe, llegará un correo de *activación* a esa bandeja: ábrelo y pulsa el enlace una vez. Después funciona siempre. |
 | 3 | **Toques "híbridos" editoriales** | Claude | Cifras gigantes en serif, alguna franja sobria — sin perder el wow. |
 | 4 | **Páginas por servicio individuales** | Claude | Separar SAP/JDE/IA/Desarrollo en `/servicios/<slug>/` (más profundidad para SEO/GEO). |

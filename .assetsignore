@@ -1,0 +1,15 @@
+# Archivos que NO se sirven como estáticos en el Worker unificado
+# (sintaxis tipo .gitignore). El sitio público vive en la raíz:
+# index.html, assets/, casos/, contacto/, nosotros/, servicios/,
+# sitemap.xml, robots.txt, llms.txt, og.png — esos SÍ se sirven.
+worker/
+worker-site/
+wrangler.jsonc
+.assetsignore
+.gitignore
+.github/
+.claude/
+.git/
+*.md
+*.map
+.DS_Store

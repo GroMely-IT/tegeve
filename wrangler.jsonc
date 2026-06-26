@@ -1,0 +1,21 @@
+{
+  // Worker UNIFICADO de TeGeVe: sirve el sitio estático + la IA "Tevi"
+  // en el mismo origen (https://tegeve.gabrielgrosso.workers.dev).
+  // Desplegar:  npx wrangler deploy   (desde la raíz del repo)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tegeve",
+  "main": "worker-site/index.js",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    // Sitio multipágina (no SPA): si no existe el asset, 404.
+    "not_found_handling": "404-page",
+    // Solo /api/* invoca al Worker; el resto se sirve como estático
+    // directamente (más rápido y menos invocaciones en el plan gratuito).
+    "run_worker_first": ["/api/*"]
+  },
+  // Workers AI (gratis, sin clave externa) para el asistente Tevi.
+  "ai": { "binding": "AI" },
+  "observability": { "enabled": true }
+}
