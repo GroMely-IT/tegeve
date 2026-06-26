@@ -1,0 +1,7 @@
+name = "tegeve-asistente"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+# Binding de Cloudflare Workers AI (IA gratuita, sin clave externa)
+[ai]
+binding = "AI"

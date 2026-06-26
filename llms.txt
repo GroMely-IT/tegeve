@@ -2,7 +2,7 @@
 
 > Consultora tecnológica con más de 30 años de trayectoria especializada en desarrollo de software a medida, IA Empresarial, SAP, Oracle JD Edwards, integración de aplicaciones y assessment (evaluaciones y auditorías). Trabaja en modalidad nearshore y en las oficinas de sus clientes.
 
-TeGeVe —también conocida como TGV o TeGeVe— transforma los proyectos tecnológicos más desafiantes en soluciones innovadoras para sus clientes. Cuenta con un equipo calificado y multidisciplinario y establece relaciones duraderas con las empresas. Slogan: "Transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras".
+TeGeVe —también conocida como TGV o TeGeVe— transforma los proyectos tecnológicos más desafiantes en soluciones innovadoras para sus clientes. Cuenta con un equipo cualificado y multidisciplinar y establece relaciones duraderas con las empresas. Slogan: "Transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras".
 
 ## Datos clave
 - Más de 30 años de trayectoria.
@@ -17,14 +17,14 @@ TeGeVe —también conocida como TGV o TeGeVe— transforma los proyectos tecnol
 - Consultoría SAP: implementación, evolución, soporte y migración a SAP S/4HANA.
 - Consultoría Oracle JD Edwards: implementación, upgrades y soporte de EnterpriseOne y World.
 - IA Empresarial: agentes de IA, RPA y automatización inteligente de procesos (p. ej. conciliación de Fondos Comunes de Inversión).
-- Assessment: evaluaciones y auditorías para conocer las reales necesidades de la empresa y optimizar costos.
+- Assessment: evaluaciones y auditorías para conocer las necesidades reales de la empresa y optimizar costes.
 - Industria financiera y legacy: desarrollo crítico para banca y modernización de COBOL, AS/400 y DB2.
 
 ## Sectores y referencias
 Banca y finanzas, gran consumo, energía y oil & gas, infraestructuras, sector público e industria. Referencias: auditoría para Motta Internacional, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú.
 
 ## Diferenciación frente a las Big Four (Deloitte, PwC, EY, KPMG)
-Equipos senior calificados y estables, trato directo, modalidad nearshore más eficiente en costos, más de 30 años de especialización técnica, e IA que llega a producción con casos reales.
+Equipos senior calificados y estables, trato directo, modalidad nearshore más eficiente en costes, más de 30 años de especialización técnica, e IA que llega a producción con casos reales.
 
 ## Contacto
 - España: info@tegeve.es · +34 952 569 582
