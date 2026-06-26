@@ -89,6 +89,7 @@ const pinNum = document.getElementById('pinNum');
 const pinBars = [...document.querySelectorAll('#pinProgress i')];
 let lastStep = -1, pinTO;
 function updatePin(){
+  if(!pinTrack) return;
   const r = pinTrack.getBoundingClientRect();
   const total = r.height - window.innerHeight;
   const p = Math.min(1, Math.max(0, -r.top / total));
@@ -106,7 +107,7 @@ window.addEventListener('scroll', updatePin, {passive:true});
 updatePin();
 
 const mq = document.getElementById('marquee');
-mq.innerHTML += mq.innerHTML;
+if(mq) mq.innerHTML += mq.innerHTML;
 
 const faqItems = [...document.querySelectorAll('.faq-item')];
 faqItems.forEach(item => {
