@@ -629,6 +629,8 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .hc-orb{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .hc-orb::before{content:"";position:absolute;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(227,6,19,.30),transparent 62%);filter:blur(30px);top:-150px;right:-70px;animation:tvFloat 16s var(--ease) infinite alternate}
 @keyframes tvFloat{from{transform:translate(0,0) scale(1)}to{transform:translate(-70px,80px) scale(1.14)}}
+.tv-net{position:absolute;inset:0;z-index:0;width:100%;height:100%;pointer-events:none}
+.hc-tevi-veil{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(100deg,rgba(14,16,22,.94) 0%,rgba(14,16,22,.55) 42%,rgba(14,16,22,.08) 100%)}
 .hc-tevi .hc-content h2{max-width:14ch}
 .tv-bar{display:flex;align-items:center;gap:14px;width:100%;max-width:640px;margin:26px 0 22px;padding:17px 20px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);cursor:pointer;text-align:left;transition:border-color .3s,background .3s,transform .3s var(--ease-out)}
 .tv-bar:hover{background:rgba(255,255,255,.1);border-color:var(--red);transform:translateY(-2px)}
@@ -943,6 +945,8 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
   <!-- Diapositiva 2: Tevi (asistente con IA) -->
   <div class="hc-slide hc-msg hc-tevi" data-i="1" role="group" aria-roledescription="diapositiva" aria-label="2 de 5: Pregunta a Tevi">
     <span class="hc-orb" aria-hidden="true"></span>
+    <canvas class="tv-net" aria-hidden="true"></canvas>
+    <div class="hc-veil hc-tevi-veil" aria-hidden="true"></div>
     <div class="hc-content">
       <span class="hc-eyebrow">Asistente con IA · Tevi</span>
       <h2>Pregunta lo que <span style="color:#ff4350">necesites</span> saber.</h2>
@@ -2201,6 +2205,56 @@ document.querySelectorAll('.tv-chip').forEach(function(c){
     to=setTimeout(loop,t); }
   loop();
   document.addEventListener('langchange',function(e){ arr=L[(e.detail&&e.detail.lang==='en')?'en':'es']; i=0;j=0;del=false; });
+})();
+
+/* Fondo de red neuronal animada en la diapositiva de Tevi */
+(function(){
+  var slide=document.querySelector('.hc-tevi');
+  if(!slide) return;
+  var canvas=slide.querySelector('.tv-net');
+  if(!canvas || !canvas.getContext) return;
+  var ctx=canvas.getContext('2d');
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var w=0,h=0,dpr=1,parts=[],raf=null,running=false;
+  function size(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    w=slide.clientWidth||window.innerWidth; h=slide.clientHeight||window.innerHeight;
+    canvas.width=w*dpr; canvas.height=h*dpr;
+    canvas.style.width=w+'px'; canvas.style.height=h+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    var n=Math.max(24,Math.round(Math.min(74, w*h/20000)));
+    parts=[];
+    for(var i=0;i<n;i++){ parts.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.34,vy:(Math.random()-.5)*.34,r:Math.random()*1.7+.7}); }
+  }
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    var i,j,p,q,dx,dy,d,a,MAX=15000;
+    for(i=0;i<parts.length;i++){
+      p=parts[i];
+      for(j=i+1;j<parts.length;j++){
+        q=parts[j]; dx=p.x-q.x; dy=p.y-q.y; d=dx*dx+dy*dy;
+        if(d<MAX){ a=(1-d/MAX)*.52; ctx.strokeStyle='rgba(231,55,67,'+a.toFixed(3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke(); }
+      }
+    }
+    ctx.shadowBlur=8; ctx.shadowColor='rgba(231,55,67,.9)';
+    for(i=0;i<parts.length;i++){ p=parts[i]; ctx.fillStyle='rgba(255,120,128,.95)'; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.2832); ctx.fill(); }
+    ctx.shadowBlur=0;
+  }
+  function move(){
+    for(var i=0;i<parts.length;i++){ var p=parts[i]; p.x+=p.vx; p.y+=p.vy;
+      if(p.x<-12)p.x=w+12; else if(p.x>w+12)p.x=-12;
+      if(p.y<-12)p.y=h+12; else if(p.y>h+12)p.y=-12; }
+  }
+  function step(){ move(); draw(); raf=requestAnimationFrame(step); }
+  function start(){ if(running)return; running=true; if(!parts.length||!w)size(); step(); }
+  function stop(){ running=false; if(raf){cancelAnimationFrame(raf); raf=null;} }
+  size();
+  if(reduce){ draw(); return; }
+  var rsz; window.addEventListener('resize',function(){ clearTimeout(rsz); rsz=setTimeout(function(){ size(); if(!running) draw(); },200); },{passive:true});
+  function update(){ if(slide.classList.contains('is-active') && !document.hidden) start(); else stop(); }
+  new MutationObserver(update).observe(slide,{attributes:true,attributeFilter:['class']});
+  document.addEventListener('visibilitychange',update);
+  update();
 })();
 
 /* Filtro de casos de éxito */
