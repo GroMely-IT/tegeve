@@ -333,6 +333,9 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
   .nav-drop-t{width:100%;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);color:var(--t1);font-weight:500}
   .nav-drop-t .caret{display:none}
   .nav-drop{position:static;transform:none;opacity:1;visibility:visible;box-shadow:none;border:0;border-radius:0;padding:0 0 0 14px;margin:0;min-width:0;background:none;z-index:auto}
+  /* En móvil el desplegable va estático: anula el desplazamiento de escritorio
+     (translate(-50%)) en hover/focus, que lo escondía hacia la izquierda al tocarlo. */
+  .nav-group:hover .nav-drop,.nav-group:focus-within .nav-drop{transform:none}
   .nav-drop::before{display:none}
   .cases-grid{grid-template-columns:1fr}
   .stats-grid{grid-template-columns:repeat(2,1fr);gap:30px}
