@@ -185,6 +185,15 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 .nav-links a:hover{color:var(--ink)}
 .nav-cta{font-size:.9rem;font-weight:600;padding:.55rem 1.15rem;border-radius:999px;background:var(--red);border:1px solid var(--red);color:#fff;transition:.3s}
 .nav-cta:hover{background:var(--red-700);transform:translateY(-1px)}
+/* CTA: la letra SIEMPRE blanca, en cualquier estado del nav (claro, oscuro, hover, scrolled) */
+.nav-links a.nav-cta,.nav-links a.nav-cta:hover,.nav.nav-dark:not(.scrolled) .nav-links a.nav-cta{color:#fff!important;font-weight:600;text-shadow:none}
+/* Icono de LinkedIn de empresa en la cabecera */
+.nav-links a.nav-li{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;color:var(--t2);transition:color .25s,background .25s,transform .3s var(--ease-out);will-change:transform}
+.nav-links a.nav-li svg{width:20px;height:20px;fill:currentColor;pointer-events:none}
+.nav-links a.nav-li:hover{color:#0A66C2;background:rgba(10,102,194,.12)}
+.nav-links a.nav-li:focus-visible{outline:2px solid #0A66C2;outline-offset:2px}
+.nav.nav-dark:not(.scrolled) .nav-links a.nav-li{color:#fff;text-shadow:none}
+.nav.nav-dark:not(.scrolled) .nav-links a.nav-li:hover{color:#fff;background:rgba(255,255,255,.2)}
 .nav.scrolled{background:rgba(255,255,255,.78);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(39,43,54,.04)}
 /* Menú legible sobre las diapositivas oscuras del carrusel */
 .nav.nav-dark:not(.scrolled){background:linear-gradient(to bottom,rgba(10,12,18,.55),rgba(10,12,18,0))}
@@ -882,6 +891,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
         <button class="lang-opt" type="button" data-lang="en" aria-pressed="false">EN</button>
       </div>
       <button class="nav-ai ai-open-link" aria-label="Abrir asistente con IA Tevi"><svg class="sp" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.5 3.5Q9.5 10.5 16.5 10.5Q9.5 10.5 9.5 17.5Q9.5 10.5 2.5 10.5Q9.5 10.5 9.5 3.5ZM17.5 13Q17.5 17 21.5 17Q17.5 17 17.5 21Q17.5 17 13.5 17Q17.5 17 17.5 13Z"/></svg>Tevi</button>
+      <a class="nav-li" href="https://www.linkedin.com/company/tegeve/" target="_blank" rel="noopener noreferrer" aria-label="TeGeVe en LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zm1.78 13.02H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.22.79 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></a>
       <a href="#contacto" class="nav-cta">Contáctanos</a>
     </div>
   </div>
@@ -1795,6 +1805,21 @@ const burger = document.getElementById('burger'), navLinks = document.getElement
 burger.addEventListener('click', () => { const show = navLinks.classList.toggle('show'); burger.setAttribute('aria-expanded', String(show)); });
 navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('show')));
 document.getElementById('year').textContent = new Date().getFullYear();
+
+/* Efecto imán: el botón/icono se atrae suavemente hacia el cursor */
+(function(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || matchMedia('(hover: none)').matches) return;
+  document.querySelectorAll('.nav-cta, .nav-li').forEach(function(el){
+    var s = el.classList.contains('nav-li') ? 0.5 : 0.35;
+    el.addEventListener('pointermove', function(e){
+      var r = el.getBoundingClientRect();
+      var mx = e.clientX - (r.left + r.width / 2);
+      var my = e.clientY - (r.top + r.height / 2);
+      el.style.transform = 'translate(' + (mx * s).toFixed(1) + 'px,' + (my * s).toFixed(1) + 'px)';
+    });
+    el.addEventListener('pointerleave', function(){ el.style.transform = ''; });
+  });
+})();
 (function(){var i=document.getElementById('intro');if(!i)return;var rm=matchMedia('(prefers-reduced-motion: reduce)').matches;if(sessionStorage.getItem('tgvIntro')||rm){i.remove();return;}sessionStorage.setItem('tgvIntro','1');var c=function(){i.classList.add('out');setTimeout(function(){i.remove();},700);};setTimeout(c,1500);i.addEventListener('click',c);})();
 
 const io = new IntersectionObserver((entries) => {
