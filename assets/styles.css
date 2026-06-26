@@ -62,9 +62,9 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 .nav.scrolled{background:rgba(255,255,255,.78);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(39,43,54,.04)}
 /* Menú legible sobre las diapositivas oscuras del carrusel */
 .nav.nav-dark:not(.scrolled){background:linear-gradient(to bottom,rgba(10,12,18,.55),rgba(10,12,18,0))}
-.nav.nav-dark:not(.scrolled) .nav-links a,
+.nav.nav-dark:not(.scrolled) .nav-links > a,
 .nav.nav-dark:not(.scrolled) .nav-drop-t{color:#fff;font-weight:700;text-shadow:0 1px 12px rgba(0,0,0,.45)}
-.nav.nav-dark:not(.scrolled) .nav-links a:hover,
+.nav.nav-dark:not(.scrolled) .nav-links > a:hover,
 .nav.nav-dark:not(.scrolled) .nav-group:hover .nav-drop-t,
 .nav.nav-dark:not(.scrolled) .nav-group:focus-within .nav-drop-t{color:#fff;opacity:.82}
 .nav.nav-dark:not(.scrolled) .nav-drop-t .caret{opacity:.9}

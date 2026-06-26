@@ -521,13 +521,23 @@ aiInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = aiI
     var payload={ nombre:data.nombre, empresa:data.empresa||'—', email:data.email, reto:data.reto,
       _subject:'Nuevo contacto web — '+data.nombre, _template:'table', _captcha:'false' };
     fetch(CONTACT_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(payload)})
-      .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){ return {ok:r.ok && String(j&&j.success)==='true'}; }); })
+      .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){ return {ok:r.ok && String(j&&j.success)==='true', msg:(j&&j.message)||''}; }); })
       .then(function(res){
         form.classList.remove('sending');
-        if(!res.ok) throw new Error('fail');
-        form.reset();
-        msg.className='cform-msg ok';
-        msg.textContent=EN()?'Thanks — we got your message and will reply shortly.':'¡Gracias! Hemos recibido tu mensaje y te responderemos en breve.';
+        if(res.ok){
+          form.reset();
+          msg.className='cform-msg ok';
+          msg.textContent=EN()?'Thanks — we got your message and will reply shortly.':'¡Gracias! Hemos recibido tu mensaje y te responderemos en breve.';
+          return;
+        }
+        if(/activ/i.test(res.msg)){
+          msg.className='cform-msg';
+          msg.innerHTML=EN()
+            ? 'Almost there — this form needs a one-time activation. Check the inbox <b>info@tegeve.es</b> and click “Activate Form”. After that it just works.'
+            : 'Casi listo: el formulario necesita una activación única. Revisa la bandeja de <b>info@tegeve.es</b> y pulsa “Activate Form”. Después funcionará siempre.';
+          return;
+        }
+        throw new Error('fail');
       })
       .catch(function(){
         form.classList.remove('sending');
