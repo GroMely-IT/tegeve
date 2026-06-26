@@ -942,36 +942,35 @@ import * as THREE from 'three';
       const spin = new THREE.Group(); root.add(spin);
 
       // planeta de cristal (muy tenue) + halo
-      spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*0.992,48,48), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.05 })));
-      spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.004,48,48), new THREE.MeshBasicMaterial({ color:0x272B36, transparent:true, opacity:0.05, side:THREE.BackSide })));
+      spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*0.99,48,48), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.05 })));
+      spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.005,48,48), new THREE.MeshBasicMaterial({ color:0x272B36, transparent:true, opacity:0.05, side:THREE.BackSide })));
 
       const ll = (lat,lng,r)=>{ const phi=(90-lat)*Math.PI/180, th=(lng+180)*Math.PI/180;
         return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(th), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(th)); };
 
-      // Sedes TeGeVe (rojo grande + halo) y nodos de cobertura (América + Europa)
-      const OFFICES = [ [40.4,-3.7], [19.4,-99.1], [25.8,-80.2], [-34.6,-58.4] ];      // ES, MX, US(Miami), AR
-      const NODES = [ [51.5,-0.12],[48.85,2.35],[50.11,8.68],[38.72,-9.14],[45.46,9.19],[52.37,4.9],   // Europa
-                      [40.71,-74.0],[43.65,-79.38],[8.98,-79.52],[4.71,-74.07],[-12.05,-77.04],[-23.55,-46.63],[-33.45,-70.66],[25.67,-100.31] ]; // América
-
+      // Sedes TeGeVe (rojo grande + halo): ES, MX, US, AR
+      const OFFICES = [ [40.4,-3.7], [19.4,-99.1], [38.0,-97.0], [-34.6,-58.4] ];
       const mRed = new THREE.MeshBasicMaterial({ color:RED });
-      OFFICES.forEach(([la,lo])=>{ const p=ll(la,lo,R*1.012);
-        const m=new THREE.Mesh(new THREE.SphereGeometry(0.032,14,14),mRed); m.position.copy(p); spin.add(m);
-        const g=new THREE.Mesh(new THREE.SphereGeometry(0.075,16,16), new THREE.MeshBasicMaterial({color:RED,transparent:true,opacity:0.16})); g.position.copy(p); spin.add(g); });
-      const nMat = new THREE.MeshBasicMaterial({ color:0xff4350, transparent:true, opacity:0.85 });
-      NODES.forEach(([la,lo])=>{ const m=new THREE.Mesh(new THREE.SphereGeometry(0.013,8,8),nMat); m.position.copy(ll(la,lo,R*1.01)); spin.add(m); });
+      OFFICES.forEach(([la,lo])=>{ const p=ll(la,lo,R*1.014);
+        const m=new THREE.Mesh(new THREE.SphereGeometry(0.034,16,16),mRed); m.position.copy(p); spin.add(m);
+        const g=new THREE.Mesh(new THREE.SphereGeometry(0.085,16,16), new THREE.MeshBasicMaterial({color:RED,transparent:true,opacity:0.16})); g.position.copy(p); spin.add(g); });
 
-      // Conexiones animadas (cometa viajero): sedes <-> cobertura
-      const conns = [ [0,'o',2],[0,'o',3],[0,'n',0],[0,'n',1],[0,'n',2],[0,'n',3],
-                      [2,'n',6],[2,'n',8],[2,'n',9],[2,'o',1],[2,'n',10],
-                      [1,'n',13],[1,'n',9],[3,'n',11],[3,'n',12] ];
+      // Regiones cubiertas (sus puntos de continente se tiñen de rojo)
+      function covered(lat,lng){
+        if(lat>=36 && lat<=72 && lng>=-26 && lng<=46) return true;      // Europa (desde España)
+        if(lat>=7 && lat<=49.5 && lng>=-125 && lng<=-77) return true;   // EE.UU. + México + Centroamérica
+        if(lat>=-56 && lat<=13 && lng>=-82 && lng<=-34) return true;    // Sudamérica (desde Argentina)
+        return false;
+      }
+
+      // Conexiones animadas (cometa viajero) entre las 4 sedes
+      const conns = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
       const SEG=64, WIN=10;
-      const baseMat = new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.16 });
+      const baseMat = new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.18 });
       const cometMat = new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.9 });
       const headMat = new THREE.MeshBasicMaterial({ color:0xff4d57 });
-      const arcs = conns.map(([ai,kind,bi])=>{
-        const A = ll(OFFICES[ai][0], OFFICES[ai][1], R);
-        const tgt = kind==='o' ? OFFICES[bi] : NODES[bi];
-        const B = ll(tgt[0], tgt[1], R);
+      const arcs = conns.map(([ai,bi])=>{
+        const A = ll(OFFICES[ai][0], OFFICES[ai][1], R), B = ll(OFFICES[bi][0], OFFICES[bi][1], R);
         const mid = A.clone().add(B).multiplyScalar(0.5).normalize().multiplyScalar(R*(1.14 + A.distanceTo(B)*0.17));
         const curve = new THREE.QuadraticBezierCurve3(A, mid, B);
         const pts = curve.getPoints(SEG);
@@ -981,17 +980,17 @@ import * as THREE from 'three';
         return { curve, comet, head, t: Math.random()*1.18, speed: 0.0035 + Math.random()*0.0025 };
       });
 
-      // Continentes: puntos sobre tierra muestreados de la máscara equirectangular
-      function addPoints(arr){
-        const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr,3));
-        spin.add(new THREE.Points(g, new THREE.PointsMaterial({ color:0x8b93a0, size:0.013, sizeAttenuation:true, transparent:true, opacity:0.62 })));
-        frame();
+      // Continentes: puntos sobre tierra (gris) y rojos en las regiones cubiertas
+      function addPoints(arr, color, size, opacity){
+        if(!arr.length) return;
+        const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr),3));
+        spin.add(new THREE.Points(g, new THREE.PointsMaterial({ color, size, sizeAttenuation:true, transparent:true, opacity })));
       }
       function fallbackSphere(){
-        const N=1600, a=new Float32Array(N*3), gr=Math.PI*(1+Math.sqrt(5));
+        const N=2200, a=[], gr=Math.PI*(1+Math.sqrt(5));
         for(let i=0;i<N;i++){ const t=i/(N-1), inc=Math.acos(1-2*t), az=gr*i;
-          a[i*3]=R*Math.sin(inc)*Math.cos(az); a[i*3+1]=R*Math.cos(inc); a[i*3+2]=R*Math.sin(inc)*Math.sin(az); }
-        addPoints(a);
+          a.push(R*Math.sin(inc)*Math.cos(az), R*Math.cos(inc), R*Math.sin(inc)*Math.sin(az)); }
+        addPoints(a, 0x5A5F6B, 0.014, 0.7); frame();
       }
       const img = new Image();
       img.onload = () => { try {
@@ -1002,9 +1001,9 @@ import * as THREE from 'three';
         const px=(u,v)=>d[((((v%sh)+sh)%sh)*sw + (((u%sw)+sw)%sw))*4];
         const uv=(lat,lng)=>[Math.round((lng+180)/360*sw), Math.round((90-lat)/180*sh)];
         const af=uv(8,21), pa=uv(0,-150);
-        const landDark = px(af[0],af[1]) < px(pa[0],pa[1]);   // tierra = oscuro?
+        const landDark = px(af[0],af[1]) < px(pa[0],pa[1]);
         const isLand=(u,v)=> landDark ? px(u,v)<110 : px(u,v)>145;
-        const out=[], STEP=2, DENS=0.55;
+        const gray=[], red=[], STEP=2, DENS=0.92;
         for(let v=0; v<sh; v+=STEP){
           const lat=90-(v/sh)*180;
           if(lat<-58 || lat>84) continue;
@@ -1014,10 +1013,12 @@ import * as THREE from 'three';
             if(Math.random() > w*DENS) continue;
             const lng=(u/sw)*360-180;
             const p=ll(lat+(Math.random()-0.5), lng+(Math.random()-0.5), R*0.999);
-            out.push(p.x,p.y,p.z);
+            (covered(lat,lng)?red:gray).push(p.x,p.y,p.z);
           }
         }
-        addPoints(new Float32Array(out));
+        addPoints(gray, 0x565C68, 0.014, 0.72);   // continentes (gris oscuro, más visibles)
+        addPoints(red,  RED,      0.017, 0.95);   // regiones cubiertas (rojo de marca)
+        frame();
       } catch(e){ fallbackSphere(); } };
       img.onerror = fallbackSphere;
       img.src = 'assets/earth-mask.png';
