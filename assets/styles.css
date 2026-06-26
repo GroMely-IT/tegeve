@@ -185,24 +185,11 @@ section{position:relative}
 .card .tags span{font-size:.74rem;font-weight:600;color:var(--red-700);background:var(--red-tint);padding:4px 10px;border-radius:999px}
 
 /* En LinkedIn / Novedades */
-.li-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.li-card{display:flex;flex-direction:column}
-.li-card::after{background:#0A66C2}
-.li-card:hover{border-color:#cde0f5}
-.li-head{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-.li-logo{width:44px;height:44px;border-radius:12px;flex:none;display:grid;place-items:center;background:#0A66C2;color:#fff}
-.li-logo svg{width:22px;height:22px;fill:currentColor}
-.li-who{display:flex;flex-direction:column;line-height:1.25}
-.li-name{font-weight:700;color:var(--ink);font-size:.98rem}
-.li-meta{font-size:.78rem;color:var(--t3)}
-.li-topic{align-self:flex-start;font-size:.74rem;font-weight:600;color:#0A66C2;background:rgba(10,102,194,.09);padding:4px 11px;border-radius:999px;margin-bottom:14px}
-.li-card p{color:var(--t2);font-size:.98rem;margin:0 0 20px}
-.li-link{margin-top:auto;display:inline-flex;align-items:center;gap:.45rem;font-weight:600;font-size:.95rem;color:#0A66C2}
-.li-link:hover{color:#085296}
-.li-link:hover .btn-arrow{transform:translateX(4px)}
 .li-foot{margin-top:40px;display:flex;justify-content:center}
 .btn-li{background:#0A66C2;color:#fff;box-shadow:0 12px 30px -10px rgba(10,102,194,.5)}
 .btn-li:hover{background:#085296;transform:translateY(-2px) scale(1.015);box-shadow:0 18px 44px -12px rgba(10,102,194,.6)}
+.li-embed{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--paper);box-shadow:var(--shadow)}
+.li-embed iframe{display:block;width:100%;border:0}
 
 /* Pinned scene */
 .pin{position:relative;background:var(--ink);color:#fff}
@@ -360,7 +347,6 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
   .cases-grid{grid-template-columns:1fr}
   .stats-grid{grid-template-columns:repeat(2,1fr);gap:30px}
   .cards{grid-template-columns:1fr}
-  .li-grid{grid-template-columns:1fr}
   .pin-grid{grid-template-columns:1fr;gap:30px}
   .pin-visual{display:none}
   .pin-track{height:340vh}
