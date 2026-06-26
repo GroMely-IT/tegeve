@@ -181,7 +181,12 @@ var TEVI_KB = [
 '# Dónde ampliar la información en la web',
 'Historia, equipo, valores y reconocimientos: página Nosotros, en /nosotros/. Servicios: el resumen en /servicios/ y cada servicio con su detalle en /servicios/sap/, /servicios/oracle-jd-edwards/, /servicios/ia-empresarial/ y /servicios/desarrollo-a-medida/. Casos de éxito, sectores y clientes: /casos/. Contacto y oficinas: /contacto/. Preguntas frecuentes: la página de inicio.',
 '# Contacto',
-'España info@tegeve.es / +34 952 569 582; Argentina info@tgv.com.ar / +54 11 5767-7477; México info@tgv-group.com / +52 81 2092 2323; USA info@tgvamericas.net / +1 561 306-5121.'
+'Datos de contacto públicos por país (facilítalos directamente cuando los pidan):',
+'- España: teléfono +34 952 569 582, correo info@tegeve.es (oficina en Málaga).',
+'- Argentina: teléfono +54 11 5767-7477, correo info@tgv.com.ar (oficina en Buenos Aires).',
+'- México: teléfono +52 81 2092 2323, correo info@tgv-group.com.',
+'- Estados Unidos: teléfono +1 561 306-5121, correo info@tgvamericas.net (Florida).',
+'Correo general del grupo: info@tegeve.es. La página de contacto y las oficinas están en /contacto/.'
 ].join('\n');
 
 function siteContext(){
@@ -224,7 +229,7 @@ async function fullContext(){
   }
   // TEVI_KB (resumen canónico con el equipo) primero, para que sobreviva
   // aunque el Worker recorte; luego la KB completa de todas las páginas.
-  return _kbText ? (TEVI_KB + "\n\n" + _kbText).slice(0, 56000) : siteContext();
+  return _kbText ? (TEVI_KB + "\n\n" + _kbText).slice(0, 60000) : siteContext();
 }
 const TEVI = {
   es: {
