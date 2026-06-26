@@ -70,6 +70,11 @@ intel.html            herramienta interna (no es parte de la web pública)
 **Conversión**
 - ✅ **Formulario de contacto funcional** en `/contacto/` (nombre, empresa, email, reto) con validación, honeypot anti-spam, estados de envío/éxito/error e i18n. **Entrega directa a `info@tegeve.es` vía FormSubmit** (gratis, sin cuenta ni DNS). Degrada con elegancia a `mailto` si el servicio falla.
 
+**Ajustes finos (páginas profundas y casos)**
+- ✅ Quitado el **encabezado duplicado** y el hueco grande en `/casos/`, `/servicios/`, `/nosotros/`, `/contacto/` (el page-hero repetía el título de la primera sección). Un solo `<h1>` por página.
+- ✅ **Hero de servicio centrado en vertical** (`.svc-hero`): las 4 páginas de servicio caben en una pantalla, sin scroll ni hueco superior.
+- ✅ **Rediseño "wow" de las fichas de casos**: barra de acento roja que se rellena, resplandor rojo en hover, título en Heebo que vira a rojo, métrica de impacto en píldora destacada, CTA "Ver caso" en versalitas; se conservan filtro y expansión. (`assets/styles.css`)
+
 **Decisión de diseño (importante):** revisamos el documento externo `MEJORA-TEGEVE.md` (de "Claude Design"). Se **descartó** su rediseño "editorial / Big Four" porque choca con la norma de no comparar/parecerse a las Big Four y arrancaría el "wow" actual. Se eligió **híbrido**: conservar diseño + wow y, como mucho, tomar prestadas ideas editoriales puntuales.
 
 ---
