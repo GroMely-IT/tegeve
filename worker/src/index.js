@@ -108,7 +108,7 @@ export default {
     const lang = body.lang === "en" ? "en" : "es";
     // El contexto lo provee el cliente desde el propio sitio (en el idioma activo).
     // Se limita su tamaño y se usa el respaldo si no llega.
-    const ctx = String(body.context || "").trim().slice(0, 24000) || FALLBACK_KB;
+    const ctx = String(body.context || "").trim().slice(0, 40000) || FALLBACK_KB;
 
     try {
       const result = await env.AI.run(MODEL, {

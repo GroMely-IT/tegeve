@@ -1,0 +1,460 @@
+# === Inicio ===
+TeGeVe — Consultoría y servicios de software | SAP, JD Edwards, IA y desarrollo a medida
+Consultoría y servicios de software · +30 años
+Transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras .
+Desarrollo de software a medida, IA Empresarial , SAP y Oracle JD Edwards . Un equipo cualificado y multidisciplinar que trabaja en modalidad nearshore o en las oficinas de nuestros clientes.
+Tevi responde al instante sobre SAP, Oracle JD Edwards, IA Empresarial, nuestros casos de éxito y cómo trabajamos. Sin formularios, sin esperas.
+Partner tecnológico
+Soluciones inteligentes para tu empresa.
+Nos implicamos como partners estratégicos: alineamos tecnología y negocio para que crezcas con solidez.
+Ver servicios Hablar con un experto
+SAP · Migración a S/4HANA
+El salto a SAP S/4HANA, sin sobresaltos.
+Te acompañamos en cada paso de la migración —del análisis a producción— con un plan claro y experiencia real.
+Conocer SAP Iniciar diagnóstico
+IA Empresarial · Automatización
+Cuando la automatización transforma el proceso.
+Reducimos tiempos y costes con IA y RPA: de una conciliación de cuatro días a cuestión de horas.
+Ver caso de éxito Explorar IA
+Nuestras alianzas · partner de ecosistemas de primer nivel
+30+
+Años de trayectoria
+16+
+Países con proyectos
+Oficinas: España · Argentina · USA
+Áreas de especialización
+Desarrollo a medida SAP S/4HANA Oracle JD Edwards IA Empresarial RPA Integración de aplicaciones Assessment Java J2EE AS/400 COBOL DB2
+Servicios
+Software de primer nivel, a la medida de tu negocio.
+Somos expertos en el desarrollo de software a medida y en la implementación de paquetes de primer nivel como SAP y Oracle JD Edwards. También nos especializamos en IA Empresarial, integración de aplicaciones, evaluaciones y auditorías.
+Desarrollo a medida
+Software a medida e integración de sistemas de múltiple envergadura sobre diferentes plataformas tecnológicas. Conectamos tus aplicaciones para que la información fluya end-to-end.
+A medida Integración APIs
+Consultoría SAP
+Implementación, evolución y soporte de SAP, incluido el camino hacia S/4HANA. Paquetes de primer nivel respaldados por más de 30 años de experiencia.
+S/4HANA Implantación Soporte
+Oracle JD Edwards
+Implementación, upgrades y soporte de JD Edwards EnterpriseOne y World. Proyectos de misión crítica como partner del ecosistema Oracle/IBM.
+EnterpriseOne Upgrades Soporte
+IA Empresarial
+Incorporamos la inteligencia artificial al negocio: agentes de IA, RPA y automatización inteligente de procesos. Llevamos la IA a producción, con casos reales como la conciliación de fondos de inversión.
+Agentes IA RPA Automatización
+Assessment y Auditorías
+Evaluaciones y auditorías para conocer las necesidades reales de tu empresa, generar una propuesta de valor y optimizar costes antes de invertir.
+Evaluaciones Auditorías ROI
+Industria Financiera & Legacy
+Desarrollo crítico para banca y finanzas y modernización de sistemas legacy (COBOL, AS/400, DB2), donde la fiabilidad y la continuidad del negocio son innegociables.
+Banca COBOL AS/400
+¿Por qué elegirnos?
+Experiencia profunda con la cercanía de un socio.
+Porque transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras. Esto es lo que nos define.
+Equipo cualificado y estable
+Un equipo multidisciplinar y senior con el que estableces relaciones duraderas. El conocimiento de tu proyecto se queda en casa.
+Modalidad nearshore eficiente
+Nos integramos a equipos multiculturales con flexibilidad y eficiencia, optimizando costes con un modelo de entrega ágil.
++30 años de oficio real
+Experiencia profunda en desarrollo a medida, SAP, JD Edwards, IA y modernización de legacy. Hemos visto —y resuelto— casi todo.
+Trato directo, sin capas
+Orientación al cliente y escucha activa: trato directo con quien diseña y ejecuta. Decisiones rápidas y foco en el resultado.
+IA que llega a producción
+Automatización inteligente con casos reales, como la conciliación de Fondos Comunes de Inversión. Nada de pilotos que no escalan.
+Propuesta de valor y costes
+Entendemos las necesidades reales del negocio para generar una propuesta de valor y optimizar costes antes de invertir.
+Preguntas frecuentes
+Todo lo que hace TeGeVe, respondido.
+¿Tienes una pregunta que no está aquí? Pregúntale a nuestro asistente con IA abajo a la derecha.
+Servicios
+SAP
+JD Edwards
+Conceptos
+Modelo
+¿Qué es TeGeVe?
+TeGeVe —también conocida como TGV — es una consultora tecnológica con más de 30 años de trayectoria que transforma los proyectos tecnológicos más desafiantes en soluciones innovadoras. Combinamos el desarrollo de software a medida con la implementación de paquetes de primer nivel como SAP y Oracle JD Edwards , y sumamos IA Empresarial . Contamos con un equipo cualificado y multidisciplinar, prestamos servicios desde España, Argentina y USA, y hemos desarrollado proyectos en más de 16 países.
+¿Desde qué países presta servicio TeGeVe?
+Prestamos servicios desde España (Málaga), Argentina (Buenos Aires) y Estados Unidos , con contacto comercial también en México . Nuestra trayectoria internacional —proyectos en más de 16 países , con empresas y organismos gubernamentales— nos permite atender con cercanía a clientes de toda Europa y América , en modalidad nearshore o en las oficinas del cliente.
+¿Cuántos años de experiencia tiene TeGeVe?
+Más de 30 años . Esa trayectoria nos permite entender el negocio de cada cliente, anticipar riesgos y generar una propuesta de valor que optimiza costes . Hemos acompañado proyectos de misión crítica en banca, energía, infraestructuras y gran consumo.
+¿A qué sectores presta servicio TeGeVe?
+Tenemos experiencia en banca y finanzas , energía y oil&gas , infraestructuras , retail y distribución , sector público e industria . Entre nuestras referencias: una auditoría para Motta Internacional , Weatherford , Abertis/Autopistas del Oeste y Banco Itaú .
+¿Qué servicios ofrece TeGeVe?
+Somos expertos en el desarrollo de software a medida y en la implementación de paquetes de primer nivel como SAP y Oracle JD Edwards . También nos especializamos en IA Empresarial (agentes, RPA y automatización), integración de aplicaciones , evaluaciones y auditorías (Assessment) y modernización de sistemas legacy para la industria financiera.
+¿Desarrollan software a medida e integraciones?
+Sí. Nuestra capacidad de desarrollar software a medida , sumada al conocimiento de software empresarial de primer nivel, nos permite integrar sistemas de múltiple envergadura sobre diferentes plataformas tecnológicas, para que la información fluya de extremo a extremo y elimines silos.
+¿Qué es el Assessment de TeGeVe?
+El Assessment es una práctica de evaluaciones y auditorías para conocer las necesidades reales de tu empresa, generar una propuesta de valor y optimizar costes antes de invertir. Un ejemplo es la auditoría que realizamos para Motta Internacional .
+¿Modernizan sistemas legacy y trabajan para banca?
+Sí. Modernizamos sistemas legacy construidos sobre COBOL , AS/400 y DB2 , y desarrollamos para la industria financiera , donde la fiabilidad y la continuidad del negocio son críticas. Evolucionamos lo crítico sin poner en riesgo la operación.
+¿Dan soporte y mantenimiento tras la puesta en marcha?
+Sí. No desaparecemos tras el go-live: ofrecemos soporte , evolución funcional y mantenimiento de las soluciones, y medimos el valor entregado. Buscamos relaciones duraderas , no proyectos de usar y tirar.
+¿Trabaja TeGeVe con SAP y S/4HANA?
+Sí. Implementamos, evolucionamos y damos soporte a SAP , y acompañamos a las empresas en su camino hacia SAP S/4HANA . Aportamos consultores senior con experiencia en proyectos ERP de gran envergadura y misión crítica.
+¿Qué hacen con Oracle JD Edwards?
+Implementamos, actualizamos ( upgrades ) y damos soporte a Oracle JD Edwards EnterpriseOne y World , como partner del ecosistema Oracle/IBM. Trabajamos módulos financieros, de distribución, manufactura y logística en proyectos de misión crítica.
+¿Cómo aborda TeGeVe la inteligencia artificial?
+Ayudamos a incorporar la inteligencia artificial al negocio con foco en casos de uso concretos, gobernanza , seguridad del dato y retorno medible . Llevamos la IA a producción —no nos quedamos en pilotos— con casos reales como la conciliación de fondos de inversión .
+¿Qué tipo de soluciones de IA pueden implementar?
+Desde agentes de IA que atienden consultas y ejecutan tareas, hasta RPA para automatizar procesos repetitivos (conciliaciones, altas de datos, informes), pasando por copilotos internos y automatización inteligente sobre tus sistemas SAP , JD Edwards o aplicaciones a medida.
+¿Qué es SAP?
+SAP es uno de los sistemas ERP líderes del mundo: un software empresarial que integra en una sola plataforma procesos como finanzas, compras, ventas, producción, logística y recursos humanos. Su generación actual es SAP S/4HANA . En TeGeVe lo implementamos, evolucionamos y damos soporte.
+¿Qué es Oracle JD Edwards?
+Oracle JD Edwards (JDE) es un sistema ERP de Oracle muy implantado en industria, distribución y manufactura. Sus líneas principales son EnterpriseOne y World . En TeGeVe lo implementamos, actualizamos y damos soporte.
+¿Qué es un ERP?
+Un ERP (Enterprise Resource Planning) es un sistema que integra y centraliza los procesos clave de una empresa —finanzas, compras, inventario, ventas, producción— en una única plataforma , evitando silos de información. SAP y Oracle JD Edwards son dos de los ERP más utilizados.
+¿Qué es SAP S/4HANA?
+SAP S/4HANA es la generación actual del ERP de SAP, construida sobre la base de datos en memoria SAP HANA , que permite procesar grandes volúmenes de información en tiempo real. Muchas empresas con versiones anteriores de SAP están migrando a S/4HANA ; en TeGeVe acompañamos ese camino.
+¿Qué es la IA empresarial?
+La IA empresarial es la aplicación de la inteligencia artificial a los procesos de una organización con criterios de gobernanza , seguridad del dato y retorno medible . Incluye agentes de IA, automatización inteligente y RPA. En TeGeVe la llevamos a producción, integrada con tus sistemas.
+¿Qué es RPA?
+RPA (Robotic Process Automation) es la automatización de tareas repetitivas y basadas en reglas mediante “robots” de software —por ejemplo conciliaciones, altas de datos o generación de informes—. Libera a los equipos del trabajo manual y reduce errores. En TeGeVe la combinamos con IA para una automatización inteligente.
+¿Qué es el modelo nearshore?
+El nearshore es un modelo de servicios en el que el proveedor trabaja desde un país cercano en zona horaria e idioma , en lugar de deslocalizar a destinos lejanos (offshore). Aporta cercanía cultural, comunicación fluida y costes eficientes. TeGeVe opera en nearshore entre España y Latinoamérica , además de en las oficinas del cliente.
+¿Qué es la modernización de sistemas legacy?
+La modernización de legacy consiste en evolucionar sistemas antiguos pero críticos (por ejemplo en COBOL , AS/400 o DB2 ) hacia tecnologías y arquitecturas actuales, sin poner en riesgo la continuidad del negocio . Es habitual en banca y finanzas, donde TeGeVe tiene amplia experiencia.
+¿Qué hace diferente a TeGeVe?
+Aportamos equipos senior cualificados y estables , trato directo con quien diseña y ejecuta, un modelo nearshore eficiente en costes y más de 30 años de especialización técnica real. Cercanía, foco y flexibilidad, sin perder profundidad técnica .
+¿Cómo es el modelo de contratación y precio?
+Trabajamos por proyecto cerrado o por equipo dedicado (nearshore / staff augmentation), según lo que mejor encaje contigo. El precio depende del alcance, pero nuestro modelo nearshore suele ser eficiente en costes . Lo definimos tras un primer diagnóstico sin compromiso.
+¿Cómo empezamos a trabajar juntos?
+Empezamos con una conversación de diagnóstico para entender tu reto y tus necesidades reales. A partir de ahí proponemos un enfoque (assessment, prueba de concepto o proyecto) con un alcance claro. Escríbenos a info@tegeve.es o desde la sección de contacto .
+¿Cómo puedo contactar con TeGeVe?
+Según tu región: España info@tegeve.es · +34 952 569 582 — Argentina info@tgv.com.ar · +54 11 5767-7477 — México info@tgv-group.com · +52 81 2092 2323 — USA info@tgvamericas.net · +1 561 306-5121.
+¿Tienes un reto tecnológico? Démosle forma.
+Cuéntanos tu reto y te propondremos un enfoque con un alcance claro, centrado en el valor de negocio y la optimización de costes.
+España
+info@tegeve.es +34 952 569 582
+Argentina
+info@tgv.com.ar +54 11 5767-7477
+México
+info@tgv-group.com +52 81 2092 2323
+USA
+info@tgvamericas.net +1 561 306-5121
+
+# === Servicios ===
+Servicios — SAP, JD Edwards, IA y desarrollo a medida | TeGeVe
+Servicios Resolvemos tus retos tecnológicos, de la estrategia a producción.
+SAP, Oracle JD Edwards, IA Empresarial, desarrollo a medida e integración: un equipo senior que se implica como partner y entrega resultados reales.
+SAP
+Optimiza la gestión de tu empresa con SAP.
+Conocemos el mundo SAP y sabemos cómo hacer que se integre, evolucione y escale: desde migraciones a SAP S/4HANA hasta desarrollos a medida. Aceleramos los flujos de trabajo, mejoramos la eficiencia operativa y maximizamos el retorno de la inversión.
+Qué hacemos
+SAP S/4HANA Finanzas, Operaciones y RR. HH. SAP BTP SAP Fiori SAP HANA ABAP (RAP) CPI · PI/HCI SAP Analytics Cloud
+Cómo lo hacemos
+Implementación a medida
+AMS · soporte evolutivo
+Software Factory
+Staff Augmentation
+Assessment
+Hablar de tu proyecto SAP → Ver casos SAP
+Oracle JD Edwards
+Tu ERP de clase mundial, en las mejores manos.
+Un aliado de confianza en Oracle JD Edwards. Implementamos, evolucionamos y damos soporte a EnterpriseOne y World con soluciones a medida que se adaptan a las necesidades reales de cada negocio, con más de una década acompañando operaciones críticas.
+Qué hacemos
+JD Edwards EnterpriseOne JD Edwards World Orchestrator · IoT BI Publisher One View Reporting E1 Pages JDE Mobile Upgrades
+Cómo lo hacemos
+Implementación a medida
+AMS · soporte evolutivo
+Software Factory
+Staff Augmentation
+Assessment
+Hablar de JD Edwards → Ver casos JDE
+IA Empresarial & Business Intelligence
+De los datos a la decisión. De la decisión a la acción.
+Integramos Business Intelligence, Inteligencia Artificial y automatización (RPA) en una misma estrategia para que tu organización decida mejor y opere con más eficiencia. Llevamos la IA a producción con casos reales.
+Qué hacemos
+Automatización (RPA + IA) Agentes de IA Asistentes y chatbots BI y analítica Integración y gestión de datos Test Automation IA agéntica Evaluación de madurez de IA
+Plataformas: Power Platform · OpenAI · Google Cloud · UiPath · SAP Joule
+Cómo lo hacemos
+Desarrollo a medida
+AMS · soporte evolutivo
+Staff Augmentation
+Consultoría en automatización
+Evaluación de madurez de IA
+Explorar IA y datos → Ver casos de IA
+Desarrollo de software a medida
+Simplificamos la complejidad tecnológica.
+Diseñamos aplicaciones web y móviles modernas, integramos sistemas y gestionamos grandes volúmenes de datos. Nos integramos a tu metodología con foco en la usabilidad, el rendimiento y la escalabilidad.
+Qué hacemos
+Apps web y móviles Integración de sistemas Angular · React HTML5 · CSS .NET Java Node.js SQL Server · Oracle SharePoint
+Cómo lo hacemos
+Implementación a medida
+Software Factory
+Testing Factory
+AMS · soporte evolutivo
+Staff Augmentation
+Construyamos tu software → Ver casos
+Modelos de servicio
+La forma de colaborar que tu proyecto necesita.
+Nos adaptamos a tu realidad: desde un proyecto llave en mano hasta sumar talento senior a tu equipo. Siempre con calidad asegurada y cercanía.
+Implementación a medida
+Proyectos llave en mano, del análisis a producción, con un plan claro y entregables medibles.
+AMS · soporte evolutivo
+Mantenemos y hacemos evolucionar tus sistemas con niveles de servicio y mejora continua.
+Software Factory
+Una fábrica de software dedicada que escala tu capacidad de entrega con calidad asegurada.
+Staff Augmentation
+Sumamos perfiles senior a tu equipo, integrados a tu cultura y a tu forma de trabajar.
+Assessment
+Evaluamos procesos, tecnología y madurez para decidir con datos antes de invertir.
+Nearshore
+Misma franja horaria, cultura cercana y costes optimizados: colaboración en tiempo real desde España y Latinoamérica.
+Cómo trabajamos · 01
+Entendemos las necesidades reales de tu negocio.
+Empezamos por un assessment honesto. Nuestra experiencia de +30 años nos permite entender el negocio para generar una propuesta de valor y optimizar costes.
+Cómo trabajamos · 02
+Diseñamos con un equipo cualificado y multidisciplinar.
+Combinamos desarrollo a medida con el dominio de software empresarial de primer nivel para integrar sistemas de múltiple envergadura.
+Cómo trabajamos · 03
+Entregamos en modalidad nearshore o en tus oficinas.
+Nuestra trayectoria internacional nos permite integrarnos con flexibilidad y eficiencia a equipos multiculturales, en la modalidad que mejor se adapte a cada proyecto.
+Cómo trabajamos · 04
+Acompañamos la adopción y la transformación.
+Acompañamos a nuestros clientes en la adopción de la solución digital oportuna y adecuada para cada negocio, sector y cultura, estableciendo relaciones duraderas.
+
+# === Casos de éxito ===
+Casos de éxito | TeGeVe
+Casos de éxito Resultados reales en banca, energía, industria y sector público.
+Cada proyecto, un reto concreto resuelto con rigor. Filtra por servicio o sector y mira cómo lo hicimos.
+Casos de éxito
+Resultados reales, en producción.
+Proyectos de SAP, Oracle JD Edwards, IA Empresarial, desarrollo a medida e integración para líderes de banca, agro, gran consumo, energía y medios de pago. Filtra por servicio o busca por palabra clave.
+Todos
+SAP
+Oracle JD Edwards
+IA Empresarial
+Desarrollo a medida
+Business Intelligence
+Integración
+Assessment
+IA Empresarial Servicios financieros
+IA que convierte cuatro días de conciliación de FCI en cuestión de horas
+Operadora de la mayor red de gasoductos de Argentina
+De 4 días a horas
+Ver caso
+Reto. El equipo de finanzas necesitaba agilizar la consolidación de sus distintos fondos comunes de inversión (FCI) para el cálculo de impuestos y su imputación en SAP. El procesamiento manual consumía varios días de trabajo de una persona, con alto coste operativo y elevado riesgo de errores.
+Solución. TeGeVe desarrolló una aplicación sobre la plataforma de Microsoft con inteligencia artificial que lee e interpreta automáticamente los documentos PDF de los bancos, vuelca los datos en Excel estructurado por FCI y consolida los resultados. El sistema calcula saldos e impuestos, notifica por Outlook y alerta sobre cualquier incidencia.
+Resultado. La solución reduce el procesamiento de cuatro días a cuestión de horas, minimiza los errores y ofrece resultados inmediatos. Simplifica la gestión de grandes volúmenes de información y es escalable a nuevos fondos y bancos.
+ia empresarial ai builder power automate fci conciliacion sap automatizacion servicios financieros microsoft excel online
+IA Empresarial Logística (Oil & Gas)
+IA que automatiza la planificación logística diaria y reemplaza el Excel manual
+Empresa del sector Oil & Gas
+Valoración del cliente: 5/5
+Ver caso
+Reto. La empresa planificaba su operación logística diaria de forma manual con hojas de Excel: procesaba pedidos, completaba datos faltantes y definía recorridos según la flota disponible. Era un proceso complejo y exigente, con alto riesgo de error y fuerte dependencia del conocimiento del programador logístico, que debía gestionar a mano múltiples restricciones (carga correcta de cisternas, estabilidad de los camiones, separación de combustibles y eficiencia de las rutas).
+Solución. TeGeVe desarrolló una aplicación con IA que automatiza la planificación logística replicando la lógica del programador. La solución integra los pedidos de distintas fuentes, completa automáticamente los datos faltantes, optimiza la carga de las cisternas y resuelve el problema de ruteo de vehículos respetando todas las reglas del negocio, generando los recorridos diarios y la documentación de envío de forma automática.
+Resultado. El equipo automatizó la planificación logística, redujo los tiempos del proceso y eliminó los errores manuales. La solución optimiza el uso de la flota, mejora la eficiencia de los recorridos y estandariza la operación, además de sentar una base sólida para escalar capacidades de IA más avanzadas. El cliente valoró el proyecto con la máxima puntuación (5/5).
+ia empresarial logistica oil & gas ruteo de vehiculos optimizacion de flota automatizacion python fastapi google or-tools planificacion logistica
+Oracle JD Edwards Industria / Agro
+Doce años de acompañamiento sobre JD Edwards: un ERP que crece con el negocio agroindustrial
+Fabricante multinacional de equipamiento agrícola
++12 años · 92.000 h/hombre
+Ver caso
+Reto. Una multinacional productora de equipamiento agrícola necesitaba un ERP robusto, capaz de adaptar con rapidez sus procesos ante los cambios de coyuntura y lo suficientemente escalable para acompañar su crecimiento. El desafío incluía ajustar el sistema a la realidad local sin desviarse de los estándares regionales.
+Solución. TeGeVe fue seleccionada en 2010 para apoyar la implementación de JD Edwards EnterpriseOne en Argentina, abarcando la migración de datos y la instalación, sobre un modelo definido a partir del diseño adoptado en Brasil. Desde 2012, el equipo brinda un acompañamiento continuo, adaptando funcionalidades ante nuevos negocios como los derivados de la adquisición de Precision Planting.
+Resultado. El cliente gestiona de forma centralizada la producción, la venta y la exportación, junto con la administración integral de cobranzas, pagos y facturas, y dispone de información en tiempo real de múltiples sectores. La compañía ganó eficiencia y calidad en sus procesos de fabricación gracias a una solución escalable que evoluciona con el negocio.
+oracle jd edwards jd edwards enterpriseone erp agro industria equipamiento agricola manufactura argentina escalabilidad soporte continuo
+Oracle JD Edwards Agro (insumos y servicios)
+Seguridad robusta en Oracle JD Edwards: un modelo de acceso confiable para un líder del agro
+Nutrien
+Ver caso
+Reto. Tras un assessment interno en el área de IT, Nutrien, el mayor proveedor de insumos y servicios para cultivos de la región, identificó la necesidad de revisar el modelo de seguridad de su ERP y formalizar los niveles de acceso de los usuarios en sus operaciones de Chile, Uruguay y Argentina.
+Solución. TeGeVe llevó a cabo una evaluación integral del ERP Oracle JD Edwards E1 9.2: diagnosticó el estado actual (As Is) del modelo de seguridad, definió el modelo objetivo (To Be) y especificó las estrategias de adecuación, con documentación completa y recomendaciones para su implementación.
+Resultado. La seguridad pasó a formar parte del enfoque estratégico de la compañía. Se optimizaron las protecciones del ERP, se formalizaron los procesos sensibles de gestión de usuarios y se estableció un plan de mantenimiento con objetivos medibles, reforzando las prácticas de seguridad mediante una colaboración conjunta.
+oracle jd edwards erp seguridad agro insumos agricolas control de accesos assessment as is to be nutrien
+SAP Consumo masivo
+Monitor de integraciones SAP: datos de empleados unificados y en tiempo real
+Empresa de consumo masivo
+8 profesionales · 17.379 h
+Ver caso
+Reto. Los equipos de soporte afrontaban errores de integración entre sistemas, sobre todo con los datos de empleados repartidos entre servidores propios y plataformas en la nube, lo que generaba inconsistencias en los estados de actualización. Un equipo dedicado debía revisar, clasificar y abrir tickets de error de forma manual varias veces al día.
+Solución. TeGeVe desarrolló un monitor de errores de integración en SAP Fiori, dentro de la plataforma SAP BTP del cliente, que se conecta con HCM (OnPremise) y SuccessFactors a través de CPI para consolidar la información en un único punto y mostrarla en línea.
+Resultado. El personal administrativo accede a la información en tiempo real y el equipo antes dedicado a la revisión manual quedó liberado para otras tareas. La parametrización de tendencias reduce el volumen de tickets y aligera la carga de los equipos de soporte. El trabajo conjunto con el cliente permitió incorporar funcionalidades adicionales no previstas inicialmente, como una pantalla de errores frecuentes con navegación hacia sus soluciones.
+sap sap fiori sap btp successfactors hcm cpi integracion rrhh consumo masivo monitorizacion
+SAP Agroindustria
+Soporte SAP continuo que reduce costes y blinda la operación frente a la rotación
+Empresa agroindustrial líder en Argentina
+5/5 · Soporte N1 y N2
+Ver caso
+Reto. Una de las principales empresas agroindustriales de Argentina necesitaba soporte funcional continuo sobre su sistema SAP, abarcando la resolución de incidencias, la atención de consultas de los usuarios y la capacitación permanente de los nuevos integrantes del equipo.
+Solución. TeGeVe diseñó un modelo de soporte basado en la cercanía, la colaboración y la eficiencia. El equipo puso en marcha una mesa de ayuda funcional de niveles 1 y 2, con herramientas flexibles de gestión de tickets y una base de conocimiento compartida que permitió escalar las soluciones de forma ágil.
+Resultado. El servicio remoto redujo los costes operativos sin comprometer la calidad y evitó los impactos derivados de la rotación de personal. La asignación flexible de recursos permitió ajustar los costes a las necesidades del negocio, con una valoración del cliente de 5 sobre 5.
+sap soporte mesa de ayuda sap fi sap co sap mm sap sd sap pp agroindustria soporte remoto reduccion de costes
+Business Intelligence Gran consumo
+Decisiones basadas en datos para anticipar tendencias de consumo
+Kimberly-Clark
+Ver caso
+Reto. Como líder mundial en productos de higiene, Kimberly-Clark necesitaba detectar tendencias de consumo y anticipar distintos escenarios para definir estrategias seguras. Para ello requería acceso a información actualizada en tiempo real desde sus filiales, con la flexibilidad y escalabilidad necesarias para sostener el crecimiento del análisis.
+Solución. TeGeVe acompañó la evolución de la plataforma analítica del cliente, migrando primero de SAP BW a SAP HANA y Tableau, y posteriormente adoptando Snowflake (Data Cloud) y Power BI en la nube. El equipo habilitó así un entorno escalable que consolida información de las distintas filiales y la pone a disposición de forma actualizada.
+Resultado. El seguimiento estadístico de indicadores propios y de mercado a nivel local, regional y global permite optimizar las acciones de producción, logística y exhibición en góndola. Además, la generación de informes facilita redefinir objetivos estratégicos y tomar decisiones fundamentadas a partir de múltiples variables.
+business intelligence snowflake power bi sap bw sap hana tableau data cloud analitica en la nube gran consumo tendencias de consumo toma de decisiones
+Desarrollo a medida Banca
+Un sistema de rating crediticio unificado y web que reduce costes de mantenimiento
+Banco Comafi
+Ver caso
+Reto. El banco necesitaba actualizar su aplicativo de cálculo del rating, la calificación crediticia para personas físicas y jurídicas, junto con la interfaz de carga de información asociada.
+Solución. TeGeVe realizó la parametrización del cálculo del rating, centralizó la funcionalidad en una única aplicación y migró la herramienta a un portal web diseñado con foco en la usabilidad.
+Resultado. El nuevo desarrollo aporta mayor trazabilidad del funcionamiento y un soporte evolutivo de calidad que facilita la adaptación a futuros requerimientos. Al unificar la solución en una sola aplicación, se redujeron los costes de mantenimiento y mejoró la experiencia de usuario.
+banca rating crediticio calificacion crediticia desarrollo a medida portal web angular java spring sql server usabilidad
+Desarrollo a medida Seguros
+Una Software Factory que mantiene a una aseguradora líder al ritmo de su negocio
+Aseguradora líder del sector
+22 expertos · 32.000 h/año
+Ver caso
+Reto. Una aseguradora de referencia necesitaba adaptar su plataforma de gestión a los cambios constantes de la operativa del negocio, sin renunciar a calidad, estabilidad ni a tiempos de respuesta ágiles.
+Solución. TeGeVe puso en marcha una Software Factory con un equipo de analistas, desarrolladores y testers que da soporte a todo el ciclo de vida de las herramientas, actualizando la plataforma de forma continua.
+Resultado. El cliente logró adaptar su sistema a la evolución de la operativa con calidad y rapidez, lo que le permite sostener su posición como uno de los líderes más relevantes de su industria.
+seguros software factory desarrollo a medida java spring mvc hibernate sql server jboss mantenimiento evolutivo ciclo de vida
+Desarrollo a medida Servicios financieros
+Migración a tarjetas con chip EMV: transacciones más seguras y menos fraude
+First Data (soluciones globales de pagos)
+Ver caso
+Reto. First Data, proveedor global de soluciones de pagos, necesitaba adaptar sus procesos para habilitar la operatividad de tarjetas con chip (EMV). El objetivo era actualizar su tecnología para dar soporte simultáneo a tarjetas con chip y de banda magnética.
+Solución. TeGeVe ofreció servicios de integración, soporte, implementación y testing sobre el entorno de pagos del cliente. El equipo adaptó el modelo de datos para diferenciar las tarjetas con chip de las de banda magnética y trabajó sobre los sistemas de autorización y pagos internacionales.
+Resultado. Se mejoró la seguridad de las transacciones y se redujo el fraude, habilitando la operatividad tanto con banda magnética como con chip. Además, se logró la certificación de tarjetas IC y mejoras en los sistemas de autorización y de pagos internacionales.
+servicios financieros emv tarjetas con chip medios de pago integracion testing cobol mainframe antifraude certificacion ic
+Integración Finanzas / Medios de pago
+Sistemas legacy al servicio de nuevas estrategias de negocio en medios de pago
+First Data (licenciataria de MasterCard en Argentina)
+16 profesionales · 21.600 h
+Ver caso
+Reto. First Data, entidad financiera licenciataria de MasterCard, necesitaba incorporar a sus sistemas nuevas prestaciones que acompañaran sus estrategias de marketing y elevaran la calidad de servicios como MasterAssist, los préstamos en línea y los resúmenes de gastos con información más detallada.
+Solución. TeGeVe integró los sistemas legacy con nuevas funcionalidades y modificaciones para ampliar y mejorar las plataformas de MasterAssist, préstamos, el programa de fidelización, las campañas y las cuentas corrientes, sobre un entorno mainframe.
+Resultado. La entidad amplió y mejoró su oferta de servicios, reforzando su posicionamiento de mercado. Se incorporaron datos al servicio de asistencia médica, se habilitó una nueva interfaz web en la plataforma de Call Center y se unificó la presentación de bonificaciones en los resúmenes de cuenta.
+integracion sistemas legacy mainframe finanzas medios de pago mastercard cobol java db2
+Assessment Distribución, retail y logística
+Business Value Assessment: la decisión de ERP de Motta Internacional, basada en datos
+Motta Internacional
+14 profesionales · ≈1.600 h
+Ver caso
+Reto. Motta Internacional operaba con múltiples sistemas ERP antiguos e independientes que ya no respondían a las necesidades cambiantes del grupo. La compañía necesitaba unificar su infraestructura tecnológica y tomar una decisión de inversión fundamentada sobre qué plataforma adoptar.
+Solución. El equipo de TeGeVe llevó a cabo un Business Value Assessment: mapeó los procesos y el ecosistema tecnológico para construir un modelo As Is, diseñó un modelo multidimensional de evaluación a medida y, sobre esa base, realizó un análisis comparativo de dos opciones de ERP world-class.
+Resultado. Motta Internacional obtuvo información objetiva y fundada para seleccionar el ERP más conveniente para el grupo, junto con un roadmap de acciones concretas a ejecutar antes de la implementación. La decisión de inversión dejó de basarse en percepciones para apoyarse en evidencia estructurada.
+business value assessment erp assessment retail distribucion logistica modernizacion tecnologica seleccion de erp roadmap motta internacional
+No hay casos que coincidan con tu búsqueda. Prueba con otra palabra clave o quita los filtros.
+Experiencia
+Proyectos donde el error cuesta caro.
+Desarrollamos proyectos en más de 16 países, con empresas y organismos gubernamentales. Entre nuestras referencias: una auditoría para Motta Internacional, Weatherford, Abertis/Autopistas del Oeste y Banco Itaú.
+Banca & Finanzas
+Desarrollo crítico, modernización de legacy y proyectos para la industria financiera, como Banco Itaú.
+Retail & Distribución
+Proyectos para grupos de distribución y retail, como la auditoría a Motta Internacional.
+Energía & Oil/Gas
+Proyectos para compañías globales del sector, como Weatherford.
+Infraestructuras
+Soluciones para operadores de infraestructuras y concesiones, como Abertis/Autopistas del Oeste.
+Sector Público
+Proyectos con organismos gubernamentales en distintos países de nuestra trayectoria internacional.
+Servicios Financieros
+Automatización inteligente de procesos, como la conciliación de fondos de inversión.
+Nuestros clientes
+Grandes organizaciones confían en TeGeVe.
+Hemos acompañado a líderes de banca, telecomunicaciones, gran consumo, energía e industria en Europa y América.
+
+# === Nosotros (historia, equipo, valores, reconocimientos) ===
+Nosotros — historia, equipo y valores | TeGeVe
+Compañía Treinta y cuatro años convirtiendo retos en soluciones.
+Una consultora de personas: historia, equipo, valores y los reconocimientos que respaldan cada proyecto.
+Quiénes somos
+La pasión por lo que hacemos, el compromiso absoluto con el éxito de nuestros clientes y la vocación por la mejor calidad.
+Son los cimientos sobre los que se fundó TeGeVe: una consultora tecnológica con más de 30 años transformando los proyectos más desafiantes en soluciones innovadoras.
+30+
+Años de trayectoria
+16+
+Países con proyectos
+CMMI 3
+Nivel de madurez acreditado
+Nuestra visión
+Nuestra historia
+Treinta y cuatro años, cuatro países, una misma vocación.
+Argentina Nace TGV. Osvaldo Tessio, Ernesto Galindez y Marta Vicena lo fundan en Argentina: un espacio donde las personas apasionadas por la excelencia pueden desarrollarse.
+México Damos nuestro primer paso internacional con Phillip Morris México. El mundo entra en los planes de la compañía.
+SAP se convierte en nuestro primer Service Partner en el ámbito comercial.
+Iniciamos la adhesión al estándar de calidad de la industria: CMMI.
+Monterrey, México Inauguramos nuestra primera oficina internacional, en Monterrey, bajo el nombre de Soinf.
+Florida, EE. UU. Abrimos oficina en Florida como TGVAmericas, dentro de la expansión regional del Grupo TGV.
+Málaga, España Llegamos a Málaga y abrimos oficinas como TeGeVe: comienza el capítulo español del Grupo TGV.
+Cumplimos 30 años y superamos la 6.ª evaluación del modelo de calidad CMMI.
+Avanzamos con Horizonte: empoderamiento del equipo directivo, multiculturalidad y evolución tecnológica.
+Obtenemos el nivel de madurez 3 en el CMMI DEV Benchmark Appraisal.
+Paso firme en el mercado internacional: cientos de proyectos exitosos y decenas de clientes satisfechos.
+Lo que nos define
+Seis valores, una forma de trabajar.
+Orientación al cliente
+Tus objetivos guían cada decisión: entendemos el negocio antes que la tecnología.
+Mejora continua
+Revisamos, medimos y refinamos. Cada proyecto nos deja mejores que el anterior.
+Escucha activa
+Preguntamos y escuchamos de verdad para resolver el problema real, no el aparente.
+Diversidad y multiculturalidad
+Equipos diversos en tres continentes que suman miradas y enriquecen cada solución.
+Empoderamiento
+Personas con autonomía y criterio para decidir y llevar las ideas a producción.
+Compromiso con las personas
+Relaciones duraderas dentro y fuera: cuidamos al equipo y a cada cliente.
+Nuestro equipo
+Personas expertas detrás de cada proyecto.
+Dirección
+OT Osvaldo Tessio Director · Cofundador
+EG Ernesto Galindez Director · Cofundador
+MV Marta Vicena Directora · Cofundadora
+GG Gabriel Grosso Director TeGeVe
+Áreas de Operaciones
+FG Fernando García SAP
+JV Julieta Vegas Oracle ERPs
+FB Fernando Baztarrica Web Business Solutions
+JJ Jose Jaliff IA Empresarial
+JB Jorge Bessone Desarrollo para Servicios Financieros
+Áreas de Soporte
+MR María Amelia Rojas Recursos Humanos
+JC José Luis Carcamo Calidad y Procesos
+MA Mariano Attanasio Administración y Finanzas
+CR Carlos Rasch Ventas y Marketing
+GP Gustavo Palmieri IT
+Mercados
+FG Fernando García TGV Argentina
+AB Adriana Barbera TGV México
+HR Hugo Rabinovich TGV Americas
+Testimonios
+Lo que dicen quienes ya trabajan con nosotros.
+Relaciones de confianza que se sostienen durante años, en banca, energía e infraestructuras.
+“ TGV nos ha permitido convertirnos en una alternativa a medida, ágil y viable, sin la cual no hubiéramos podido alcanzar nuestro objetivo. El impacto positivo en nuestro departamento ha sido muy sólido, gracias a la voluntad y la flexibilidad de TGV para discutir, proponer y acordar una alternativa viable para nuestra situación.
+David Blaustein IT Region Manager, Latinoamérica · Weatherford
+“ Con la ayuda de TGV como socio tecnológico genuino, logramos desarrollar un sistema de control de permanencia que gestiona más de 400 dispositivos móviles distribuidos en todo el país.
+Fabián Ricciardi Director General de Sistemas y TI · Dirección Nacional de Migraciones
+“ Han demostrado ser un proveedor confiable, y los servicios que nos brindan nos ayudan a cumplir con nuestros proyectos. Sin dudas, podemos recomendarlos como una empresa a la cual contratar.
+Graciela Liliana Arosa Gerente de Desarrollo Core · Banco Comafi
+“ TGV es nuestro proveedor desde 2011. No dudamos en recomendarlos como una empresa a la cual contratar.
+Marcelo Migale IT Development Manager · Banco Itaú
+Compañía
+Valores y reconocimientos que respaldan cada proyecto.
+Una cultura de personas, calidad certificada y compromiso con el sector tecnológico.
+Orientación al cliente
+Mejora continua
+Escucha activa
+Diversidad y multiculturalidad
+Empoderamiento
+Compromiso con las personas
+Certificaciones y membresías
+CMMI Nivel 3
+Madurez certificada en desarrollo de software.
+Pacto Global ONU
+Firmantes del UN Global Compact.
+Polo IT Buenos Aires
+Miembros fundadores del clúster tecnológico.
+CESSI
+Participación en la comisión directiva del sector.
+Finalistas de los Premios Sadosky, reconocimiento Customer Focus en el Oracle JD Edwards Summit y distinción como uno de los mejores empleadores del sector tecnológico durante años consecutivos.
+
+# === Contacto ===
+Contacto | TeGeVe
+Contacto ¿Tienes un reto tecnológico? Démosle forma.
+Cuéntanos tu reto y te propondremos un enfoque con un alcance claro, centrado en el valor de negocio.
+¿Tienes un reto tecnológico? Démosle forma.
+Cuéntanos tu reto y te propondremos un enfoque con un alcance claro, centrado en el valor de negocio y la optimización de costes.
+España
+info@tegeve.es +34 952 569 582
+Argentina
+info@tgv.com.ar +54 11 5767-7477
+México
+info@tgv-group.com +52 81 2092 2323
+USA
+info@tgvamericas.net +1 561 306-5121

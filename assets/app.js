@@ -198,6 +198,30 @@ function siteContext(){
   ].filter(function(b){ return b.split('\n').slice(1).join('').trim().length>0; });
   return blocks.join('\n\n').slice(0, 22000);
 }
+
+// KB COMPLETA del sitio (todas las páginas) en assets/tevi-kb.txt: así a
+// Tevi le llega TODO el contenido, esté el usuario en la página que esté.
+// Regenerar con /tmp/build_kb.py cuando cambie el contenido del sitio.
+var _kbText, _kbLoaded = false, _kbP = null;
+function _kbUrl(){
+  var s = (document.querySelector('script[src*="app.js"]') || {}).src || '';
+  return s ? s.replace(/app\.js.*$/, 'tevi-kb.txt') : null;
+}
+async function fullContext(){
+  if(!_kbLoaded){
+    if(!_kbP){
+      var u = _kbUrl();
+      _kbP = u ? fetch(u).then(function(r){ return r.ok ? r.text() : ''; }).catch(function(){ return ''; })
+               : Promise.resolve('');
+    }
+    var t = await _kbP;
+    _kbText = (t && t.length > 500) ? t : '';
+    _kbLoaded = true;
+  }
+  // TEVI_KB (resumen canónico con el equipo) primero, para que sobreviva
+  // aunque el Worker recorte; luego la KB completa de todas las páginas.
+  return _kbText ? (TEVI_KB + '\n\n' + _kbText).slice(0, 40000) : siteContext();
+}
 const TEVI = {
   es: {
     greet: '👋 Hola, soy <b>Tevi</b>, el asistente de TeGeVe. Puedo explicarte qué hacemos (SAP, JD&nbsp;Edwards, IA, desarrollo a medida…) y también conceptos como “¿qué es un ERP?”. ¿En qué te ayudo?',
@@ -279,7 +303,7 @@ async function ask(q){
   const t = typing();
   if (AI_ENDPOINT){
     try {
-      const res = await fetch(AI_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question: q, lang: tlang(), context: siteContext() }) });
+      const res = await fetch(AI_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question: q, lang: tlang(), context: await fullContext() }) });
       const data = await res.json().catch(()=>({}));
       t.remove();
       if (res.ok && data.answer){ addMsg(formatAI(data.answer), 'bot'); addChips(suggest()); }

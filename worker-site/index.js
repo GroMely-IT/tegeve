@@ -95,7 +95,7 @@ async function handleTevi(request, env) {
   if (!question) return json({ error: "Empty question." }, 400, h);
 
   const lang = body.lang === "en" ? "en" : "es";
-  const ctx = String(body.context || "").trim().slice(0, 24000) || FALLBACK_KB;
+  const ctx = String(body.context || "").trim().slice(0, 40000) || FALLBACK_KB;
 
   try {
     const result = await env.AI.run(MODEL, {

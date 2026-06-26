@@ -27,6 +27,8 @@ assets/styles.css     TODO el CSS (compartido por todas las páginas)
 assets/app.js         TODO el JS: nav, carrusel, reveal, Tevi, filtro de casos, i18n, red neuronal…
 assets/*.jpg|png|mp4  imágenes/vídeo (fotos del equipo, fondos, logos)
 sitemap.xml           5 URLs · robots.txt · llms.txt (GEO)
+assets/tevi-kb.txt    base de conocimiento COMPLETA de Tevi (todas las páginas).
+                      Regenerar con /tmp/build_kb.py al cambiar contenido del sitio.
 wrangler.jsonc        Worker UNIFICADO "tegeve": sirve el sitio + IA en /api/tevi
 worker-site/index.js  código de ese Worker (estáticos vía ASSETS + IA de Tevi)
 .assetsignore         qué NO se sirve como estático (worker/, *.md, .github…)
