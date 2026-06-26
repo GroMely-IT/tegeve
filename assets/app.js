@@ -161,13 +161,33 @@ function ctxCases(){
     return '- ['+g('.case-svc')+' · '+g('.case-sector')+'] '+g('h3')+' — '+g('.case-client')+(g('.case-metric')?' ('+g('.case-metric')+')':'')+'. '+reto;
   }).join('\n');
 }
+// Base de conocimiento CANÓNICA: se envía SIEMPRE, esté el usuario en la
+// página que esté (la web es multipágina y cada página solo ve su propio
+// DOM). Incluye al equipo para responder "¿quién es X?".
+var TEVI_KB = [
+'# TeGeVe — datos de empresa',
+'TeGeVe (también TGV) es una consultora tecnológica con más de 30 años de trayectoria. Eslogan: "Transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras". Opera desde España (Málaga), Argentina (Buenos Aires) y Estados Unidos; contacto comercial también en México. Proyectos en más de 16 países. Modalidad nearshore o en las oficinas del cliente. Equipo cualificado y multidisciplinar.',
+'# Equipo de TeGeVe',
+'Dirección: Osvaldo Tessio (Director, cofundador), Ernesto Galindez (Director, cofundador), Marta Vicena (Directora, cofundadora) y Gabriel Grosso (Director de TeGeVe).',
+'Responsables de área: Fernando García (SAP), Julieta Vegas (Oracle ERPs), Fernando Baztarrica (Web Business Solutions), Jose Jaliff (IA Empresarial), Jorge Bessone (Desarrollo para Servicios Financieros), María Amelia Rojas (Recursos Humanos), José Luis Cárcamo (Calidad y Procesos), Mariano Attanasio (Administración y Finanzas), Carlos Rasch (Ventas y Marketing) y Gustavo Palmieri (IT).',
+'Mercados: Fernando García (TGV Argentina), Adriana Barbera (TGV México) y Hugo Rabinovich (TGV Americas).',
+'# Servicios',
+'(1) Desarrollo de software a medida e integración; (2) Consultoría SAP, incluido el salto a SAP S/4HANA (BTP, Fiori, HANA, ABAP, CPI); (3) Oracle JD Edwards (EnterpriseOne y World): implementación, upgrades, Orchestrator y soporte; (4) IA Empresarial y BI: agentes de IA, RPA, automatización y analítica (caso real: conciliación de fondos de inversión, de 4 días a horas); (5) Assessment: evaluaciones y auditorías para optimizar costes; (6) Industria financiera y modernización de legacy (COBOL, AS/400, DB2).',
+'Modelos de servicio: implementación a medida, AMS (soporte evolutivo), Software Factory, Testing Factory, Staff Augmentation, Assessment y nearshore.',
+'# Reconocimientos y alianzas',
+'CMMI Nivel 3, firmantes del Pacto Global de la ONU, miembros de Polo IT Buenos Aires y de CESSI. Partner de SAP, Oracle e IBM. Referencias: Motta Internacional, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú, Banco Comafi, Kimberly-Clark, Nutrien, First Data.',
+'# Contacto',
+'España info@tegeve.es / +34 952 569 582; Argentina info@tgv.com.ar / +54 11 5767-7477; México info@tgv-group.com / +52 81 2092 2323; USA info@tgvamericas.net / +1 561 306-5121.'
+].join('\n');
+
 function siteContext(){
   var faq = KB.map(function(k){ return 'P: '+k.q+'\nR: '+stripHtml(k.a); }).join('\n\n');
   var blocks = [
+    TEVI_KB,
     '# Preguntas frecuentes\n'+faq,
-    '# Contacto\n'+ctxSection('#contacto'),
+    '# Contacto (web)\n'+ctxSection('#contacto'),
     '# Sobre TeGeVe y su equipo\n'+ctxSection('#nosotros'),
-    '# Servicios\n'+ctxSection('#servicios')+'\n'+ctxSection('#sap')+'\n'+ctxSection('#jde')+'\n'+ctxSection('#ia')+'\n'+ctxSection('#desarrollo'),
+    '# Servicios (detalle)\n'+[ctxSection('#servicios'),ctxSection('#sap'),ctxSection('#jde'),ctxSection('#ia'),ctxSection('#desarrollo')].filter(Boolean).join('\n'),
     '# Modelos de servicio\n'+ctxSection('#modelos'),
     '# Cómo trabajamos\n'+ctxSection('#metodo'),
     '# Sectores\n'+ctxSection('#sectores'),
@@ -175,7 +195,7 @@ function siteContext(){
     '# Reconocimientos y certificaciones\n'+ctxSection('#premios'),
     '# Casos de éxito\n'+ctxCases(),
     '# Testimonios\n'+ctxSection('#testimonios')
-  ];
+  ].filter(function(b){ return b.split('\n').slice(1).join('').trim().length>0; });
   return blocks.join('\n\n').slice(0, 22000);
 }
 const TEVI = {
