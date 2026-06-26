@@ -10,6 +10,8 @@ TeGeVe —también conocida como TGV o TeGeVe— transforma los proyectos tecnol
 - Proyectos en más de 16 países, con empresas y organismos gubernamentales.
 - Modalidad de entrega: nearshore y en las oficinas del cliente.
 - Partner de los ecosistemas SAP y Oracle/IBM.
+- Certificación CMMI Nivel 3; firmantes del Pacto Global de la ONU; miembros de Polo IT Buenos Aires y de CESSI. Finalistas de los Premios Sadosky y reconocimiento "Customer Focus" en el Oracle JD Edwards Summit.
+- Modelos de servicio: implementación a medida, AMS (soporte evolutivo), Software Factory, Testing Factory, Staff Augmentation, Assessment y nearshore.
 - Identidad de marca: rojo corporativo #E30613, gris oscuro #272B36.
 
 ## Servicios
