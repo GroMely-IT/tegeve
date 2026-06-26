@@ -23,6 +23,15 @@ TeGeVe —también conocida como TGV o TeGeVe— transforma los proyectos tecnol
 ## Sectores y referencias
 Banca y finanzas, gran consumo, energía y oil & gas, infraestructuras, sector público e industria. Referencias: auditoría para Motta Internacional, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú.
 
+## Casos de éxito (selección)
+- IA Empresarial: conciliación de Fondos Comunes de Inversión (FCI) para una operadora de gasoductos, de 4 días a horas; planificación logística con IA y ruteo de vehículos (OR-Tools) para una empresa de Oil & Gas (valoración 5/5).
+- Oracle JD Edwards: +12 años de soporte y evolución de JD Edwards EnterpriseOne para un fabricante de equipamiento agrícola (92.000 h); assessment del modelo de seguridad de JD Edwards E1 9.2 para Nutrien (Chile, Uruguay y Argentina).
+- SAP: monitor de integraciones en SAP Fiori/BTP con HCM y SuccessFactors para una empresa de consumo masivo; soporte funcional N1/N2 para una agroindustria líder (valoración 5/5).
+- Business Intelligence: plataforma analítica (SAP BW/HANA, Tableau, Snowflake, Power BI) para Kimberly-Clark.
+- Desarrollo a medida: rating crediticio web para Banco Comafi; Software Factory para una aseguradora líder (32.000 h/año); migración a tarjetas con chip EMV para First Data.
+- Integración y assessment: integración de sistemas legacy en medios de pago (MasterCard/First Data); Business Value Assessment de ERP para Motta Internacional.
+- Disponibles y filtrables por servicio o palabra clave en https://www.tegeve.es/#casos
+
 ## Diferenciación frente a las Big Four (Deloitte, PwC, EY, KPMG)
 Equipos senior calificados y estables, trato directo, modalidad nearshore más eficiente en costes, más de 30 años de especialización técnica, e IA que llega a producción con casos reales.
 
