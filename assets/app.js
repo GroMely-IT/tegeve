@@ -176,6 +176,10 @@ var TEVI_KB = [
 'Modelos de servicio: implementación a medida, AMS (soporte evolutivo), Software Factory, Testing Factory, Staff Augmentation, Assessment y nearshore.',
 '# Reconocimientos y alianzas',
 'CMMI Nivel 3, firmantes del Pacto Global de la ONU, miembros de Polo IT Buenos Aires y de CESSI. Partner de SAP, Oracle e IBM. Referencias: Motta Internacional, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú, Banco Comafi, Kimberly-Clark, Nutrien, First Data.',
+'# Historia e hitos de TeGeVe',
+'TeGeVe (TGV) fue FUNDADA en 1992 en Argentina por Osvaldo Tessio, Ernesto Galindez y Marta Vicena. Hitos: 1992 fundación en Argentina; 2002 primer contacto internacional (Phillip Morris, México); 2004 primer Service Partner de SAP; 2006 inicio de la adhesión al estándar CMMI; 2010 primera oficina internacional en Monterrey, México (con el nombre Soinf); 2014 oficina en Florida, EE. UU. (TGVAmericas); 2021 llegada a Málaga, España, como TeGeVe —comienza el capítulo español del Grupo TGV—; 2022 30 años y 6.ª evaluación del modelo CMMI; 2024 programa Horizonte (empoderamiento del equipo directivo, multiculturalidad y evolución tecnológica); 2025 nivel de madurez 3 en el CMMI DEV Benchmark Appraisal; 2026 paso firme en el mercado internacional.',
+'# Dónde ampliar la información en la web',
+'Historia, equipo, valores y reconocimientos: página Nosotros, en /nosotros/. Servicios en detalle (SAP, Oracle JD Edwards, IA Empresarial, desarrollo a medida, modelos y método): /servicios/. Casos de éxito, sectores y clientes: /casos/. Contacto y oficinas: /contacto/. Preguntas frecuentes: la página de inicio.',
 '# Contacto',
 'España info@tegeve.es / +34 952 569 582; Argentina info@tgv.com.ar / +54 11 5767-7477; México info@tgv-group.com / +52 81 2092 2323; USA info@tgvamericas.net / +1 561 306-5121.'
 ].join('\n');
@@ -294,9 +298,15 @@ function greet(){
 }
 const escapeHtml = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const suggest = (exclude) => KB.filter(k => k !== exclude).sort(()=>0.5-Math.random()).slice(0,3).map(k=>k.q);
+var SITE_ROOT = (function(){ var s=(document.querySelector('script[src*="app.js"]')||{}).src||''; return s ? s.replace(/assets\/app\.js.*$/, '') : ''; })();
+var PAGE_LABELS = {nosotros:'Nosotros', servicios:'Servicios', casos:'Casos de éxito', contacto:'Contacto'};
 function formatAI(text){
   return escapeHtml(text)
     .replace(/(info@[a-z0-9.\-]+\.[a-z]{2,})/gi, '<a href="mailto:$1">$1</a>')
+    // Convierte las rutas del sitio en enlaces clicables que llevan a la sección
+    .replace(/\/(nosotros|servicios|casos|contacto)\//g, function(m, slug){
+      return '<a href="'+SITE_ROOT+slug+'/" style="color:var(--red);font-weight:600;text-decoration:underline">'+PAGE_LABELS[slug]+'</a>';
+    })
     .replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
 }
 function localAnswer(q){

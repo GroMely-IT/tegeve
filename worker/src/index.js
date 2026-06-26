@@ -21,6 +21,7 @@ Eslogan: "Transformamos los proyectos tecnológicos más desafiantes en solucion
 Presta servicios desde España (Málaga), Argentina (Buenos Aires) y Estados Unidos; contacto comercial también en México. Proyectos en más de 16 países, con empresas y organismos gubernamentales. Modalidad nearshore y en las oficinas del cliente. Equipo cualificado y multidisciplinar.
 Equipo: Dirección — Osvaldo Tessio, Ernesto Galindez y Marta Vicena (cofundadores) y Gabriel Grosso (Director de TeGeVe). Responsables de área: Fernando García (SAP), Julieta Vegas (Oracle ERPs), Fernando Baztarrica (Web Business Solutions), Jose Jaliff (IA Empresarial), Jorge Bessone (Desarrollo para Servicios Financieros), María Amelia Rojas (RRHH), José Luis Cárcamo (Calidad y Procesos), Mariano Attanasio (Administración y Finanzas), Carlos Rasch (Ventas y Marketing), Gustavo Palmieri (IT). Mercados: Fernando García (TGV Argentina), Adriana Barbera (TGV México), Hugo Rabinovich (TGV Americas).
 Servicios: (1) Desarrollo de software a medida e integración de aplicaciones; (2) Consultoría SAP, incluido el camino a SAP S/4HANA (BTP, Fiori, HANA, ABAP, CPI); (3) Oracle JD Edwards (EnterpriseOne y World): implementación, upgrades, Orchestrator/IoT y soporte; (4) IA Empresarial y Business Intelligence: agentes de IA, RPA, automatización, BI y analítica (caso real: conciliación de fondos de inversión, de 4 días a horas); (5) Assessment: evaluaciones y auditorías para optimizar costes (caso: Business Value Assessment para Motta Internacional); (6) Industria financiera y modernización de sistemas legacy (COBOL, AS/400, DB2).
+Historia: TeGeVe (TGV) fue fundada en 1992 en Argentina por Osvaldo Tessio, Ernesto Galindez y Marta Vicena. Hitos: 2002 primer contacto internacional (México); 2004 primer Service Partner de SAP; 2006 inicio de CMMI; 2010 primera oficina internacional en Monterrey (Soinf); 2014 oficina en Florida, EE. UU. (TGVAmericas); 2021 llegada a Málaga, España (TeGeVe); 2022 30 años; 2025 nivel de madurez 3 en CMMI DEV.
 Modelos de servicio: implementación a medida, AMS (soporte evolutivo), Software Factory, Testing Factory, Staff Augmentation, Assessment y nearshore.
 Reconocimientos: CMMI Nivel 3, firmantes del Pacto Global de la ONU, miembros de Polo IT Buenos Aires y de CESSI.
 Alianzas: partner de SAP, Oracle e IBM. Clientes/Referencias: Motta Internacional, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú, Banco Comafi, Kimberly-Clark, Nutrien, First Data.
@@ -35,6 +36,7 @@ Always answer in clear, neutral, professional English. Be concise: 2 to 4 senten
 Answer ONLY about TeGeVe and its services, strictly grounded in the CONTEXT below. Do NOT invent data, figures or clients.
 If the question cannot be answered from the CONTEXT, or asks for a specific quote/price, politely invite the user to write to info@tegeve.es.
 Do not discuss topics unrelated to TeGeVe. Do not compare TeGeVe with other consultancies or mention competitors; focus only on TeGeVe's strengths.
+When the answer is expanded on a section of the website, point to it with its exact path: history and team at /nosotros/, services at /servicios/, success stories at /casos/, contact at /contacto/.
 
 CONTEXT ABOUT TEGEVE:
 ${kb}`;
@@ -45,6 +47,7 @@ Sé conciso: entre 2 y 4 frases. Evita exclamaciones y lenguaje coloquial.
 Responde ÚNICAMENTE sobre TeGeVe y sus servicios, basándote ESTRICTAMENTE en el CONOCIMIENTO de abajo. No inventes datos, cifras ni clientes.
 Si la pregunta no se puede responder con ese conocimiento, o si piden un presupuesto concreto, invita amablemente a escribir a info@tegeve.es.
 No trates temas ajenos a TeGeVe. No compares a TeGeVe con otras consultoras ni menciones a la competencia; céntrate solo en las fortalezas de TeGeVe.
+Cuando la respuesta se amplíe en una sección de la web, indícala con su ruta exacta: la historia y el equipo en /nosotros/, los servicios en /servicios/, los casos de éxito en /casos/, el contacto en /contacto/.
 
 CONOCIMIENTO SOBRE TEGEVE:
 ${kb}`;
