@@ -450,10 +450,11 @@ aiInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = aiI
 })();
 
 
-/* Formulario de contacto -> Worker /contact (con honeypot, validación y fallback) */
+/* Formulario de contacto -> FormSubmit (entrega directa a info@tegeve.es, gratis) */
 (function(){
   var form=document.getElementById('cform');
   if(!form) return;
+  var CONTACT_ENDPOINT='https://formsubmit.co/ajax/info@tegeve.es';
   var msg=document.getElementById('cformMsg');
   var EN=function(){ return window.__lang==='en'; };
   var EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -466,10 +467,13 @@ aiInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = aiI
       msg.textContent=EN()?'Please fill in your name, a valid email and your message.':'Rellena tu nombre, un email válido y tu mensaje.';
       return;
     }
+    if(data._gotcha){ form.reset(); msg.className='cform-msg ok'; msg.textContent=EN()?'Thanks!':'¡Gracias!'; return; }
     form.classList.add('sending');
     msg.className='cform-msg'; msg.textContent=EN()?'Sending…':'Enviando…';
-    fetch(AI_ENDPOINT+'/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
-      .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){ return {ok:r.ok&&j&&j.ok}; }); })
+    var payload={ nombre:data.nombre, empresa:data.empresa||'—', email:data.email, reto:data.reto,
+      _subject:'Nuevo contacto web — '+data.nombre, _template:'table', _captcha:'false' };
+    fetch(CONTACT_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(payload)})
+      .then(function(r){ return r.json().catch(function(){return{};}).then(function(j){ return {ok:r.ok && String(j&&j.success)==='true'}; }); })
       .then(function(res){
         form.classList.remove('sending');
         if(!res.ok) throw new Error('fail');

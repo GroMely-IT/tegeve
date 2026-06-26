@@ -75,55 +75,6 @@ const json = (data, status, headers) =>
     headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
   });
 
-// Escapa HTML para el cuerpo del correo
-const esc = (s) =>
-  String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-
-// Maneja el formulario de contacto y envía el correo vía Resend (gratis)
-async function handleContact(body, env, h) {
-  // Honeypot anti-spam: si viene relleno, fingimos éxito y descartamos.
-  if (String(body._gotcha || "").trim()) return json({ ok: true }, 200, h);
-
-  const nombre = String(body.nombre || "").trim().slice(0, 120);
-  const empresa = String(body.empresa || "").trim().slice(0, 160);
-  const email = String(body.email || "").trim().slice(0, 200);
-  const reto = String(body.reto || "").trim().slice(0, 4000);
-
-  const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  if (!nombre || !okEmail || !reto) return json({ error: "Campos incompletos." }, 400, h);
-
-  if (!env.RESEND_API_KEY) return json({ error: "Email no configurado en el Worker." }, 500, h);
-
-  const to = env.CONTACT_TO || "gabrielgrosso@gmail.com";
-  const from = env.CONTACT_FROM || "TeGeVe web <onboarding@resend.dev>";
-  const subject = `Nuevo contacto web — ${nombre}${empresa ? " (" + empresa + ")" : ""}`;
-  const text = `Nombre: ${nombre}\nEmpresa: ${empresa || "—"}\nEmail: ${email}\n\nReto:\n${reto}`;
-  const html =
-    `<h2 style="font-family:sans-serif">Nuevo contacto desde la web</h2>` +
-    `<p><b>Nombre:</b> ${esc(nombre)}</p>` +
-    `<p><b>Empresa:</b> ${esc(empresa) || "—"}</p>` +
-    `<p><b>Email:</b> <a href="mailto:${esc(email)}">${esc(email)}</a></p>` +
-    `<p><b>Reto:</b><br>${esc(reto).replace(/\n/g, "<br>")}</p>`;
-
-  try {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from, to, reply_to: email, subject, text, html }),
-    });
-    if (!r.ok) {
-      const d = await r.text();
-      return json({ error: "No se pudo enviar el correo.", detail: d.slice(0, 300) }, 502, h);
-    }
-    return json({ ok: true }, 200, h);
-  } catch (err) {
-    return json({ error: "Error de red al enviar.", detail: String(err) }, 502, h);
-  }
-}
-
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
@@ -137,12 +88,6 @@ export default {
       body = await request.json();
     } catch {
       return json({ error: "Invalid JSON." }, 400, h);
-    }
-
-    // Formulario de contacto (POST /contact)
-    const url = new URL(request.url);
-    if (url.pathname.replace(/\/+$/, "") === "/contact") {
-      return handleContact(body, env, h);
     }
 
     const question = String(body.question || "").trim().slice(0, 600);
