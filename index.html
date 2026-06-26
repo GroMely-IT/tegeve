@@ -1870,7 +1870,7 @@ document.querySelectorAll('.faq-cat').forEach(btn => {
 /* Asistente IA — base de conocimiento construida desde el FAQ (fuente única de verdad) */
 /* IA generativa GRATIS: pega aquí la URL del Cloudflare Worker (ver carpeta /worker) para
    activarla. Si queda vacío o falla, el asistente responde con búsqueda local sobre el FAQ. */
-const AI_ENDPOINT = '';
+const AI_ENDPOINT = 'https://tegeve-asistente.gabrielgrosso.workers.dev';
 function buildKB(){ return faqItems.map(item => ({
   q: item.querySelector('.faq-q').textContent.replace('+','').trim(),
   a: item.querySelector('.faq-a-inner').innerHTML.trim(),
@@ -1880,7 +1880,33 @@ let KB = buildKB();
 document.addEventListener('langchange', function(){ KB = buildKB(); });
 function tlang(){ return (window.__lang === 'en') ? 'en' : 'es'; }
 function stripHtml(h){ var d=document.createElement('div'); d.innerHTML=h; return (d.textContent||'').replace(/\s+/g,' ').trim(); }
-function siteContext(){ return KB.map(function(k){ return 'Q: '+k.q+'\nA: '+stripHtml(k.a); }).join('\n\n').slice(0, 6500); }
+function ctxClean(t){ return (t||'').replace(/\s+/g,' ').trim(); }
+function ctxSection(sel){ var el=document.querySelector(sel); return el ? ctxClean(el.textContent) : ''; }
+function ctxCases(){
+  return [].slice.call(document.querySelectorAll('#casos .case')).map(function(c){
+    var g=function(s){ return ctxClean((c.querySelector(s)||{}).textContent); };
+    var reto=ctxClean((c.querySelector('.case-detail p')||{}).textContent);
+    if(reto.length>160) reto=reto.slice(0,160)+'…';
+    return '- ['+g('.case-svc')+' · '+g('.case-sector')+'] '+g('h3')+' — '+g('.case-client')+(g('.case-metric')?' ('+g('.case-metric')+')':'')+'. '+reto;
+  }).join('\n');
+}
+function siteContext(){
+  var faq = KB.map(function(k){ return 'P: '+k.q+'\nR: '+stripHtml(k.a); }).join('\n\n');
+  var blocks = [
+    '# Preguntas frecuentes\n'+faq,
+    '# Contacto\n'+ctxSection('#contacto'),
+    '# Sobre TeGeVe y su equipo\n'+ctxSection('#nosotros'),
+    '# Servicios\n'+ctxSection('#servicios')+'\n'+ctxSection('#sap')+'\n'+ctxSection('#jde')+'\n'+ctxSection('#ia')+'\n'+ctxSection('#desarrollo'),
+    '# Modelos de servicio\n'+ctxSection('#modelos'),
+    '# Cómo trabajamos\n'+ctxSection('#metodo'),
+    '# Sectores\n'+ctxSection('#sectores'),
+    '# Por qué elegirnos\n'+ctxSection('#porque'),
+    '# Reconocimientos y certificaciones\n'+ctxSection('#premios'),
+    '# Casos de éxito\n'+ctxCases(),
+    '# Testimonios\n'+ctxSection('#testimonios')
+  ];
+  return blocks.join('\n\n').slice(0, 22000);
+}
 const TEVI = {
   es: {
     greet: '👋 Hola, soy <b>Tevi</b>, el asistente de TeGeVe. Puedo explicarte qué hacemos (SAP, JD&nbsp;Edwards, IA, desarrollo a medida…) y también conceptos como “¿qué es un ERP?”. ¿En qué te ayudo?',

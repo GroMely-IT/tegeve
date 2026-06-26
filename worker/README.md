@@ -52,8 +52,10 @@ wrangler dev
 ## Notas
 - **Coste:** Workers AI incluye una cuota diaria gratuita (Neurons) suficiente para
   un sitio de baja/media demanda. Revisa los límites actuales en el panel de Cloudflare.
-- **Modelo:** se puede cambiar en `src/index.js` (`MODEL`). Otros modelos disponibles:
-  `@cf/meta/llama-3.3-70b-instruct-fp8-fast`, etc.
+- **Modelo:** usa `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (actual). El anterior
+  `@cf/meta/llama-3.1-8b-instruct` fue **retirado el 2026-05-30**. Si quieres consumir
+  menos Neurons (cuota gratuita), cambia `MODEL` en `src/index.js` por
+  `@cf/meta/llama-3.1-8b-instruct-fast`. Tras cualquier cambio, vuelve a hacer `wrangler deploy`.
 - **Anclaje (grounding):** el sitio envía el FAQ como `context` en cada consulta, así que
   para mantener la IA al día basta con editar el FAQ del `index.html`. La constante
   `FALLBACK_KB` en `src/index.js` solo se usa si no llega `context`.

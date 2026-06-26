@@ -9,7 +9,9 @@
 //  Despliegue: ver worker/README.md  →  `wrangler deploy`
 // ════════════════════════════════════════════════════════════════
 
-const MODEL = "@cf/meta/llama-3.1-8b-instruct";
+// Modelo actual de Workers AI (el anterior llama-3.1-8b-instruct fue retirado el 2026-05-30).
+// Alternativa más ligera/económica en Neurons: "@cf/meta/llama-3.1-8b-instruct-fast".
+const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
 // Conocimiento de respaldo (si el cliente no envía `context`).
 // Mantener sincronizado con el FAQ del sitio.
@@ -94,7 +96,7 @@ export default {
     const lang = body.lang === "en" ? "en" : "es";
     // El contexto lo provee el cliente desde el propio sitio (en el idioma activo).
     // Se limita su tamaño y se usa el respaldo si no llega.
-    const ctx = String(body.context || "").trim().slice(0, 7000) || FALLBACK_KB;
+    const ctx = String(body.context || "").trim().slice(0, 24000) || FALLBACK_KB;
 
     try {
       const result = await env.AI.run(MODEL, {
