@@ -81,7 +81,7 @@ intel.html            herramienta interna (no es parte de la web pública)
 | 1 | **Desplegar el Worker UNIFICADO** (sitio + IA) | **Tú** | Desde la raíz del repo: `npx wrangler deploy`. Despliega el Worker `tegeve` (sirve el sitio estático + la IA de Tevi en `/api/tevi`, mismo origen → sin CORS). Si tu conexión Cloudflare↔GitHub ya hace build, debería detectar `wrangler.jsonc` y desplegarlo solo al hacer push; si no, usa el comando. Necesita Workers AI activado (gratis) en la cuenta. **Avísame al desplegar y lo verifico.** |
 | 2 | **Activar el formulario** (1 clic, sin código) | **Tú** | El formulario de `/contacto/` usa **FormSubmit** y entrega a **info@tegeve.es**. La PRIMERA vez que alguien envíe, llegará un correo de *activación* a esa bandeja: ábrelo y pulsa el enlace una vez. Después funciona siempre. |
 | 3 | **Toques "híbridos" editoriales** | Claude | Cifras gigantes en serif, alguna franja sobria — sin perder el wow. |
-| 4 | **Páginas por servicio individuales** | Claude | Separar SAP/JDE/IA/Desarrollo en `/servicios/<slug>/` (más profundidad para SEO/GEO). |
+| ~~4~~ | ~~Páginas por servicio~~ ✅ HECHO | — | `/servicios/{sap,oracle-jd-edwards,ia-empresarial,desarrollo-a-medida}/` con reto/enfoque/casos/FAQ/CTA; hub = índice; nav y sitemap actualizados; Tevi las conoce. |
 | 5 | **/insights (blog)** | Claude | Motor de citabilidad por IA: índice + artículos (S/4HANA, IA en producción, modernizar legacy). |
 | 6 | **i18n de los nuevos textos** | Claude | Los `<h1>`/lede de las páginas profundas son nuevos: añadir su traducción EN al diccionario de `app.js`. |
 | 7 | **Mover el JSON-LD de casos (ItemList) a `/casos/`** | Claude | Hoy sigue en la home; debería vivir en su página. |

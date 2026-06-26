@@ -60,6 +60,24 @@ IA que llega a producción
 Automatización inteligente con casos reales, como la conciliación de Fondos Comunes de Inversión. Nada de pilotos que no escalan.
 Propuesta de valor y costes
 Entendemos las necesidades reales del negocio para generar una propuesta de valor y optimizar costes antes de invertir.
+Novedades
+Lo último que compartimos en LinkedIn.
+Ideas, proyectos y aprendizajes de nuestro equipo sobre SAP, Oracle JD Edwards, IA empresarial y modernización de sistemas.
+y cambia 4 cosas: el tema (.li-topic), el texto ( ), la fecha (.li-meta) y el
+enlace href="…" al post real de LinkedIn. Pon el más reciente arriba; deja 3. -->
+TeGeVe Member of TGV Group · Jun 2026
+IA Empresarial
+De la prueba de concepto a producción: cómo automatizamos la conciliación de Fondos Comunes de Inversión con agentes de IA, eliminando horas de trabajo manual.
+Ver publicación →
+TeGeVe Member of TGV Group · May 2026
+SAP S/4HANA
+Migrar a S/4HANA sin frenar el negocio: claves de un proyecto de misión crítica con más de 30 años de experiencia en el ecosistema SAP detrás.
+Ver publicación →
+TeGeVe Member of TGV Group · Abr 2026
+Nearshore
+Equipos senior, estables y cercanos: por qué el modelo nearshore funciona cuando el conocimiento del proyecto se queda en casa y las decisiones son rápidas.
+Ver publicación →
+Seguir a TeGeVe en LinkedIn →
 Preguntas frecuentes
 Todo lo que hace TeGeVe, respondido.
 ¿Tienes una pregunta que no está aquí? Pregúntale a nuestro asistente con IA abajo a la derecha.
@@ -129,59 +147,21 @@ info@tgv-group.com +52 81 2092 2323
 USA
 info@tgvamericas.net +1 561 306-5121
 
-# === Servicios ===
+# === Servicios (resumen) ===
 Servicios — SAP, JD Edwards, IA y desarrollo a medida | TeGeVe
 Servicios Resolvemos tus retos tecnológicos, de la estrategia a producción.
 SAP, Oracle JD Edwards, IA Empresarial, desarrollo a medida e integración: un equipo senior que se implica como partner y entrega resultados reales.
-SAP
-Optimiza la gestión de tu empresa con SAP.
-Conocemos el mundo SAP y sabemos cómo hacer que se integre, evolucione y escale: desde migraciones a SAP S/4HANA hasta desarrollos a medida. Aceleramos los flujos de trabajo, mejoramos la eficiencia operativa y maximizamos el retorno de la inversión.
-Qué hacemos
-SAP S/4HANA Finanzas, Operaciones y RR. HH. SAP BTP SAP Fiori SAP HANA ABAP (RAP) CPI · PI/HCI SAP Analytics Cloud
-Cómo lo hacemos
-Implementación a medida
-AMS · soporte evolutivo
-Software Factory
-Staff Augmentation
-Assessment
-Hablar de tu proyecto SAP → Ver casos SAP
-Oracle JD Edwards
-Tu ERP de clase mundial, en las mejores manos.
-Un aliado de confianza en Oracle JD Edwards. Implementamos, evolucionamos y damos soporte a EnterpriseOne y World con soluciones a medida que se adaptan a las necesidades reales de cada negocio, con más de una década acompañando operaciones críticas.
-Qué hacemos
-JD Edwards EnterpriseOne JD Edwards World Orchestrator · IoT BI Publisher One View Reporting E1 Pages JDE Mobile Upgrades
-Cómo lo hacemos
-Implementación a medida
-AMS · soporte evolutivo
-Software Factory
-Staff Augmentation
-Assessment
-Hablar de JD Edwards → Ver casos JDE
-IA Empresarial & Business Intelligence
-De los datos a la decisión. De la decisión a la acción.
-Integramos Business Intelligence, Inteligencia Artificial y automatización (RPA) en una misma estrategia para que tu organización decida mejor y opere con más eficiencia. Llevamos la IA a producción con casos reales.
-Qué hacemos
-Automatización (RPA + IA) Agentes de IA Asistentes y chatbots BI y analítica Integración y gestión de datos Test Automation IA agéntica Evaluación de madurez de IA
-Plataformas: Power Platform · OpenAI · Google Cloud · UiPath · SAP Joule
-Cómo lo hacemos
-Desarrollo a medida
-AMS · soporte evolutivo
-Staff Augmentation
-Consultoría en automatización
-Evaluación de madurez de IA
-Explorar IA y datos → Ver casos de IA
-Desarrollo de software a medida
-Simplificamos la complejidad tecnológica.
-Diseñamos aplicaciones web y móviles modernas, integramos sistemas y gestionamos grandes volúmenes de datos. Nos integramos a tu metodología con foco en la usabilidad, el rendimiento y la escalabilidad.
-Qué hacemos
-Apps web y móviles Integración de sistemas Angular · React HTML5 · CSS .NET Java Node.js SQL Server · Oracle SharePoint
-Cómo lo hacemos
-Implementación a medida
-Software Factory
-Testing Factory
-AMS · soporte evolutivo
-Staff Augmentation
-Construyamos tu software → Ver casos
+Servicios Cuatro especialidades, un mismo oficio.
+Elige el área y entra al detalle: el reto que resolvemos, cómo trabajamos, casos y preguntas frecuentes.
+SAP Optimiza la gestión de tu empresa con SAP.
+Implantación, migración a S/4HANA, desarrollo y soporte AMS.
+Ver servicio → Oracle JD Edwards Tu ERP de clase mundial, en las mejores manos.
+EnterpriseOne y World: implantación, upgrades, Orchestrator y soporte.
+Ver servicio → IA Empresarial y BI De los datos a la decisión.
+IA, BI y automatización (RPA) llevadas a producción.
+Ver servicio → Desarrollo a medida Simplificamos la complejidad tecnológica.
+Apps web y móviles, integración y modernización de legacy.
+Ver servicio →
 Modelos de servicio
 La forma de colaborar que tu proyecto necesita.
 Nos adaptamos a tu realidad: desde un proyecto llave en mano hasta sumar talento senior a tu equipo. Siempre con calidad asegurada y cercanía.
@@ -209,6 +189,233 @@ Nuestra trayectoria internacional nos permite integrarnos con flexibilidad y efi
 Cómo trabajamos · 04
 Acompañamos la adopción y la transformación.
 Acompañamos a nuestros clientes en la adopción de la solución digital oportuna y adecuada para cada negocio, sector y cultura, estableciendo relaciones duraderas.
+
+# === Servicio: SAP (/servicios/sap/) ===
+Consultoría SAP y migración a S/4HANA | TeGeVe
+Servicios
+Visión general
+SAP
+Oracle JD Edwards
+IA Empresarial & BI
+Desarrollo a medida
+Modelos de servicio
+Casos de éxito
+Compañía
+Nosotros
+Cómo trabajamos
+Sectores
+Por qué elegirnos
+Testimonios
+Clientes
+Reconocimientos
+FAQ
+SAP
+Optimiza la gestión de tu empresa con SAP.
+Conocemos el mundo SAP y sabemos cómo hacer que se integre, evolucione y escale: desde migraciones a SAP S/4HANA hasta desarrollos a medida. Aceleramos los flujos de trabajo, mejoramos la eficiencia operativa y maximizamos el retorno de la inversión.
+Qué hacemos
+SAP S/4HANA Finanzas, Operaciones y RR. HH. SAP BTP SAP Fiori SAP HANA ABAP (RAP) CPI · PI/HCI SAP Analytics Cloud
+Cómo lo hacemos
+Implementación a medida
+AMS · soporte evolutivo
+Software Factory
+Staff Augmentation
+Assessment
+Hablar de tu proyecto SAP → Ver casos SAP
+El reto Cuándo nos llaman.
+Nos llaman cuando el ERP se ha quedado por detrás del negocio: una migración a SAP S/4HANA que no se puede aplazar, integraciones entre sistemas propios y nube que fallan y obligan a revisar datos a mano, o un soporte funcional que depende de pocas personas y se resiente con cada rotación. El problema rara vez es solo técnico: son procesos que cuestan horas, decisiones que llegan tarde y una inversión en SAP que no termina de rendir.
+Tienes pendiente la migración a SAP S/4HANA y necesitas un plan realista que no detenga la operación
+Los datos viven repartidos entre SAP OnPremise y la nube (HCM, SuccessFactors, CPI) y las inconsistencias obligan a abrir tickets manuales a diario
+El soporte funcional recae en pocas personas y cada baja o rotación pone en riesgo la continuidad
+Necesitas desarrollos a medida sobre SAP BTP o Fiori que el estándar no cubre, sin abrir un proyecto eterno
+Cómo trabajamos Nuestro enfoque.
+Empezamos por entender tu operación antes que el sistema: un Assessment que sitúa dónde duele de verdad y qué orden de prioridades tiene sentido para tu negocio. A partir de ahí implementamos a medida sobre SAP S/4HANA, BTP y Fiori, evolucionamos lo existente y damos soporte continuo (AMS, niveles 1 y 2) con un equipo senior estable que conoce tanto el lado funcional (Finanzas, Operaciones, RR. HH.) como el técnico (ABAP/RAP, HANA, CPI · PI/HCI, SAP Analytics Cloud). Trabajamos en modalidad nearshore o en tus oficinas, integrados en tu metodología, con la cercanía de un partner y los procesos de una consultora con CMMI Nivel 3. El resultado es concreto: información unificada en tiempo real, equipos liberados de la revisión manual y costes ajustados a las necesidades reales del negocio, blindados frente a la rotación.
+Prueba Casos relacionados.
+SAP Monitor de integraciones SAP: datos de empleados unificados y en tiempo real
+Empresa de consumo masivo
+SAP Soporte SAP continuo que reduce costes y blinda la operación frente a la rotación
+Empresa agroindustrial líder en Argentina
+Assessment Business Value Assessment: la decisión de ERP de Motta Internacional, basada en datos
+Motta Internacional
+Ver todos los casos →
+Preguntas frecuentes Sobre SAP.
+¿Trabaja TeGeVe con SAP y S/4HANA?
+Sí. Implementamos, evolucionamos y damos soporte a SAP , y acompañamos a las empresas en su camino hacia SAP S/4HANA . Aportamos consultores senior con experiencia en proyectos ERP de gran envergadura y misión crítica.
+Contáctanos ¿Hablamos de tu proyecto SAP?
+Cuéntanos tu reto y te propondremos un enfoque con un alcance claro, centrado en el valor de negocio.
+Cuéntanos tu reto →
+
+# === Servicio: Oracle JD Edwards (/servicios/oracle-jd-edwards/) ===
+Oracle JD Edwards: implantación y soporte | TeGeVe
+Servicios
+Visión general
+SAP
+Oracle JD Edwards
+IA Empresarial & BI
+Desarrollo a medida
+Modelos de servicio
+Casos de éxito
+Compañía
+Nosotros
+Cómo trabajamos
+Sectores
+Por qué elegirnos
+Testimonios
+Clientes
+Reconocimientos
+FAQ
+Oracle JD Edwards
+Tu ERP de clase mundial, en las mejores manos.
+Un aliado de confianza en Oracle JD Edwards. Implementamos, evolucionamos y damos soporte a EnterpriseOne y World con soluciones a medida que se adaptan a las necesidades reales de cada negocio, con más de una década acompañando operaciones críticas.
+Qué hacemos
+JD Edwards EnterpriseOne JD Edwards World Orchestrator · IoT BI Publisher One View Reporting E1 Pages JDE Mobile Upgrades
+Cómo lo hacemos
+Implementación a medida
+AMS · soporte evolutivo
+Software Factory
+Staff Augmentation
+Assessment
+Hablar de JD Edwards → Ver casos JDE
+El reto Cuándo nos llaman.
+Nos llaman cuando el ERP ya sostiene el día a día del negocio y cualquier parada tiene coste inmediato: cierres que no pueden esperar, procesos que necesitan evolucionar al ritmo de la operación y un EnterpriseOne o World que conviene aprovechar mejor en lugar de reemplazar. Buscan un equipo que conozca JD Edwards a fondo y se haga responsable de que siga funcionando y dando valor.
+Tu equipo dedica más tiempo a apagar incidencias en JD Edwards que a mejorarlo, y dependes de pocas personas que conocen cómo está montado el sistema.
+Arrastras una versión que se ha quedado atrás y necesitas un upgrade de EnterpriseOne o World sin frenar la operación durante el proceso.
+Tienes procesos que aún se resuelven a mano o en hojas de cálculo y podrías automatizarlos con Orchestrator, IoT o integraciones sobre el propio ERP.
+Necesitas que dirección y planta vean la información del negocio a tiempo, con BI Publisher, One View Reporting, E1 Pages o acceso móvil, en lugar de pedir informes que llegan tarde.
+Cómo trabajamos Nuestro enfoque.
+Trabajamos JD Edwards de extremo a extremo: implantamos, evolucionamos y damos soporte a EnterpriseOne y World con un equipo senior estable que entiende tanto la tecnología como el proceso de negocio que hay detrás. Empezamos por un assessment para conocer cómo está tu sistema y dónde está el valor, y a partir de ahí elegimos el modelo que mejor encaja: implementación a medida, AMS para soporte y evolutivo con niveles de servicio, Software Factory para escalar la entrega o staff augmentation para reforzar a tu equipo. Sumamos automatización con Orchestrator e IoT, reporting con BI Publisher y One View, productividad con E1 Pages y movilidad, y upgrades ordenados que te mantienen al día. Lo hacemos en modalidad nearshore o en tus oficinas, con procesos certificados en CMMI Nivel 3, para que tu ERP acompañe al negocio sin sobresaltos.
+Prueba Casos relacionados.
+Oracle JD Edwards Doce años de acompañamiento sobre JD Edwards: un ERP que crece con el negocio agroindustrial
+Fabricante multinacional de equipamiento agrícola
+Oracle JD Edwards Seguridad robusta en Oracle JD Edwards: un modelo de acceso confiable para un líder del agro
+Nutrien
+Ver todos los casos →
+Preguntas frecuentes Sobre Oracle JD Edwards.
+¿Qué hacen con Oracle JD Edwards?
+Implementamos, actualizamos ( upgrades ) y damos soporte a Oracle JD Edwards EnterpriseOne y World , como partner del ecosistema Oracle/IBM. Trabajamos módulos financieros, de distribución, manufactura y logística en proyectos de misión crítica.
+Contáctanos ¿Hablamos de JD Edwards?
+Cuéntanos tu reto y te propondremos un enfoque con un alcance claro, centrado en el valor de negocio.
+Cuéntanos tu reto →
+
+# === Servicio: IA Empresarial y BI (/servicios/ia-empresarial/) ===
+IA Empresarial y Business Intelligence | TeGeVe
+Servicios
+Visión general
+SAP
+Oracle JD Edwards
+IA Empresarial & BI
+Desarrollo a medida
+Modelos de servicio
+Casos de éxito
+Compañía
+Nosotros
+Cómo trabajamos
+Sectores
+Por qué elegirnos
+Testimonios
+Clientes
+Reconocimientos
+FAQ
+IA Empresarial & Business Intelligence
+De los datos a la decisión. De la decisión a la acción.
+Integramos Business Intelligence, Inteligencia Artificial y automatización (RPA) en una misma estrategia para que tu organización decida mejor y opere con más eficiencia. Llevamos la IA a producción con casos reales.
+Qué hacemos
+Automatización (RPA + IA) Agentes de IA Asistentes y chatbots BI y analítica Integración y gestión de datos Test Automation IA agéntica Evaluación de madurez de IA
+Plataformas: Power Platform · OpenAI · Google Cloud · UiPath · SAP Joule
+Cómo lo hacemos
+Desarrollo a medida
+AMS · soporte evolutivo
+Staff Augmentation
+Consultoría en automatización
+Evaluación de madurez de IA
+Explorar IA y datos → Ver casos de IA
+El reto Cuándo nos llaman.
+Nos llaman cuando la organización acumula datos pero no decisiones: informes que llegan tarde, hojas de cálculo que no cuadran entre departamentos y tareas repetitivas que consumen horas del equipo cualificado. También cuando ya se han probado pilotos de IA que nunca pasaron de la demo. El reto no es "tener IA", sino llevarla a producción sobre procesos reales y que mueva un indicador de negocio.
+Cierres y conciliaciones que dependen de personas leyendo y copiando datos a mano entre PDF, correos y el ERP, con errores y plazos de días
+Cada área mira sus propios números y nadie se fía del informe: no hay una única fuente de datos para decidir
+Tienes pruebas de concepto de IA o chatbots que funcionaron en una demo pero nunca llegaron a operar de verdad
+El equipo senior pierde horas en tareas repetitivas de bajo valor que podrían automatizarse con RPA
+Cómo trabajamos Nuestro enfoque.
+Empezamos por evaluar la madurez de datos e IA de tu organización para saber qué automatizar primero y dónde el retorno es claro, sin invertir a ciegas. A partir de ahí integramos Business Intelligence, IA y RPA en una sola estrategia: ordenamos y conectamos tus fuentes de datos, montamos la analítica que da una única versión de la verdad y construimos agentes, asistentes y automatizaciones sobre plataformas como Power Platform, OpenAI, Google Cloud, UiPath o SAP Joule. No nos quedamos en el piloto: llevamos cada caso a producción, lo integramos con tu ERP y tus sistemas, y lo sostenemos con soporte evolutivo (AMS). Lo hacemos con un equipo senior estable y multidisciplinar, en modalidad nearshore o en tus oficinas, con la calidad asegurada de un proceso certificado CMMI Nivel 3. Es lo que ya hacemos para la operadora de la mayor red de gasoductos de Argentina: una aplicación con IA lee los PDF de los bancos y consolida los fondos comunes de inversión, de modo que la conciliación de FCI pasó de cuatro días a cuestión de horas y con menos errores.
+Prueba Casos relacionados.
+IA Empresarial IA que convierte cuatro días de conciliación de FCI en cuestión de horas
+Operadora de la mayor red de gasoductos de Argentina
+IA Empresarial IA que automatiza la planificación logística diaria y reemplaza el Excel manual
+Empresa del sector Oil & Gas
+Business Intelligence Decisiones basadas en datos para anticipar tendencias de consumo
+Kimberly-Clark
+Ver todos los casos →
+Preguntas frecuentes Sobre IA Empresarial y BI.
+¿Cómo aborda TeGeVe la inteligencia artificial?
+Ayudamos a incorporar la inteligencia artificial al negocio con foco en casos de uso concretos, gobernanza , seguridad del dato y retorno medible . Llevamos la IA a producción —no nos quedamos en pilotos— con casos reales como la conciliación de fondos de inversión .
+¿Qué tipo de soluciones de IA pueden implementar?
+Desde agentes de IA que atienden consultas y ejecutan tareas, hasta RPA para automatizar procesos repetitivos (conciliaciones, altas de datos, informes), pasando por copilotos internos y automatización inteligente sobre tus sistemas SAP , JD Edwards o aplicaciones a medida.
+Contáctanos ¿Hablamos de IA y datos?
+Cuéntanos tu reto y te propondremos un enfoque con un alcance claro, centrado en el valor de negocio.
+Cuéntanos tu reto →
+
+# === Servicio: Desarrollo a medida (/servicios/desarrollo-a-medida/) ===
+Desarrollo de software a medida | TeGeVe
+Servicios
+Visión general
+SAP
+Oracle JD Edwards
+IA Empresarial & BI
+Desarrollo a medida
+Modelos de servicio
+Casos de éxito
+Compañía
+Nosotros
+Cómo trabajamos
+Sectores
+Por qué elegirnos
+Testimonios
+Clientes
+Reconocimientos
+FAQ
+Desarrollo de software a medida
+Simplificamos la complejidad tecnológica.
+Diseñamos aplicaciones web y móviles modernas, integramos sistemas y gestionamos grandes volúmenes de datos. Nos integramos a tu metodología con foco en la usabilidad, el rendimiento y la escalabilidad.
+Qué hacemos
+Apps web y móviles Integración de sistemas Angular · React HTML5 · CSS .NET Java Node.js SQL Server · Oracle SharePoint
+Cómo lo hacemos
+Implementación a medida
+Software Factory
+Testing Factory
+AMS · soporte evolutivo
+Staff Augmentation
+Construyamos tu software → Ver casos
+El reto Cuándo nos llaman.
+Nos llaman cuando un proceso de negocio crítico vive en hojas de cálculo, sistemas dispersos o aplicaciones heredadas que ya no acompañan el ritmo de la operación. El software estándar no encaja con cómo trabajas realmente, mantener lo que tienes cuesta cada vez más y cada cambio tarda semanas. Necesitas una aplicación pensada para tu negocio, que se integre con lo que ya usas y que puedas hacer crecer sin reescribirla.
+El mismo dato se calcula de formas distintas en varias herramientas y nadie se fía del resultado: necesitas unificarlo en una única aplicación con trazabilidad.
+Tienes sistemas legacy (COBOL, AS/400, DB2) que sostienen procesos clave pero son cada vez más caros y arriesgados de mantener.
+Tus equipos pierden horas en tareas manuales o saltando entre aplicaciones que no se hablan entre sí.
+Un proyecto a medida se te ha quedado sin manos senior o sin un proveedor que se integre a tu metodología y mantenga el ritmo de entrega.
+Cómo trabajamos Nuestro enfoque.
+Partimos de tu proceso de negocio, no de un catálogo de tecnología. Diseñamos la aplicación web o móvil alrededor de cómo trabaja tu equipo, con foco en usabilidad, rendimiento y escalabilidad, y la integramos con los sistemas que ya tienes en producción. Trabajamos con el stack que mejor encaje en cada caso (Angular, React, .NET, Java, Node.js, SQL Server u Oracle) y con la profundidad para modernizar sistemas legacy sin parar la operación. Según lo que necesites, lo abordamos como proyecto a medida, Software Factory o Testing Factory, te acompañamos después con soporte evolutivo (AMS) o reforzamos tu equipo con perfiles senior en Staff Augmentation. Nos integramos a tu metodología y entregamos en modalidad nearshore o en tus oficinas, con un equipo estable que conoce tu proyecto y se queda en el tiempo. Un ejemplo: para Banco Comafi unificamos el cálculo del rating crediticio en una única aplicación web (Angular y Java Spring), con foco en usabilidad y trazabilidad, lo que redujo los costes de mantenimiento.
+Prueba Casos relacionados.
+Desarrollo a medida Un sistema de rating crediticio unificado y web que reduce costes de mantenimiento
+Banco Comafi
+Desarrollo a medida Una Software Factory que mantiene a una aseguradora líder al ritmo de su negocio
+Aseguradora líder del sector
+Desarrollo a medida Migración a tarjetas con chip EMV: transacciones más seguras y menos fraude
+First Data (soluciones globales de pagos)
+Integración Sistemas legacy al servicio de nuevas estrategias de negocio en medios de pago
+First Data (licenciataria de MasterCard en Argentina)
+Ver todos los casos →
+Preguntas frecuentes Sobre Desarrollo a medida.
+¿Qué servicios ofrece TeGeVe?
+Somos expertos en el desarrollo de software a medida y en la implementación de paquetes de primer nivel como SAP y Oracle JD Edwards . También nos especializamos en IA Empresarial (agentes, RPA y automatización), integración de aplicaciones , evaluaciones y auditorías (Assessment) y modernización de sistemas legacy para la industria financiera.
+¿Desarrollan software a medida e integraciones?
+Sí. Nuestra capacidad de desarrollar software a medida , sumada al conocimiento de software empresarial de primer nivel, nos permite integrar sistemas de múltiple envergadura sobre diferentes plataformas tecnológicas, para que la información fluya de extremo a extremo y elimines silos.
+¿Qué es el Assessment de TeGeVe?
+El Assessment es una práctica de evaluaciones y auditorías para conocer las necesidades reales de tu empresa, generar una propuesta de valor y optimizar costes antes de invertir. Un ejemplo es la auditoría que realizamos para Motta Internacional .
+¿Modernizan sistemas legacy y trabajan para banca?
+Sí. Modernizamos sistemas legacy construidos sobre COBOL , AS/400 y DB2 , y desarrollamos para la industria financiera , donde la fiabilidad y la continuidad del negocio son críticas. Evolucionamos lo crítico sin poner en riesgo la operación.
+¿Dan soporte y mantenimiento tras la puesta en marcha?
+Sí. No desaparecemos tras el go-live: ofrecemos soporte , evolución funcional y mantenimiento de las soluciones, y medimos el valor entregado. Buscamos relaciones duraderas , no proyectos de usar y tirar.
+Contáctanos ¿Hablamos de tu software?
+Cuéntanos tu reto y te propondremos un enfoque con un alcance claro, centrado en el valor de negocio.
+Cuéntanos tu reto →
 
 # === Casos de éxito ===
 Casos de éxito | TeGeVe
