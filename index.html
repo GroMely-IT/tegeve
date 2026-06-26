@@ -166,9 +166,9 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 
 /* Nav */
 .nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:background .4s var(--ease),backdrop-filter .4s,border-color .4s,box-shadow .4s}
-.nav-inner{max-width:var(--max);margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:28px}
+.nav-inner{max-width:var(--max);margin:0 auto;padding:6px 24px;display:flex;align-items:center;gap:28px}
 .brand{display:flex;align-items:center;gap:10px}
-.brand img{height:50px;width:auto}
+.brand img{height:86px;width:auto}
 .nav-links{display:flex;gap:26px;margin-left:auto;align-items:center}
 .nav-links a{font-size:.94rem;font-weight:500;color:var(--t2);transition:color .25s}
 .nav-links a:hover{color:var(--ink)}
@@ -178,7 +178,7 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 .burger{display:none;margin-left:auto;background:none;border:0;cursor:pointer;width:44px;height:44px;color:var(--ink)}
 
 /* Hero (light, on-brand) */
-.hero{position:relative;min-height:100svh;display:flex;align-items:center;background:#FBFBFC;color:var(--ink);overflow:hidden;padding-top:96px}
+.hero{position:relative;min-height:100svh;display:flex;align-items:center;background:#FBFBFC;color:var(--ink);overflow:hidden;padding-top:128px}
 .hero-mesh{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .blob{position:absolute;border-radius:50%;filter:blur(72px);will-change:transform}
 .blob.b1{width:44vw;height:44vw;left:-10vw;top:-12vw;background:radial-gradient(circle,rgba(227,6,19,.22),transparent 65%)}
@@ -982,29 +982,7 @@ import * as THREE from 'three';
         if(lat>=-56&&lat<=13&&lng>=-82&&lng<=-34) return 2;   // Sudamérica -> AR
         return -1;
       }
-
-      // Conexiones sutiles oficina -> países que atiende
-      const TARGETS=[
-        [0,51.5,-0.12],[0,48.85,2.35],[0,52.52,13.40],[0,41.9,12.5],[0,38.72,-9.14],[0,52.37,4.9],[0,52.23,21.0],[0,59.33,18.07],[0,48.21,16.37],
-        [2,40.71,-74.0],[2,41.88,-87.63],[2,34.05,-118.24],[2,29.76,-95.37],[2,25.76,-80.19],[2,47.61,-122.33],[2,39.74,-104.99],
-        [1,14.6,-90.5],[1,13.69,-89.22],[1,14.07,-87.19],[1,12.13,-86.25],[1,9.93,-84.08],[1,8.98,-79.52],[1,21.16,-86.85],
-        [3,-33.45,-70.66],[3,-12.05,-77.04],[3,4.71,-74.07],[3,-23.55,-46.63],[3,10.49,-66.88],[3,-0.18,-78.47],[3,-16.5,-68.15],[3,-34.9,-56.16],[3,-25.28,-57.63]
-      ];
-      const SEG=48, WIN=8, delay=[1.6,2.2,2.2,2.8];
-      const paintStart=[delay[0]+1.2, delay[1]+1.2, delay[2]+1.2, delay[3]+1.2];
-      const baseMat=new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.1 });
-      const cometMat=new THREE.LineBasicMaterial({ color:RED, transparent:true, opacity:0.7 });
-      const headMat=new THREE.MeshBasicMaterial({ color:0xff4d57 });
-      const conns=TARGETS.map(([oi,la,lo])=>{
-        const A=oPos[oi], B=ll(la,lo,R);
-        const mid=A.clone().add(B).multiplyScalar(0.5).normalize().multiplyScalar(R*(1.1+A.distanceTo(B)*0.18));
-        const curve=new THREE.QuadraticBezierCurve3(A,mid,B);
-        const pts=curve.getPoints(SEG);
-        spin.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), baseMat));
-        const comet=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cometMat); comet.geometry.setDrawRange(0,0); spin.add(comet);
-        const head=new THREE.Mesh(new THREE.SphereGeometry(0.016,8,8), headMat); head.visible=false; spin.add(head);
-        return { curve, comet, head, start: delay[oi]+Math.random()*0.3 };
-      });
+      const paintStart=[1.9, 2.3, 2.3, 2.8];   // por oficina (reveal escalonado tras el intro)
 
       // Continentes con color por vértice + pintado radial desde cada sede
       let colAttr=null, dotSrc=null, dotT0=null, dotDone=null, painting=false;
@@ -1068,12 +1046,6 @@ import * as THREE from 'three';
         const now=(performance.now()-clock)/1000;
         if(!dragging){ spin.rotation.y += (reduce?0:0.0011) + velY; velY*=0.94; pitch += velX; velX*=0.9; pitch=Math.max(-1.0,Math.min(0.55,pitch)); }
         root.rotation.x = baseX + pitch;
-        conns.forEach(c=>{ const local=now-c.start;
-          if(local<0){ c.comet.geometry.setDrawRange(0,0); c.head.visible=false; return; }
-          const cyc=local%1.9, tt=Math.min(cyc,1), live=cyc<=1, s=Math.floor(tt*(SEG-WIN));
-          c.comet.geometry.setDrawRange(s, live?WIN:0); c.head.visible=live;
-          if(live) c.head.position.copy(c.curve.getPoint(Math.min(0.999,(s+WIN)/SEG)));
-        });
         pings.forEach(pg=>{ const p=((now+pg.phase)%2.2)/2.2; pg.ring.scale.setScalar(1+p*3.2); pg.mat.opacity=0.5*(1-p); });
         if(painting && colAttr){
           let any=false, allDone=true;
