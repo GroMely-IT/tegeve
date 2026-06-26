@@ -264,12 +264,22 @@ function search(q){
   });
   return bestScore >= 1 ? best : null;
 }
+// Botón flotante de Tevi (creado por JS para que esté en TODAS las páginas).
+// Solo se ve en móvil (CSS); en escritorio se usa el botón del nav.
+(function(){
+  if(document.getElementById('aiFab') || !document.body) return;
+  var f=document.createElement('button');
+  f.id='aiFab'; f.type='button'; f.className='ai-fab';
+  f.setAttribute('aria-label','Abrir asistente Tevi');
+  f.innerHTML='<span class="av"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.5 3.5Q9.5 10.5 16.5 10.5Q9.5 10.5 9.5 17.5Q9.5 10.5 2.5 10.5Q9.5 10.5 9.5 3.5ZM17.5 13Q17.5 17 21.5 17Q17.5 17 17.5 21Q17.5 17 13.5 17Q17.5 17 17.5 13Z"/></svg></span><span class="txt">Tevi</span><span class="spark" aria-hidden="true"></span>';
+  document.body.appendChild(f);
+})();
 const aiFab = document.getElementById('aiFab'), aiPanel = document.getElementById('aiPanel'),
       aiClose = document.getElementById('aiClose'), aiBody = document.getElementById('aiBody'),
       aiInput = document.getElementById('aiInput'), aiSend = document.getElementById('aiSend');
 let aiStarted = false;
-function openAI(){ aiPanel.classList.add('open'); if(aiFab) aiFab.style.display='none'; if(!aiStarted){aiStarted=true;greet();} setTimeout(()=>aiInput.focus(),350); }
-function closeAI(){ aiPanel.classList.remove('open'); if(aiFab) aiFab.style.display='flex'; var nb=document.querySelector('.nav-ai'); if(nb) nb.focus(); }
+function openAI(){ aiPanel.classList.add('open'); if(aiFab) aiFab.classList.add('is-hidden'); if(!aiStarted){aiStarted=true;greet();} setTimeout(()=>aiInput.focus(),350); }
+function closeAI(){ aiPanel.classList.remove('open'); if(aiFab) aiFab.classList.remove('is-hidden'); var nb=document.querySelector('.nav-ai'); if(nb) nb.focus(); }
 if(aiFab) aiFab.addEventListener('click', openAI);
 aiClose.addEventListener('click', closeAI);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && aiPanel.classList.contains('open')) closeAI(); });

@@ -323,7 +323,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
   .hc-dots{left:0;right:0;justify-content:center}
   .nav-links.show{align-items:flex-start}
   .nav-links.show .nav-ai{align-self:flex-start;margin:12px 0}
-  .nav-links.show{display:flex;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);padding:8px 24px 18px;border-bottom:1px solid var(--line)}
+  .nav-links.show{display:flex;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);padding:8px 24px 18px;border-bottom:1px solid var(--line);max-height:calc(100dvh - 54px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .nav-links.show a{color:var(--t1);padding:12px 0;border-bottom:1px solid var(--line)}
 
   .nav-group{flex-direction:column;align-items:flex-start;width:100%}
@@ -600,3 +600,9 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .cform-msg.ok{color:#7CE0A0}.cform-msg.err{color:#ff8088}
 .cform.sending button[type=submit]{opacity:.6;pointer-events:none}
 @media(max-width:520px){.cform-row{grid-template-columns:1fr}}
+
+/* Botón flotante de Tevi: solo en móvil (en escritorio se usa el botón del nav). */
+.ai-fab{display:none}
+@media(max-width:900px){.ai-fab{display:flex}}
+.ai-fab.is-hidden{display:none!important}
+@media(max-width:900px){.ai-fab{right:16px;bottom:16px;padding:11px 16px 11px 12px}}
