@@ -519,6 +519,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .hc-msg.is-active .hc-content>*:nth-child(2){transition-delay:.28s}
 .hc-msg.is-active .hc-content>*:nth-child(3){transition-delay:.41s}
 .hc-msg.is-active .hc-content>*:nth-child(4){transition-delay:.54s}
+.hc-msg.is-active .hc-content>*:nth-child(5){transition-delay:.67s}
 .btn-light{background:#fff;color:var(--ink)}
 .btn-light:hover{transform:translateY(-2px);background:#fff;box-shadow:0 14px 34px -14px rgba(0,0,0,.5)}
 .btn-outline{background:rgba(255,255,255,.06);color:#fff;border-color:rgba(255,255,255,.32)}
@@ -623,33 +624,25 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .lang-opt.on{background:var(--red);color:#fff}
 @media(max-width:900px){ .nav-links.show .lang-switch{align-self:flex-start;margin:12px 0} }
 
-/* ===== Habla con Tevi ===== */
-.tv-ask{padding:clamp(78px,11vw,132px) 0;position:relative;overflow:hidden}
-.tv-veil{position:absolute;inset:0;z-index:0;background:radial-gradient(120% 90% at 82% -10%,rgba(227,6,19,.20),transparent 55%),linear-gradient(160deg,#1c1f27,#272b36)}
-.tv-inner{position:relative;z-index:1}
-.tv-display{font-size:clamp(2.4rem,6.4vw,4.6rem);max-width:15ch;line-height:1.02;letter-spacing:-.02em;margin:14px 0 14px}
-.tv-bar{display:flex;align-items:center;gap:14px;width:100%;max-width:760px;margin:30px 0 44px;padding:18px 22px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);cursor:pointer;text-align:left;transition:border-color .3s,background .3s,transform .3s var(--ease-out)}
+/* ===== Tevi (diapositiva del carrusel) ===== */
+.hc-tevi{background:radial-gradient(120% 95% at 85% -8%,rgba(227,6,19,.22),transparent 52%),linear-gradient(160deg,#1c1f27,#13151c)}
+.hc-orb{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.hc-orb::before{content:"";position:absolute;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(227,6,19,.30),transparent 62%);filter:blur(30px);top:-150px;right:-70px;animation:tvFloat 16s var(--ease) infinite alternate}
+@keyframes tvFloat{from{transform:translate(0,0) scale(1)}to{transform:translate(-70px,80px) scale(1.14)}}
+.hc-tevi .hc-content h2{max-width:14ch}
+.tv-bar{display:flex;align-items:center;gap:14px;width:100%;max-width:640px;margin:26px 0 22px;padding:17px 20px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);cursor:pointer;text-align:left;transition:border-color .3s,background .3s,transform .3s var(--ease-out)}
 .tv-bar:hover{background:rgba(255,255,255,.1);border-color:var(--red);transform:translateY(-2px)}
 .tv-spark{color:#ff4350;display:grid;place-items:center;flex:none}.tv-spark svg{width:22px;height:22px}
-.tv-typed{flex:1;color:#fff;font-size:clamp(1rem,2vw,1.22rem);font-weight:500;min-height:1.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-typed{flex:1;color:#fff;font-size:clamp(1rem,2vw,1.18rem);font-weight:500;min-height:1.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tv-caret{display:inline-block;width:2px;height:1.05em;background:var(--red);margin-left:2px;vertical-align:-2px;animation:tvBlink 1s steps(1) infinite}
 @keyframes tvBlink{50%{opacity:0}}
 .tv-go{flex:none;font-weight:700;color:#fff;background:var(--red);padding:9px 16px;border-radius:999px;font-size:.92rem;box-shadow:0 12px 30px -10px rgba(227,6,19,.5)}
-.tv-bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(0,1fr);gap:16px}
-.tv-card{grid-column:span 1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:26px;text-align:left;cursor:pointer;color:#fff;position:relative;overflow:hidden;transition:transform .5s var(--ease-out),background .4s,border-color .4s;font-family:inherit}
-.tv-card--lg{grid-column:span 2;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-end}
-.tv-card h3{font-size:clamp(1.15rem,2.2vw,1.7rem);margin:10px 0 8px;letter-spacing:-.02em;color:#fff}
-.tv-card--lg h3{font-size:clamp(1.6rem,3vw,2.4rem)}
-.tv-card p{color:var(--t2d);font-size:.95rem;line-height:1.5}
-.tv-card .tv-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#ff4350}
-.tv-card .tv-cta{margin-top:16px;display:inline-block;font-weight:700;color:#fff;opacity:0;transform:translateX(-6px);transition:.35s}
-.tv-card::after{content:"";position:absolute;inset:0;background:radial-gradient(140% 100% at 0% 0%,rgba(227,6,19,.22),transparent 60%);opacity:0;transition:opacity .4s;pointer-events:none}
-.tv-card:hover{transform:translateY(-6px);border-color:rgba(227,6,19,.5);background:rgba(255,255,255,.07)}
-.tv-card:hover::after{opacity:1}.tv-card:hover .tv-cta{opacity:1;transform:none}
-.tv-card:focus-visible{outline:2px solid #ff4350;outline-offset:3px}
-@media(max-width:860px){.tv-bento{grid-template-columns:repeat(2,1fr)}.tv-card,.tv-card--lg{grid-column:span 1!important;grid-row:auto!important}.tv-card--lg{justify-content:flex-start}}
-@media(max-width:520px){.tv-bento{grid-template-columns:1fr}.tv-go{display:none}}
-@media(prefers-reduced-motion:reduce){.tv-card,.tv-bar{transition:none}.tv-caret{animation:none}}
+.tv-chips{display:flex;flex-wrap:wrap;gap:10px;max-width:780px}
+.tv-chip{display:inline-flex;align-items:center;padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:#fff;font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .3s,border-color .3s,transform .3s var(--ease-out)}
+.tv-chip:hover{background:rgba(227,6,19,.18);border-color:var(--red);transform:translateY(-2px)}
+.tv-chip:focus-visible{outline:2px solid #ff4350;outline-offset:3px}
+@media(max-width:520px){.tv-go{display:none}.tv-bar{max-width:none}}
+@media(prefers-reduced-motion:reduce){.tv-bar,.tv-chip{transition:none}.tv-caret,.hc-orb::before{animation:none}}
 
 /* ===== Nosotros ===== */
 .ns-bento{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:64px}
@@ -929,7 +922,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 
 <section class="hero-carousel" id="top" aria-roledescription="carrusel" aria-label="Presentación de TeGeVe">
   <!-- Diapositiva 1: planeta TeGeVe -->
-  <div class="hc-slide hc-hero is-active" data-i="0" role="group" aria-roledescription="diapositiva" aria-label="1 de 4: Soluciones innovadoras">
+  <div class="hc-slide hc-hero is-active" data-i="0" role="group" aria-roledescription="diapositiva" aria-label="1 de 5: Soluciones innovadoras">
     <div class="hero-mesh" aria-hidden="true">
       <div class="blob b1" data-speed="0.12"></div>
       <div class="blob b2" data-speed="0.08"></div>
@@ -947,8 +940,29 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
       </div>
     </div>
   </div>
-  <!-- Diapositiva 2: partner estratégico (vídeo) -->
-  <div class="hc-slide hc-msg" data-i="1" role="group" aria-roledescription="diapositiva" aria-label="2 de 4: Partner tecnológico">
+  <!-- Diapositiva 2: Tevi (asistente con IA) -->
+  <div class="hc-slide hc-msg hc-tevi" data-i="1" role="group" aria-roledescription="diapositiva" aria-label="2 de 5: Pregunta a Tevi">
+    <span class="hc-orb" aria-hidden="true"></span>
+    <div class="hc-content">
+      <span class="hc-eyebrow">Asistente con IA · Tevi</span>
+      <h2>Pregunta lo que <span style="color:#ff4350">necesites</span> saber.</h2>
+      <p>Tevi responde al instante sobre SAP, Oracle JD&nbsp;Edwards, IA Empresarial, nuestros casos de éxito y cómo trabajamos. Sin formularios, sin esperas.</p>
+      <button class="tv-bar ai-open-link" aria-label="Abrir el asistente Tevi y preguntar">
+        <span class="tv-spark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 3.5Q9.5 10.5 16.5 10.5Q9.5 10.5 9.5 17.5Q9.5 10.5 2.5 10.5Q9.5 10.5 9.5 3.5ZM17.5 13Q17.5 17 21.5 17Q17.5 17 17.5 21Q17.5 17 13.5 17Q17.5 17 17.5 13Z"/></svg></span>
+        <span class="tv-typed" aria-hidden="true"><span class="tv-typed-text"></span><span class="tv-caret"></span></span>
+        <span class="tv-go">Preguntar <span aria-hidden="true">&rarr;</span></span>
+      </button>
+      <div class="tv-chips">
+        <button class="tv-chip" data-q="¿Qué servicios de SAP ofrece TeGeVe: implantación, soporte y evolutivo?" data-qen="What SAP services does TeGeVe offer: implementation, support and evolution?">«¿Qué hacéis con SAP?»</button>
+        <button class="tv-chip" data-q="¿Cómo funciona la modalidad nearshore de TeGeVe desde España?" data-qen="How does TeGeVe's nearshore model work from Spain?">«¿Cómo es el nearshore?»</button>
+        <button class="tv-chip" data-q="¿Qué casos de éxito tiene TeGeVe en banca e industria financiera?" data-qen="What success stories does TeGeVe have in banking and financial services?">«Casos en banca»</button>
+        <button class="tv-chip" data-q="¿Qué es el assessment inicial de TeGeVe y por qué empezáis por ahí?" data-qen="What is TeGeVe's initial assessment and why do you start there?">«¿Qué es el assessment?»</button>
+        <button class="tv-chip" data-q="¿Cómo aplica TeGeVe la IA Empresarial en producción, con casos reales?" data-qen="How does TeGeVe apply Enterprise AI in production, with real cases?">«IA en producción»</button>
+      </div>
+    </div>
+  </div>
+  <!-- Diapositiva 3: partner estratégico (vídeo) -->
+  <div class="hc-slide hc-msg" data-i="2" role="group" aria-roledescription="diapositiva" aria-label="3 de 5: Partner tecnológico">
     <video class="hc-video" autoplay muted loop playsinline preload="none" poster="assets/bg-tech.jpg" aria-hidden="true"><source src="assets/bg-tech.mp4" type="video/mp4"></video>
     <div class="hc-veil"></div>
     <div class="hc-content">
@@ -959,7 +973,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
     </div>
   </div>
   <!-- Diapositiva 3: SAP S/4HANA -->
-  <div class="hc-slide hc-msg" data-i="2" style="--img:url('assets/bg-sap.jpg')" role="group" aria-roledescription="diapositiva" aria-label="3 de 4: Migración a SAP S/4HANA">
+  <div class="hc-slide hc-msg" data-i="3" style="--img:url('assets/bg-sap.jpg')" role="group" aria-roledescription="diapositiva" aria-label="4 de 5: Migración a SAP S/4HANA">
     <div class="hc-bg"></div><div class="hc-veil"></div>
     <div class="hc-content">
       <span class="hc-eyebrow">SAP · Migración a S/4HANA</span>
@@ -969,7 +983,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
     </div>
   </div>
   <!-- Diapositiva 4: automatización con IA -->
-  <div class="hc-slide hc-msg" data-i="3" style="--img:url('assets/bg-automation.jpg')" role="group" aria-roledescription="diapositiva" aria-label="4 de 4: Automatización con IA">
+  <div class="hc-slide hc-msg" data-i="4" style="--img:url('assets/bg-automation.jpg')" role="group" aria-roledescription="diapositiva" aria-label="5 de 5: Automatización con IA">
     <div class="hc-bg"></div><div class="hc-veil"></div>
     <div class="hc-content">
       <span class="hc-eyebrow">IA Empresarial · Automatización</span>
@@ -984,6 +998,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
     <button class="hc-dot" type="button" data-i="1" aria-label="Diapositiva 2"></button>
     <button class="hc-dot" type="button" data-i="2" aria-label="Diapositiva 3"></button>
     <button class="hc-dot" type="button" data-i="3" aria-label="Diapositiva 4"></button>
+    <button class="hc-dot" type="button" data-i="4" aria-label="Diapositiva 5"></button>
   </div>
 </section>
 
@@ -1786,56 +1801,6 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 
 <!-- Contacto -->
 <!-- Habla con Tevi -->
-<section class="tv-ask sec-dark" id="tevi" aria-labelledby="tv-h">
-  <div class="tv-veil" aria-hidden="true"></div>
-  <div class="wrap tv-inner">
-    <div class="tv-head reveal">
-      <span class="eyebrow" style="color:#ff4350">Asistente con IA · Tevi</span>
-      <h2 class="h2 tv-display" id="tv-h" style="color:#fff">Pregunta lo que <span style="color:#ff4350">necesites</span> saber.</h2>
-      <p class="lede">Tevi responde al instante sobre SAP, Oracle JD&nbsp;Edwards, IA Empresarial, nuestros casos de éxito y cómo trabajamos. Sin formularios, sin esperas.</p>
-    </div>
-
-    <button class="tv-bar ai-open-link reveal" data-d="1" aria-label="Abrir el asistente Tevi y preguntar">
-      <span class="tv-spark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 3.5Q9.5 10.5 16.5 10.5Q9.5 10.5 9.5 17.5Q9.5 10.5 2.5 10.5Q9.5 10.5 9.5 3.5ZM17.5 13Q17.5 17 21.5 17Q17.5 17 17.5 21Q17.5 17 13.5 17Q17.5 17 17.5 13Z"/></svg></span>
-      <span class="tv-typed" aria-hidden="true"><span class="tv-typed-text"></span><span class="tv-caret"></span></span>
-      <span class="tv-go">Preguntar <span aria-hidden="true">→</span></span>
-    </button>
-
-    <div class="tv-bento reveal" data-d="2">
-      <button class="tv-card tv-card--lg" data-q="¿Qué servicios de SAP ofrece TeGeVe: implantación, soporte y evolutivo?" data-qen="What SAP services does TeGeVe offer: implementation, support and evolution?">
-        <span class="tv-k">Implantación</span>
-        <h3>«¿Qué hacéis con SAP?»</h3>
-        <p>Implantación, soporte AMS y evolutivo sobre SAP, con migración a S/4HANA.</p>
-        <span class="tv-cta">Preguntar a Tevi →</span>
-      </button>
-      <button class="tv-card" data-q="¿Cómo funciona la modalidad nearshore de TeGeVe desde España?" data-qen="How does TeGeVe's nearshore model work from Spain?">
-        <span class="tv-k">Modelo</span>
-        <h3>«¿Cómo es el nearshore?»</h3>
-        <p>Misma franja horaria, equipo senior estable y costes optimizados.</p>
-        <span class="tv-cta">Preguntar a Tevi →</span>
-      </button>
-      <button class="tv-card" data-q="¿Qué casos de éxito tiene TeGeVe en banca e industria financiera?" data-qen="What success stories does TeGeVe have in banking and financial services?">
-        <span class="tv-k">Casos</span>
-        <h3>«Casos en banca»</h3>
-        <p>Proyectos críticos reales en servicios financieros y legacy.</p>
-        <span class="tv-cta">Preguntar a Tevi →</span>
-      </button>
-      <button class="tv-card" data-q="¿Qué es el assessment inicial de TeGeVe y por qué empezáis por ahí?" data-qen="What is TeGeVe's initial assessment and why do you start there?">
-        <span class="tv-k">Método</span>
-        <h3>«¿Qué es el assessment?»</h3>
-        <p>Evaluamos el negocio antes de que inviertas, sin compromiso.</p>
-        <span class="tv-cta">Preguntar a Tevi →</span>
-      </button>
-      <button class="tv-card" data-q="¿Cómo aplica TeGeVe la IA Empresarial en producción, con casos reales?" data-qen="How does TeGeVe apply Enterprise AI in production, with real cases?">
-        <span class="tv-k">IA</span>
-        <h3>«IA en producción»</h3>
-        <p>Automatización que escala, como la conciliación de FCI. Nada de pilotos.</p>
-        <span class="tv-cta">Preguntar a Tevi →</span>
-      </button>
-    </div>
-  </div>
-</section>
-
 <section class="sec sec-dark" id="contacto">
   <div class="wrap">
     <div class="contact-grid">
@@ -2194,7 +2159,7 @@ aiSend.addEventListener('click', () => { const v = aiInput.value.trim(); if (v) 
   function schedule(){
     if(timer){ clearTimeout(timer); timer = null; }
     if(reduce || paused || document.hidden) return;
-    timer = setTimeout(function(){ go(i+1); }, i===0 ? 9000 : 7000);
+    timer = setTimeout(function(){ go(i+1); }, i===0 ? 9000 : (slides[i] && slides[i].classList.contains('hc-tevi') ? 12000 : 7000));
   }
   function go(n){
     i = (n + slides.length) % slides.length;
@@ -2215,7 +2180,7 @@ aiSend.addEventListener('click', () => { const v = aiInput.value.trim(); if (v) 
 })();
 
 /* Sección "Habla con Tevi": tarjetas que abren el asistente con la consulta sembrada */
-document.querySelectorAll('.tv-card').forEach(function(c){
+document.querySelectorAll('.tv-chip').forEach(function(c){
   c.addEventListener('click', function(){
     if(typeof openAI==='function') openAI();
     var q = (window.__lang==='en' && c.dataset.qen) ? c.dataset.qen : c.dataset.q;
