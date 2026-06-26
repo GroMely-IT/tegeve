@@ -52,14 +52,25 @@ ${kb}`;
 // Orígenes permitidos (CORS)
 const ALLOW = [
   "https://gagrosso.github.io",
-  "https://tegevem.es",
   "https://tegeve.es",
+  "https://www.tegeve.es",
+  "https://tegeve.gabrielgrosso.workers.dev",
   "http://localhost:4178",
   "http://localhost:8000",
 ];
 
+// Permite además cualquier subdominio propio: *.gabrielgrosso.workers.dev y *.pages.dev
+// (así no se rompe si cambias el nombre del Worker/Pages o usas una URL de preview).
+function isAllowedOrigin(origin) {
+  if (ALLOW.includes(origin)) return true;
+  return (
+    /^https:\/\/[a-z0-9-]+\.gabrielgrosso\.workers\.dev$/.test(origin) ||
+    /^https:\/\/[a-z0-9-]+\.pages\.dev$/.test(origin)
+  );
+}
+
 function corsHeaders(origin) {
-  const allowed = ALLOW.includes(origin) ? origin : ALLOW[0];
+  const allowed = isAllowedOrigin(origin) ? origin : ALLOW[0];
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
