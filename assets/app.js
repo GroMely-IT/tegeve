@@ -335,11 +335,11 @@ function localAnswer(q){
     addChips(L.noansChips);
   }
 }
-// Auto-navegación + enfoque: si Tevi recomienda UNA sección y no estamos ya en
-// ella, lleva al usuario allí solo (cuenta atrás de 10 s, con opción de quedarse
-// y cancelable al escribir) y, AL LLEGAR, hace scroll hasta el contenido concreto
-// que pidió (p. ej. "Gabriel Grosso" dentro de /nosotros/) y lo resalta. Como la
-// conversación persiste, Tevi sigue abierto con el hilo.
+// Sugerencia de navegación: si Tevi recomienda UNA sección y no estamos ya en
+// ella, muestra un botón "Ir a <sección> →". Al pulsarlo te lleva allí y, AL
+// LLEGAR, hace scroll hasta el contenido concreto que pediste (p. ej. "Gabriel
+// Grosso" en /nosotros/) y lo resalta. Si NO lo pulsas, el aviso desaparece solo
+// a los 15 s (con la misma barra de cuenta atrás). La conversación persiste.
 var _goTimer = null, lastQ = '';
 function cancelAutoGo(){ if(_goTimer){ clearTimeout(_goTimer); _goTimer = null; } var n = aiBody.querySelector('.ai-go'); if(n) n.remove(); }
 function termsOf(s){ return norm(s||'').split(/\s+/).filter(function(t){ return t.length>2 && !STOP.has(t); }); }
@@ -378,7 +378,7 @@ function scrollToTerms(terms){
   }
   return false;
 }
-function maybeAutoNavigate(answer, q){
+function offerNavigate(answer, q){
   var m = answer.match(/\/servicios\/(sap|oracle-jd-edwards|ia-empresarial|desarrollo-a-medida)\/|\/(nosotros|servicios|casos|contacto)\//);
   if(!m) return;
   var path = m[1] ? 'servicios/'+m[1]+'/' : m[2]+'/';
@@ -391,10 +391,16 @@ function maybeAutoNavigate(answer, q){
   cancelAutoGo();
   var note = document.createElement('div');
   note.className = 'ai-go';
-  note.innerHTML = '<span class="ai-go-txt">'+(en?'Taking you to ':'Te llevo a ')+'<b>'+label+'</b>…</span><button type="button" class="ai-go-stop">'+(en?'Stay here':'Quedarme aquí')+'</button><span class="ai-go-bar" aria-hidden="true"></span>';
+  note.innerHTML = '<button type="button" class="ai-go-btn">'+(en?'Go to ':'Ir a ')+'<b>'+label+'</b><svg class="ai-go-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button><span class="ai-go-bar" aria-hidden="true"></span>';
   aiBody.appendChild(note); aiBody.scrollTop = aiBody.scrollHeight;
-  note.querySelector('.ai-go-stop').addEventListener('click', cancelAutoGo);
-  _goTimer = setTimeout(function(){ _goTimer = null; setScrollTarget(url, termsOf(q)); location.href = url; }, 10000);
+  // Al pulsar el botón: navega a la sección (y enfoca el contenido al llegar).
+  note.querySelector('.ai-go-btn').addEventListener('click', function(){ cancelAutoGo(); setScrollTarget(url, termsOf(q)); location.href = url; });
+  // Si no se pulsa, el aviso desaparece solo a los 15 s (sin navegar).
+  _goTimer = setTimeout(function(){
+    _goTimer = null;
+    note.classList.add('ai-go-out');
+    setTimeout(function(){ if(note.parentNode) note.parentNode.removeChild(note); }, 320);
+  }, 15000);
 }
 // Historial de la conversación: se envía al Worker para que Tevi mantenga el
 // hilo (memoria de los turnos previos) y deje de sonar a robot sin contexto.
@@ -413,7 +419,7 @@ async function ask(q){
         teviHistory.push({ role:'user', content:q }, { role:'assistant', content:data.answer });
         if (teviHistory.length > 16) teviHistory = teviHistory.slice(-16);
         saveTevi();
-        maybeAutoNavigate(data.answer, q);
+        offerNavigate(data.answer, q);
       }
       else localAnswer(q);
     } catch (e){ t.remove(); localAnswer(q); }

@@ -648,13 +648,16 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .svc-feature.svc-hero .svc-bg-sticky{position:absolute;inset:0;height:100%}
 .svc-feature.svc-hero .svc-inner{margin-top:0;min-height:100vh;display:flex;align-items:center;padding:104px 0 60px}
 @media(max-width:900px){.svc-feature.svc-hero{min-height:auto}.svc-feature.svc-hero .svc-inner{min-height:auto;padding:96px 0 54px}}
-/* Aviso de auto-navegación de Tevi ("Te llevo a … · Quedarme aquí" + cuenta atrás) */
-.ai-go{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 2px;padding:10px 13px;border-radius:13px;background:var(--red-soft);border:1px solid rgba(227,6,19,.18)}
-.ai-go-txt{font-size:.86rem;color:var(--red-700);font-weight:600;line-height:1.3}
-.ai-go-txt b{font-weight:800}
-.ai-go-stop{flex:none;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.76rem;font-weight:700;color:var(--t2);cursor:pointer;transition:color .2s,border-color .2s}
-.ai-go-stop:hover{color:var(--red);border-color:rgba(227,6,19,.4)}
-.ai-go-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--red);transform-origin:left;animation:aiGoBar 10s linear forwards}
+/* Botón de Tevi "Ir a <sección> →" con barra de cuenta atrás (a los 15 s, si no
+   se pulsa, el aviso desaparece solo). */
+.ai-go{position:relative;overflow:hidden;display:inline-flex;margin:8px 0 2px;border-radius:12px;max-width:100%;transition:opacity .3s,transform .3s}
+.ai-go-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--red);color:#fff;border:0;border-radius:12px;padding:11px 16px 13px;font-size:.9rem;font-weight:800;cursor:pointer;transition:background .2s}
+.ai-go-btn:hover{background:var(--red-700)}
+.ai-go-btn b{font-weight:800}
+.ai-go-arrow{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.ai-go-btn:hover .ai-go-arrow{transform:translateX(3px)}
+.ai-go-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:rgba(255,255,255,.6);transform-origin:left;animation:aiGoBar 15s linear forwards}
+.ai-go-out{opacity:0;transform:translateY(-5px)}
 @keyframes aiGoBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media(prefers-reduced-motion:reduce){.ai-go-bar{animation:none;transform:scaleX(.4)}}
 /* Resaltado del contenido al que Tevi te lleva (scroll-to-content) */
