@@ -335,13 +335,50 @@ function localAnswer(q){
     addChips(L.noansChips);
   }
 }
-// Auto-navegación: si Tevi recomienda UNA sección y no estamos ya en ella, lleva
-// al usuario allí solo, con cuenta atrás de 6 s y opción de quedarse (y se
-// cancela si empieza a escribir). Como la conversación persiste, al llegar Tevi
-// sigue abierto con el hilo.
-var _goTimer = null;
+// Auto-navegación + enfoque: si Tevi recomienda UNA sección y no estamos ya en
+// ella, lleva al usuario allí solo (cuenta atrás de 10 s, con opción de quedarse
+// y cancelable al escribir) y, AL LLEGAR, hace scroll hasta el contenido concreto
+// que pidió (p. ej. "Gabriel Grosso" dentro de /nosotros/) y lo resalta. Como la
+// conversación persiste, Tevi sigue abierto con el hilo.
+var _goTimer = null, lastQ = '';
 function cancelAutoGo(){ if(_goTimer){ clearTimeout(_goTimer); _goTimer = null; } var n = aiBody.querySelector('.ai-go'); if(n) n.remove(); }
-function maybeAutoNavigate(answer){
+function termsOf(s){ return norm(s||'').split(/\s+/).filter(function(t){ return t.length>2 && !STOP.has(t); }); }
+function setScrollTarget(url, terms){
+  try {
+    if(!terms || !terms.length) return;
+    var p = new URL(url, location.href).pathname.replace(/index\.html$/,'');
+    sessionStorage.setItem('tevi_scroll', JSON.stringify({ path:p, terms:terms, ts:Date.now() }));
+  } catch(e){}
+}
+// Busca en la página el elemento que mejor coincide con los términos, lo centra
+// en pantalla y lo resalta un instante. Devuelve true si lo encontró.
+function scrollToTerms(terms){
+  if(!terms || !terms.length) return false;
+  var T = terms.map(function(t){ return norm(t); }).filter(function(t){ return t.length>2; });
+  if(!T.length) return false;
+  var root = document.querySelector('main') || document.body;
+  var els = root.querySelectorAll('h1,h2,h3,h4,h5,p,li,td,figcaption,span,strong,b,a,div.ct,div.case-client');
+  var best=null, bestScore=0;
+  els.forEach(function(el){
+    var txt = norm(el.textContent||'');
+    if(txt.length<2 || txt.length>360) return;
+    var score=0; T.forEach(function(t){ if(txt.indexOf(t)>-1) score++; });
+    if(score>bestScore){ bestScore=score; best=el; }
+  });
+  if(best && bestScore>0){
+    // Desplazamos la VENTANA con la posición medida (scrollIntoView falla por los
+    // transforms de las animaciones .reveal en los ancestros). Centramos el
+    // elemento dejando holgura para el nav fijo.
+    var rect = best.getBoundingClientRect();
+    var y = rect.top + window.pageYOffset - Math.max(96, (window.innerHeight - rect.height) / 2);
+    try { window.scrollTo({ top: Math.max(0, y), behavior:'smooth' }); } catch(e){ window.scrollTo(0, Math.max(0, y)); }
+    best.classList.add('ai-spot');
+    setTimeout(function(){ best.classList.remove('ai-spot'); }, 2600);
+    return true;
+  }
+  return false;
+}
+function maybeAutoNavigate(answer, q){
   var m = answer.match(/\/servicios\/(sap|oracle-jd-edwards|ia-empresarial|desarrollo-a-medida)\/|\/(nosotros|servicios|casos|contacto)\//);
   if(!m) return;
   var path = m[1] ? 'servicios/'+m[1]+'/' : m[2]+'/';
@@ -357,12 +394,13 @@ function maybeAutoNavigate(answer){
   note.innerHTML = '<span class="ai-go-txt">'+(en?'Taking you to ':'Te llevo a ')+'<b>'+label+'</b>…</span><button type="button" class="ai-go-stop">'+(en?'Stay here':'Quedarme aquí')+'</button><span class="ai-go-bar" aria-hidden="true"></span>';
   aiBody.appendChild(note); aiBody.scrollTop = aiBody.scrollHeight;
   note.querySelector('.ai-go-stop').addEventListener('click', cancelAutoGo);
-  _goTimer = setTimeout(function(){ _goTimer = null; location.href = url; }, 6000);
+  _goTimer = setTimeout(function(){ _goTimer = null; setScrollTarget(url, termsOf(q)); location.href = url; }, 10000);
 }
 // Historial de la conversación: se envía al Worker para que Tevi mantenga el
 // hilo (memoria de los turnos previos) y deje de sonar a robot sin contexto.
 var teviHistory = [];
 async function ask(q){
+  lastQ = q;
   addMsg(escapeHtml(q), 'user'); aiInput.value='';
   const t = typing();
   if (AI_ENDPOINT){
@@ -375,7 +413,7 @@ async function ask(q){
         teviHistory.push({ role:'user', content:q }, { role:'assistant', content:data.answer });
         if (teviHistory.length > 16) teviHistory = teviHistory.slice(-16);
         saveTevi();
-        maybeAutoNavigate(data.answer);
+        maybeAutoNavigate(data.answer, q);
       }
       else localAnswer(q);
     } catch (e){ t.remove(); localAnswer(q); }
@@ -399,6 +437,28 @@ aiInput.addEventListener('keydown', () => { if(_goTimer) cancelAutoGo(); });
   aiStarted = true;
   replayTevi(st.log);
   if(st.open){ aiPanel.classList.add('open'); if(aiFab) aiFab.classList.add('is-hidden'); }
+})();
+// Si pulsas un enlace dentro de una respuesta de Tevi, guarda el objetivo de
+// scroll (términos de la última pregunta) para enfocar el contenido al llegar.
+if(aiBody) aiBody.addEventListener('click', function(e){
+  var a = e.target.closest ? e.target.closest('a[href]') : null;
+  if(!a) return;
+  var href = a.getAttribute('href') || '';
+  if(/^(mailto:|tel:|javascript:|#)/i.test(href)) return;
+  try { if(new URL(a.href, location.href).origin === location.origin) setScrollTarget(a.href, termsOf(lastQ)); } catch(_e){}
+});
+// Al cargar la página, si hay un objetivo de scroll pendiente para ESTA página,
+// desplaza hasta el contenido relevante y lo resalta.
+(function teviScrollOnLoad(){
+  var raw; try { raw = sessionStorage.getItem('tevi_scroll'); } catch(e){ return; }
+  if(!raw) return;
+  try { sessionStorage.removeItem('tevi_scroll'); } catch(e){}
+  var t; try { t = JSON.parse(raw); } catch(e){ return; }
+  if(!t || !t.path || !t.terms) return;
+  if(t.ts && (Date.now() - t.ts) > 30000) return;
+  var here = location.pathname.replace(/index\.html$/,'');
+  if(here !== t.path) return;
+  setTimeout(function(){ scrollToTerms(t.terms); }, 550);
 })();
 
 /* Carrusel de portada */
