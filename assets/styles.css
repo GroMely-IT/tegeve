@@ -654,6 +654,6 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .ai-go-txt b{font-weight:800}
 .ai-go-stop{flex:none;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.76rem;font-weight:700;color:var(--t2);cursor:pointer;transition:color .2s,border-color .2s}
 .ai-go-stop:hover{color:var(--red);border-color:rgba(227,6,19,.4)}
-.ai-go-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--red);transform-origin:left;animation:aiGoBar 3s linear forwards}
+.ai-go-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--red);transform-origin:left;animation:aiGoBar 6s linear forwards}
 @keyframes aiGoBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media(prefers-reduced-motion:reduce){.ai-go-bar{animation:none;transform:scaleX(.4)}}

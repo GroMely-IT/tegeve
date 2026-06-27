@@ -336,7 +336,7 @@ function localAnswer(q){
   }
 }
 // Auto-navegación: si Tevi recomienda UNA sección y no estamos ya en ella, lleva
-// al usuario allí solo, con cuenta atrás de 3 s y opción de quedarse (y se
+// al usuario allí solo, con cuenta atrás de 6 s y opción de quedarse (y se
 // cancela si empieza a escribir). Como la conversación persiste, al llegar Tevi
 // sigue abierto con el hilo.
 var _goTimer = null;
@@ -357,7 +357,7 @@ function maybeAutoNavigate(answer){
   note.innerHTML = '<span class="ai-go-txt">'+(en?'Taking you to ':'Te llevo a ')+'<b>'+label+'</b>…</span><button type="button" class="ai-go-stop">'+(en?'Stay here':'Quedarme aquí')+'</button><span class="ai-go-bar" aria-hidden="true"></span>';
   aiBody.appendChild(note); aiBody.scrollTop = aiBody.scrollHeight;
   note.querySelector('.ai-go-stop').addEventListener('click', cancelAutoGo);
-  _goTimer = setTimeout(function(){ _goTimer = null; location.href = url; }, 3000);
+  _goTimer = setTimeout(function(){ _goTimer = null; location.href = url; }, 6000);
 }
 // Historial de la conversación: se envía al Worker para que Tevi mantenga el
 // hilo (memoria de los turnos previos) y deje de sonar a robot sin contexto.
