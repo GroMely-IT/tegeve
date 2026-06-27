@@ -9,7 +9,39 @@
 //  Despliegue:  wrangler deploy   (desde la raíz del repo)
 // ════════════════════════════════════════════════════════════════
 
+// Modelo en Cloudflare Workers AI (respaldo; tiene cuota diaria gratuita).
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+// Modelo en la API de NVIDIA (build.nvidia.com), gratis y SIN la cuota diaria
+// de "neuronas" de Cloudflare. Se usa cuando está la clave env.NVIDIA_API_KEY
+// (secreto del Worker: `wrangler secret put NVIDIA_API_KEY`).
+const NVIDIA_MODEL = "meta/llama-3.3-70b-instruct";
+
+// Genera la respuesta del asistente. Prioridad: 1) API de NVIDIA si hay clave;
+// 2) si NVIDIA falla o no hay clave, recurre a Cloudflare Workers AI. Ambas
+// reciben el mismo array `messages` (system + historial + pregunta).
+async function generate(env, messages) {
+  if (env.NVIDIA_API_KEY) {
+    try {
+      const r = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + env.NVIDIA_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ model: NVIDIA_MODEL, messages, max_tokens: 500, temperature: 0.35 }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const txt = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+        if (txt && txt.trim()) return txt.trim();
+      }
+    } catch (e) {
+      // si NVIDIA no responde, caemos al respaldo de Workers AI
+    }
+  }
+  const result = await env.AI.run(MODEL, { messages, max_tokens: 500, temperature: 0.35 });
+  return (result.response || "").trim();
+}
 
 const FALLBACK_KB = `
 TeGeVe (también conocida como TGV) es una consultora tecnológica con más de 30 años de trayectoria.
@@ -124,16 +156,12 @@ async function handleTevi(request, env) {
     : [];
 
   try {
-    const result = await env.AI.run(MODEL, {
-      messages: [
-        { role: "system", content: systemPrompt(lang, ctx) },
-        ...history,
-        { role: "user", content: question },
-      ],
-      max_tokens: 500,
-      temperature: 0.35,
-    });
-    return json({ answer: (result.response || "").trim() }, 200, h);
+    const answer = await generate(env, [
+      { role: "system", content: systemPrompt(lang, ctx) },
+      ...history,
+      { role: "user", content: question },
+    ]);
+    return json({ answer }, 200, h);
   } catch (err) {
     return json({ error: "AI service unavailable.", detail: String(err) }, 502, h);
   }
