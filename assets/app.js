@@ -285,14 +285,24 @@ const aiFab = document.getElementById('aiFab'), aiPanel = document.getElementByI
       aiClose = document.getElementById('aiClose'), aiBody = document.getElementById('aiBody'),
       aiInput = document.getElementById('aiInput'), aiSend = document.getElementById('aiSend');
 let aiStarted = false;
-function openAI(){ aiPanel.classList.add('open'); if(aiFab) aiFab.classList.add('is-hidden'); if(!aiStarted){aiStarted=true;greet();} setTimeout(()=>aiInput.focus(),350); }
-function closeAI(){ aiPanel.classList.remove('open'); if(aiFab) aiFab.classList.remove('is-hidden'); var nb=document.querySelector('.nav-ai'); if(nb) nb.focus(); }
+// Persistencia de la conversación entre páginas (el sitio es multipágina):
+// guardamos el transcript, el historial y si está abierto en sessionStorage,
+// y lo restauramos al cargar cada página. Así, al pulsar un enlace de Tevi y
+// navegar, el asistente sigue abierto y con todo el hilo (no se pierde).
+var TEVI_SS = 'tevi_state_v1';
+var teviLog = [];
+function saveTevi(){
+  try { sessionStorage.setItem(TEVI_SS, JSON.stringify({ open: aiPanel.classList.contains('open'), log: teviLog, history: teviHistory })); } catch(e){}
+}
+function replayTevi(log){ log.forEach(function(it){ if(it.t==='msg') addMsg(it.html, it.who, true); else if(it.t==='chips') addChips(it.items, true); }); }
+function openAI(){ aiPanel.classList.add('open'); if(aiFab) aiFab.classList.add('is-hidden'); if(!aiStarted){aiStarted=true;greet();} saveTevi(); setTimeout(()=>aiInput.focus(),350); }
+function closeAI(){ aiPanel.classList.remove('open'); if(aiFab) aiFab.classList.remove('is-hidden'); saveTevi(); var nb=document.querySelector('.nav-ai'); if(nb) nb.focus(); }
 if(aiFab) aiFab.addEventListener('click', openAI);
 aiClose.addEventListener('click', closeAI);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && aiPanel.classList.contains('open')) closeAI(); });
 document.querySelectorAll('.ai-open-link').forEach(b => b.addEventListener('click', openAI));
-function addMsg(html, who){ const m=document.createElement('div'); m.className='msg '+who; m.innerHTML=html; aiBody.appendChild(m); aiBody.scrollTop=aiBody.scrollHeight; return m; }
-function addChips(items){ const c=document.createElement('div'); c.className='chips'; items.forEach(t=>{const b=document.createElement('button');b.className='chip';b.textContent=t;b.addEventListener('click',()=>ask(t));c.appendChild(b);}); aiBody.appendChild(c); aiBody.scrollTop=aiBody.scrollHeight; }
+function addMsg(html, who, skipLog){ const m=document.createElement('div'); m.className='msg '+who; m.innerHTML=html; aiBody.appendChild(m); aiBody.scrollTop=aiBody.scrollHeight; if(!skipLog){ teviLog.push({t:'msg',who:who,html:html}); saveTevi(); } return m; }
+function addChips(items, skipLog){ const c=document.createElement('div'); c.className='chips'; items.forEach(t=>{const b=document.createElement('button');b.className='chip';b.textContent=t;b.addEventListener('click',()=>ask(t));c.appendChild(b);}); aiBody.appendChild(c); aiBody.scrollTop=aiBody.scrollHeight; if(!skipLog){ teviLog.push({t:'chips',items:items}); saveTevi(); } }
 function typing(){ const t=document.createElement('div'); t.className='typing'; t.innerHTML='<i></i><i></i><i></i>'; aiBody.appendChild(t); aiBody.scrollTop=aiBody.scrollHeight; return t; }
 function greet(){
   var L = TEVI[tlang()];
@@ -340,6 +350,7 @@ async function ask(q){
         addMsg(formatAI(data.answer), 'bot'); addChips(suggest());
         teviHistory.push({ role:'user', content:q }, { role:'assistant', content:data.answer });
         if (teviHistory.length > 16) teviHistory = teviHistory.slice(-16);
+        saveTevi();
       }
       else localAnswer(q);
     } catch (e){ t.remove(); localAnswer(q); }
@@ -348,6 +359,20 @@ async function ask(q){
   setTimeout(() => { t.remove(); localAnswer(q); }, 480 + Math.random()*420);
 }
 aiSend.addEventListener('click', () => { const v = aiInput.value.trim(); if (v) ask(v); });
+// Al cargar la página, restaura la conversación guardada (si la hay) para que
+// Tevi sobreviva a la navegación entre páginas multipágina.
+(function restoreTevi(){
+  if(!aiPanel || !aiBody) return;
+  var raw; try { raw = sessionStorage.getItem(TEVI_SS); } catch(e){ return; }
+  if(!raw) return;
+  var st; try { st = JSON.parse(raw); } catch(e){ return; }
+  if(!st || !Array.isArray(st.log) || !st.log.length) return;
+  teviHistory = Array.isArray(st.history) ? st.history : [];
+  teviLog = st.log;
+  aiStarted = true;
+  replayTevi(st.log);
+  if(st.open){ aiPanel.classList.add('open'); if(aiFab) aiFab.classList.add('is-hidden'); }
+})();
 
 /* Carrusel de portada */
 (function(){
