@@ -107,6 +107,8 @@ ${kb}`;
 // los dominios propios (por si se llama desde otro origen del grupo).
 const ALLOW = [
   "https://gagrosso.github.io",
+  "https://tegevem.es",
+  "https://www.tegevem.es",
   "https://tegeve.es",
   "https://www.tegeve.es",
   "https://tegeve.gabrielgrosso.workers.dev",
