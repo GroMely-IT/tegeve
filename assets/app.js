@@ -138,10 +138,13 @@ document.querySelectorAll('.faq-cat').forEach(btn => {
 /* IA generativa GRATIS: pega aquí la URL del Cloudflare Worker (ver carpeta /worker) para
    activarla. Si queda vacío o falla, el asistente responde con búsqueda local sobre el FAQ. */
 // En el Worker unificado (*.workers.dev) la IA va en el mismo origen → sin CORS.
-// En cualquier otro sitio (github.io, localhost) usamos el Worker independiente.
+// La IA la sirve SIEMPRE el Worker unificado "tegeve" (el mismo que el sitio en
+// workers.dev y el único con la clave de NVIDIA). En workers.dev es mismo origen
+// (/api/tevi); en github.io o dominio propio se llama de forma cruzada (CORS ya
+// permitido en el Worker). Así hay un solo backend de IA que mantener.
 const AI_ENDPOINT = (typeof location !== 'undefined' && location.hostname.endsWith('.workers.dev'))
   ? '/api/tevi'
-  : 'https://tegeve-asistente.gabrielgrosso.workers.dev';
+  : 'https://tegeve.gabrielgrosso.workers.dev/api/tevi';
 function buildKB(){ return faqItems.map(item => ({
   q: item.querySelector('.faq-q').textContent.replace('+','').trim(),
   a: item.querySelector('.faq-a-inner').innerHTML.trim(),
