@@ -169,8 +169,8 @@ async function handleTevi(request, env) {
   const history = Array.isArray(body.history)
     ? body.history
         .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-        .slice(-8)
-        .map((m) => ({ role: m.role, content: m.content.slice(0, 1200) }))
+        .slice(-6)
+        .map((m) => ({ role: m.role, content: m.content.slice(0, 600) }))
     : [];
 
   try {
