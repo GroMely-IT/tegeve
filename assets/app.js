@@ -220,19 +220,13 @@ function _kbUrl(){
   return s ? s.replace(/app\.js.*$/, 'tevi-kb.txt') : null;
 }
 async function fullContext(){
-  if(!_kbLoaded){
-    if(!_kbP){
-      var u = _kbUrl();
-      _kbP = u ? fetch(u).then(function(r){ return r.ok ? r.text() : ''; }).catch(function(){ return ''; })
-               : Promise.resolve('');
-    }
-    var t = await _kbP;
-    _kbText = (t && t.length > 500) ? t : '';
-    _kbLoaded = true;
-  }
-  // TEVI_KB (resumen canónico con el equipo) primero, para que sobreviva
-  // aunque el Worker recorte; luego la KB completa de todas las páginas.
-  return _kbText ? (TEVI_KB + "\n\n" + _kbText).slice(0, 60000) : siteContext();
+  // Contexto LEAN: solo el resumen canónico (TEVI_KB). Antes mandábamos también
+  // toda la KB del sitio (~60 KB ≈ 15.000 tokens) y el modelo tardaba 30-45 s en
+  // procesarla en CADA pregunta (la petición acababa fallando y saltaba la
+  // respuesta de respaldo). Con el resumen responde en segundos y sigue sabiendo
+  // lo esencial (equipo, servicios, historia, contacto, mapa de secciones); para
+  // el detalle remite a la sección correspondiente, que el cliente enlaza.
+  return TEVI_KB;
 }
 const TEVI = {
   es: {

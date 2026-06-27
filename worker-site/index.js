@@ -21,22 +21,27 @@ const NVIDIA_MODEL = "meta/llama-3.3-70b-instruct";
 // reciben el mismo array `messages` (system + historial + pregunta).
 async function generate(env, messages) {
   if (env.NVIDIA_API_KEY) {
-    try {
-      const r = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + env.NVIDIA_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ model: NVIDIA_MODEL, messages, max_tokens: 500, temperature: 0.35 }),
-      });
-      if (r.ok) {
-        const d = await r.json();
-        const txt = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-        if (txt && txt.trim()) return txt.trim();
+    // Dos intentos: un error transitorio de NVIDIA (429/503) no debe caer
+    // directo al respaldo de Workers AI (que puede tener la cuota agotada).
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + env.NVIDIA_API_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ model: NVIDIA_MODEL, messages, max_tokens: 500, temperature: 0.35 }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          const txt = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+          if (txt && txt.trim()) return txt.trim();
+        }
+      } catch (e) {
+        // error transitorio: reintentamos una vez antes de pasar al respaldo
       }
-    } catch (e) {
-      // si NVIDIA no responde, caemos al respaldo de Workers AI
+      if (attempt === 0) await new Promise((res) => setTimeout(res, 350));
     }
   }
   const result = await env.AI.run(MODEL, { messages, max_tokens: 500, temperature: 0.35 });
