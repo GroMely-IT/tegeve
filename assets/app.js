@@ -169,78 +169,38 @@ function ctxCases(){
 // página que esté (la web es multipágina y cada página solo ve su propio
 // DOM). Incluye al equipo para responder "¿quién es X?".
 var TEVI_KB = `
-# TeGeVe — empresa
-TeGeVe (TGV, TEGEVE; "Member of TGV Group"): consultora tecnológica de servicios de software, +30 años (34: 1992–2026). Eslogan: "Transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras". Equipo en cuatro países: España (Málaga), Argentina (Buenos Aires), México y EE. UU. (Florida). Proyectos en +16 países, con empresas y organismos públicos. Nearshore o en oficinas del cliente. Web: tegeve.es. LinkedIn: linkedin.com/company/tegeve. Asistente IA: Tevi. Herramienta: TGV Intel.
+# TeGeVe — quiénes somos
+TeGeVe (también TGV) es una consultora tecnológica de servicios de software con más de 30 años de trayectoria. Eslogan: "Transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras". Trabajamos desde España (Málaga), Argentina (Buenos Aires), México y Estados Unidos (Florida), con proyectos en más de 16 países, en modalidad nearshore o en las oficinas del cliente. Web: tegeve.es. Asistente del sitio: Tevi.
 
 # Cifras
-+300 profesionales. +80 clientes en 16 países; entre ellos 6 de las 10 compañías de alimentos más grandes del mundo y 3 de las instituciones financieras líderes del mundo. CMMI Nivel 3 (DEV), evaluación oficial nº 77554 vigente hasta julio de 2028. Visión: compañía líder en tecnología a nivel global. Cimientos: pasión, compromiso con el éxito del cliente y calidad.
-
-# Equipo
-Dirección: Osvaldo Tessio (Director, cofundador), Ernesto Galindez (Director, cofundador), Marta Vicena (Directora, cofundadora), Gabriel Grosso (Director).
-Operaciones: Fernando García (SAP), Julieta Vegas (Oracle ERPs), Fernando Baztarrica (Web Business Solutions), Jose Jaliff (IA Empresarial), Jorge Bessone (Desarrollo para Servicios Financieros).
-Soporte: María Amelia Rojas (RR. HH.), José Luis Cárcamo (Calidad y Procesos), Mariano Attanasio (Administración y Finanzas), Carlos Rasch (Ventas y Marketing), Gustavo Palmieri (IT).
-Mercados: Fernando García (TGV Argentina), Adriana Barbera (TGV México), Hugo Rabinovich (TGV Americas).
-Equipo senior, estable y multidisciplinar.
+Más de 300 profesionales en el equipo. Más de 80 clientes en 16 países; entre ellos, 6 de las 10 compañías de alimentos más grandes del mundo y 3 de las instituciones financieras líderes del mundo. Más de 30 años de trayectoria. CMMI Nivel 3 (DEV).
 
 # Servicios
-Cuatro especialidades: SAP, Oracle JD Edwards, IA Empresarial y BI, y Desarrollo a medida; más Assessment e Industria Financiera/Legacy.
-SAP: implementa, evoluciona y da soporte; acompaña a S/4HANA (Finanzas/FI, Operaciones, RR. HH.), funcional y técnico. Tecnologías: SAP S/4HANA, SAP BTP, SAP Fiori, SAP HANA, ABAP (RAP), CPI · PI/HCI, SAP Analytics Cloud. AMS niveles 1 y 2; desarrollos a medida sobre BTP o Fiori. Consultores senior de misión crítica.
-Oracle JD Edwards: implementa, hace upgrades y da soporte a EnterpriseOne y World (partner Oracle/IBM). +12 años en operaciones críticas; módulos financieros, distribución, manufactura, logística. Capacidades: Orchestrator, IoT, BI Publisher, One View Reporting, E1 Pages, JDE Mobile.
-IA Empresarial y BI: integra BI, IA y automatización (RPA) y lleva la IA a producción (no pilotos). Hace: Automatización (RPA + IA), Agentes de IA, Asistentes y chatbots, BI y analítica, Integración y gestión de datos, Test Automation, IA agéntica, Evaluación de madurez de IA.
-Plataformas: Power Platform, OpenAI, Google Cloud, UiPath, SAP Joule. Evalúa la madurez de datos e IA, conecta fuentes (única versión de la verdad), construye agentes/asistentes/automatizaciones e integra con el ERP (AMS).
-Desarrollo a medida: apps web y móviles, integración de sistemas y gran volumen de datos, con foco en usabilidad, rendimiento y escalabilidad. Tecnologías: Angular, React, HTML5, CSS, .NET, Java, Node.js, SQL Server, Oracle, SharePoint; Java J2EE/Spring/Hibernate/JBoss. Moderniza legacy (COBOL, AS/400, DB2). Modelos: Implementación a medida, Software Factory, Testing Factory, AMS, Staff Augmentation.
-Assessment: evaluaciones y auditorías para conocer necesidades, generar propuesta de valor y optimizar costes antes de invertir.
-Industria Financiera y Legacy: desarrollo para banca y finanzas (fiabilidad y continuidad críticas) y modernización de legacy (COBOL, AS/400, DB2); soporte y evolución post go-live.
+Cuatro especialidades: (1) SAP: implementación, evolución y soporte, y el camino a SAP S/4HANA (BTP, Fiori, HANA, ABAP, CPI, SAP Analytics Cloud), con soporte AMS. (2) Oracle JD Edwards (EnterpriseOne y World): implantación, upgrades y soporte (Orchestrator, BI Publisher, One View, E1 Pages, JDE Mobile). (3) IA Empresarial y Business Intelligence: BI, IA y automatización (RPA) llevadas a producción —agentes, asistentes, automatización y analítica— sobre Power Platform, OpenAI, Google Cloud, UiPath o SAP Joule. (4) Desarrollo de software a medida: apps web y móviles, integración de sistemas y modernización de legacy (Angular, React, .NET, Java, Node.js; COBOL, AS/400, DB2). Además: Assessment (evaluación y auditoría) y desarrollo para la industria financiera.
 
-# Modelos y método
-Modelos: (1) Implementación a medida — llave en mano, del análisis a producción; (2) AMS — mantenimiento y evolución con SLA; (3) Software Factory — fábrica dedicada; (4) Testing Factory; (5) Staff Augmentation — perfiles senior integrados al cliente; (6) Assessment — evaluación de procesos, tecnología y madurez; (7) Nearshore — misma franja horaria, cultura cercana y costes optimizados desde España y Latinoamérica.
-Método (4 pasos): 1) entender necesidades con assessment honesto; 2) diseñar con equipo multidisciplinar; 3) entregar en nearshore o en cliente; 4) acompañar adopción y transformación.
-Contratación: por proyecto cerrado o equipo dedicado (nearshore / staff augmentation); precio según alcance, tras un diagnóstico sin compromiso.
+# Cómo trabajamos
+Modelos: implementación a medida, AMS (soporte evolutivo con SLA), Software Factory, Testing Factory, Staff Augmentation, Assessment y nearshore. Empezamos por entender el negocio con un assessment honesto y acompañamos hasta producción y después. El precio depende del alcance y se define tras un primer diagnóstico, sin compromiso. Para empezar basta una conversación.
 
-# Sectores
-Banca y Finanzas; Energía y Oil & Gas; Infraestructuras; Retail y Distribución; Sector Público; Industria; Servicios Financieros; gran consumo; agro; medios de pago; seguros; logística; telecomunicaciones. Misión crítica en Europa y América.
+# Equipo
+Dirección: Osvaldo Tessio, Ernesto Galindez y Marta Vicena (cofundadores) y Gabriel Grosso (Director). Responsables de área: Fernando García (SAP), Julieta Vegas (Oracle ERPs), Fernando Baztarrica (Web Business Solutions), Jose Jaliff (IA Empresarial), Jorge Bessone (Desarrollo para Servicios Financieros), María Amelia Rojas (RR. HH.), José Luis Cárcamo (Calidad y Procesos), Mariano Attanasio (Administración y Finanzas), Carlos Rasch (Ventas y Marketing) y Gustavo Palmieri (IT). Equipo senior, estable y multidisciplinar.
 
-# Clientes
-Motta Internacional, Weatherford, Abertis/Autopistas del Oeste, Banco Itaú, Banco Comafi, Kimberly-Clark, Nutrien, First Data, Phillip Morris México, Dirección Nacional de Migraciones (Argentina), fabricante multinacional de equipamiento agrícola, aseguradora líder, empresa agroindustrial líder de Argentina, operadora de la mayor red de gasoductos de Argentina.
+# Sectores y clientes
+Trabajamos en banca y finanzas, energía y oil & gas, infraestructuras, retail y distribución, sector público, industria, gran consumo, agro, medios de pago, seguros y logística. Algunos clientes: Motta Internacional, Weatherford, Abertis, Banco Itaú, Banco Comafi, Kimberly-Clark, Nutrien y First Data.
 
 # Casos de éxito
-1) Conciliación FCI con IA (IA Empresarial, serv. financieros) — operadora de la mayor red de gasoductos de Argentina: conciliar fondos comunes a mano leyendo PDF de bancos; app Power Platform que lee PDF, calcula saldos e impuestos por FCI, imputa en SAP y notifica/alerta por Outlook (AI Builder, Power Automate, Excel Online); de 4 días a horas.
-2) Logística diaria con IA (IA Empresarial, Oil & Gas) — reemplaza Excel manual; ruteo de vehículos con restricciones de carga, estabilidad de camiones y separación de combustibles (Python, FastAPI, Google OR-Tools); 5/5.
-3) Acompañamiento JD Edwards 12+ años (Oracle JD Edwards, agro) — fabricante de equipamiento agrícola: implementa EnterpriseOne en Argentina (2010, diseño de Brasil) y acompaña desde 2012 (adquisición Precision Planting); 92.000 h/hombre.
-4) Seguridad en JD Edwards (Oracle JD Edwards, agro) — Nutrien: evaluación integral del ERP JD Edwards E1 9.2 en Chile, Uruguay y Argentina (As Is, To Be, estrategias); modelo de seguridad confiable.
-5) Monitor de integraciones SAP (SAP, consumo masivo) — monitor de errores en SAP Fiori sobre SAP BTP, conectando HCM (OnPremise) y SuccessFactors vía CPI; 8 personas, 17.379 h.
-6) Soporte SAP continuo (SAP, agroindustria) — agroindustrial líder de Argentina: mesa de ayuda funcional N1 y N2 (FI, CO, MM, SD, PP), remoto; 5/5.
-7) Decisiones basadas en datos (BI, gran consumo) — Kimberly-Clark: migró de SAP BW a SAP HANA y Tableau, luego a Snowflake (Data Cloud) y Power BI.
-8) Rating crediticio unificado (Desarrollo a medida, banca) — Banco Comafi: unifica el rating de personas físicas y jurídicas en una web (Angular, Java Spring, SQL Server).
-9) Software Factory (Desarrollo a medida, seguros) — aseguradora líder: Software Factory de 22 expertos, 32.000 h/año (Java, Spring MVC, Hibernate, SQL Server, JBoss).
-10) Migración a chip EMV (Desarrollo a medida, serv. financieros) — First Data: soporte simultáneo a tarjetas chip y banda magnética; certificación de tarjetas IC (COBOL, mainframe).
-11) Integración de legacy en medios de pago (Integración, finanzas) — First Data (licenciataria MasterCard en Argentina): amplió MasterAssist, préstamos, fidelización, campañas y cuentas corrientes en mainframe (COBOL, Java, DB2); 16 personas, 21.600 h.
-12) Business Value Assessment (Assessment, retail/distribución) — Motta Internacional (múltiples ERP antiguos): mapeo As Is, modelo multidimensional, comparación de dos ERP world-class, roadmap; 14 personas, ~1.600 horas.
+Tenemos casos reales con resultados medibles en banca, energía, agro, gran consumo, seguros y medios de pago; por ejemplo, una conciliación de fondos de inversión con IA que pasó de cuatro días a unas horas. El detalle de cada caso, con sus cifras, está en /casos/, donde se puede filtrar por servicio o sector.
 
-# Valores
-Orientación al cliente (entienden el negocio antes que la tecnología), Mejora continua, Escucha activa, Diversidad y multiculturalidad, Empoderamiento y Compromiso con las personas.
+# Historia
+Fundada en 1992 en Argentina por Osvaldo Tessio, Ernesto Galindez y Marta Vicena. Hitos: 2004 primer Service Partner de SAP; 2014 oficina en Florida (EE. UU.); 2021 llegada a Málaga (España); 2025 nivel de madurez 3 en el CMMI DEV. Treinta y cuatro años y cuatro países.
 
-# Historia e hitos
-Fundada en 1992 en Argentina por Osvaldo Tessio, Ernesto Galindez y Marta Vicena. 1992 fundación (Argentina); 2002 primer paso internacional (Phillip Morris, México); 2004 primer SAP Service Partner comercial; 2006 inicia adhesión a CMMI; 2010 primera oficina internacional, Monterrey, México (como Soinf); 2014 oficina en Florida, EE. UU. (TGVAmericas); 2021 llega a Málaga, España, como TeGeVe (capítulo español del Grupo TGV); 2022 cumple 30 años y supera la 6.ª evaluación CMMI; 2024 programa "Horizonte"; 2025 obtiene Nivel 3 en el CMMI DEV Benchmark Appraisal; 2026 cientos de proyectos y decenas de clientes internacionales.
+# Reconocimientos
+CMMI Nivel 3, firmantes del Pacto Global de la ONU, miembros fundadores de Polo IT Buenos Aires y de la comisión directiva de CESSI. Partners de SAP, Oracle e IBM.
 
-# Reconocimientos y alianzas
-CMMI Nivel 3 (desarrollo de software). Firmantes del Pacto Global de la ONU (UN Global Compact). Miembro fundador del clúster Polo IT Buenos Aires. Comisión directiva de CESSI. Finalista de los Premios Sadosky. Reconocimiento "Customer Focus" en el Oracle JD Edwards Summit. Uno de los mejores empleadores tecnológicos. Partner de SAP, Oracle e IBM (IBM Business Partner). Recomiendan a TeGeVe: Weatherford, Dirección Nacional de Migraciones (sistema de control de permanencia con +400 dispositivos móviles), Banco Comafi y Banco Itaú.
+# Contacto
+España: +34 952 569 582 · info@tegeve.es (Málaga). Argentina: +54 11 5767-7477 · info@tgv.com.ar (Buenos Aires). México: +52 81 2092 2323 · info@tgv-group.com. Estados Unidos: +1 561 306-5121 · info@tgvamericas.net (Florida). Correo general: info@tegeve.es. En la web hay un formulario de contacto.
 
-# FAQ
-SAP/S/4HANA: sí; implementa, evoluciona, da soporte y acompaña a S/4HANA con consultores senior de misión crítica.
-Oracle JD Edwards: implementan, actualizan y dan soporte a EnterpriseOne y World (partner Oracle/IBM).
-IA: casos concretos, gobernanza, seguridad del dato y retorno medible, en producción (no pilotos); agentes, RPA, copilotos internos y automatización sobre SAP, JD Edwards o apps a medida.
-A medida e integraciones: sí; sistemas de extremo a extremo, eliminando silos.
-Legacy: sí (COBOL, AS/400, DB2) y desarrollo para la industria financiera (fiabilidad y continuidad críticas).
-Post go-live: soporte, evolución y mantenimiento.
-Coste: según alcance; el nearshore es eficiente, tras un diagnóstico sin compromiso.
-Cómo empezar: conversación de diagnóstico; luego assessment, prueba de concepto o proyecto.
-
-# Contacto (por país)
-España: +34 952 569 582, info@tegeve.es (Málaga). Argentina: +54 11 5767-7477, info@tgv.com.ar (Buenos Aires). México: +52 81 2092 2323, info@tgv-group.com. EE. UU.: +1 561 306-5121, info@tgvamericas.net (Florida). General: info@tegeve.es. El formulario pide nombre, empresa, email y reto. Sitio en ES e EN.
-
-# Secciones de la web
-Historia, equipo, valores y reconocimientos: /nosotros/. Servicios: /servicios/ y /servicios/sap/, /servicios/oracle-jd-edwards/, /servicios/ia-empresarial/, /servicios/desarrollo-a-medida/. Casos, sectores y clientes (buscador y filtros: SAP, Oracle JD Edwards, IA Empresarial, Desarrollo a medida, Business Intelligence, Integración, Assessment): /casos/. Contacto y oficinas: /contacto/. FAQ: inicio. TGV Intel: intel.html.
+# Dónde mirar en la web
+Servicios: /servicios/ (y el detalle en /servicios/sap/, /servicios/oracle-jd-edwards/, /servicios/ia-empresarial/ y /servicios/desarrollo-a-medida/). Historia, equipo y reconocimientos: /nosotros/. Casos de éxito, sectores y clientes: /casos/. Contacto y oficinas: /contacto/.
 `;
 
 function siteContext(){
