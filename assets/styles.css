@@ -162,7 +162,7 @@ h1,h2,h3{font-family:'Heebo','Inter',system-ui,sans-serif;letter-spacing:-.025em
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-bottom:48px}
 .stat .num{font-family:'Heebo',sans-serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:900;letter-spacing:-.04em;line-height:1;
   background:linear-gradient(120deg,#fff,#ff4350);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.stat .lbl{color:var(--t2d);font-size:.96rem;margin-top:8px}
+.stat .lbl{color:var(--t2d);font-size:.92rem;line-height:1.45;margin-top:10px;max-width:22ch}
 .marquee-track{display:flex;gap:54px;width:max-content;animation:scrollx 30s linear infinite;align-items:center;opacity:.5}
 .stats:hover .marquee-track{animation-play-state:paused}
 .marquee-track span{font-size:1.1rem;font-weight:600;color:#fff;white-space:nowrap;letter-spacing:-.01em}
