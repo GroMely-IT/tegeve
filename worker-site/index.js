@@ -9,40 +9,50 @@
 //  Despliegue:  wrangler deploy   (desde la raíz del repo)
 // ════════════════════════════════════════════════════════════════
 
-// Modelo en Cloudflare Workers AI (respaldo; tiene cuota diaria gratuita).
+// Modelo en Cloudflare Workers AI (último respaldo; cuota diaria gratuita).
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-// Modelo en la API de NVIDIA (build.nvidia.com), gratis y SIN la cuota diaria
-// de "neuronas" de Cloudflare. Se usa cuando está la clave env.NVIDIA_API_KEY
-// (secreto del Worker: `wrangler secret put NVIDIA_API_KEY`).
+// Proveedores compatibles con OpenAI (Llama 3.3 70B), por orden de preferencia.
+// Groq: rápido y constante (~2 s). NVIDIA (build.nvidia.com): gratis pero con
+// picos de cola. Claves como secretos del Worker (`wrangler secret put ...`).
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const NVIDIA_MODEL = "meta/llama-3.3-70b-instruct";
 
-// Genera la respuesta del asistente. Prioridad: 1) API de NVIDIA si hay clave;
-// 2) si NVIDIA falla o no hay clave, recurre a Cloudflare Workers AI. Ambas
-// reciben el mismo array `messages` (system + historial + pregunta).
-async function generate(env, messages) {
-  if (env.NVIDIA_API_KEY) {
-    // Dos intentos: un error transitorio de NVIDIA (429/503) no debe caer
-    // directo al respaldo de Workers AI (que puede tener la cuota agotada).
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const r = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: "Bearer " + env.NVIDIA_API_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ model: NVIDIA_MODEL, messages, max_tokens: 500, temperature: 0.35 }),
-        });
-        if (r.ok) {
-          const d = await r.json();
-          const txt = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-          if (txt && txt.trim()) return txt.trim();
-        }
-      } catch (e) {
-        // error transitorio: reintentamos una vez antes de pasar al respaldo
+// Llama a un endpoint compatible con OpenAI (Groq/NVIDIA). Reintenta una vez
+// ante un fallo transitorio. Devuelve el texto, o null si no hay respuesta útil.
+async function callOpenAICompat(url, key, model, messages) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
+        body: JSON.stringify({ model, messages, max_tokens: 500, temperature: 0.35 }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const txt = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+        if (txt && txt.trim()) return txt.trim();
       }
-      if (attempt === 0) await new Promise((res) => setTimeout(res, 350));
+    } catch (e) {
+      // fallo transitorio: reintentamos una vez
     }
+    if (attempt === 0) await new Promise((res) => setTimeout(res, 300));
+  }
+  return null;
+}
+
+// Genera la respuesta del asistente. Prioridad: 1) Groq (rápido) si hay clave;
+// 2) NVIDIA si hay clave; 3) Cloudflare Workers AI (respaldo). Todas reciben el
+// mismo array `messages` (system + historial + pregunta).
+async function generate(env, messages) {
+  if (env.GROQ_API_KEY) {
+    const t = await callOpenAICompat(GROQ_URL, env.GROQ_API_KEY, GROQ_MODEL, messages);
+    if (t) return t;
+  }
+  if (env.NVIDIA_API_KEY) {
+    const t = await callOpenAICompat(NVIDIA_URL, env.NVIDIA_API_KEY, NVIDIA_MODEL, messages);
+    if (t) return t;
   }
   const result = await env.AI.run(MODEL, { messages, max_tokens: 500, temperature: 0.35 });
   return (result.response || "").trim();
