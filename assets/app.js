@@ -335,6 +335,30 @@ function localAnswer(q){
     addChips(L.noansChips);
   }
 }
+// Auto-navegación: si Tevi recomienda UNA sección y no estamos ya en ella, lleva
+// al usuario allí solo, con cuenta atrás de 3 s y opción de quedarse (y se
+// cancela si empieza a escribir). Como la conversación persiste, al llegar Tevi
+// sigue abierto con el hilo.
+var _goTimer = null;
+function cancelAutoGo(){ if(_goTimer){ clearTimeout(_goTimer); _goTimer = null; } var n = aiBody.querySelector('.ai-go'); if(n) n.remove(); }
+function maybeAutoNavigate(answer){
+  var m = answer.match(/\/servicios\/(sap|oracle-jd-edwards|ia-empresarial|desarrollo-a-medida)\/|\/(nosotros|servicios|casos|contacto)\//);
+  if(!m) return;
+  var path = m[1] ? 'servicios/'+m[1]+'/' : m[2]+'/';
+  var label = m[1] ? SVC_LABELS[m[1]] : PAGE_LABELS[m[2]];
+  var url = SITE_ROOT + path, en = tlang()==='en';
+  var here = location.pathname.replace(/index\.html$/,'').replace(/\/+$/,'');
+  var dest;
+  try { dest = new URL(url, location.href).pathname.replace(/index\.html$/,'').replace(/\/+$/,''); } catch(e){ return; }
+  if(here === dest) return; // ya estamos en esa sección
+  cancelAutoGo();
+  var note = document.createElement('div');
+  note.className = 'ai-go';
+  note.innerHTML = '<span class="ai-go-txt">'+(en?'Taking you to ':'Te llevo a ')+'<b>'+label+'</b>…</span><button type="button" class="ai-go-stop">'+(en?'Stay here':'Quedarme aquí')+'</button><span class="ai-go-bar" aria-hidden="true"></span>';
+  aiBody.appendChild(note); aiBody.scrollTop = aiBody.scrollHeight;
+  note.querySelector('.ai-go-stop').addEventListener('click', cancelAutoGo);
+  _goTimer = setTimeout(function(){ _goTimer = null; location.href = url; }, 3000);
+}
 // Historial de la conversación: se envía al Worker para que Tevi mantenga el
 // hilo (memoria de los turnos previos) y deje de sonar a robot sin contexto.
 var teviHistory = [];
@@ -351,6 +375,7 @@ async function ask(q){
         teviHistory.push({ role:'user', content:q }, { role:'assistant', content:data.answer });
         if (teviHistory.length > 16) teviHistory = teviHistory.slice(-16);
         saveTevi();
+        maybeAutoNavigate(data.answer);
       }
       else localAnswer(q);
     } catch (e){ t.remove(); localAnswer(q); }
@@ -359,6 +384,8 @@ async function ask(q){
   setTimeout(() => { t.remove(); localAnswer(q); }, 480 + Math.random()*420);
 }
 aiSend.addEventListener('click', () => { const v = aiInput.value.trim(); if (v) ask(v); });
+// Si el usuario interactúa (escribe), cancelamos cualquier auto-navegación pendiente.
+aiInput.addEventListener('keydown', () => { if(_goTimer) cancelAutoGo(); });
 // Al cargar la página, restaura la conversación guardada (si la hay) para que
 // Tevi sobreviva a la navegación entre páginas multipágina.
 (function restoreTevi(){
