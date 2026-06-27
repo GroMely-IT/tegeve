@@ -48,6 +48,7 @@ async function generate(env, messages) {
 // Mantener sincronizado con el FAQ del sitio.
 const FALLBACK_KB = `
 TeGeVe (también conocida como TGV) es una consultora tecnológica con más de 30 años de trayectoria.
+Cifras: más de 300 profesionales en el equipo (en TeGeVe trabajan más de 300 personas); más de 80 clientes en 16 países, entre ellos 6 de las 10 compañías de alimentos más grandes del mundo y 3 de las instituciones financieras líderes del mundo.
 Eslogan: "Transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras".
 Presta servicios desde España (Málaga), Argentina (Buenos Aires) y Estados Unidos; contacto comercial también en México. Proyectos en más de 16 países, con empresas y organismos gubernamentales. Modalidad nearshore y en las oficinas del cliente. Equipo cualificado y multidisciplinar.
 Equipo: Dirección — Osvaldo Tessio, Ernesto Galindez y Marta Vicena (cofundadores) y Gabriel Grosso (Director de TeGeVe). Responsables de área: Fernando García (SAP), Julieta Vegas (Oracle ERPs), Fernando Baztarrica (Web Business Solutions), Jose Jaliff (IA Empresarial), Jorge Bessone (Desarrollo para Servicios Financieros), María Amelia Rojas (RRHH), José Luis Cárcamo (Calidad y Procesos), Mariano Attanasio (Administración y Finanzas), Carlos Rasch (Ventas y Marketing), Gustavo Palmieri (IT). Mercados: Fernando García (TGV Argentina), Adriana Barbera (TGV México), Hugo Rabinovich (TGV Americas).
