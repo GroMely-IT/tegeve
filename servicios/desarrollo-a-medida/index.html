@@ -69,8 +69,8 @@
   </div>
 </nav>
 <main id="contenido">
-<section class="svc-feature svc-right svc-hero" id="desarrollo" style="--img:url('../../assets/bg-dev.jpg')">
-  <div class="svc-bg-sticky"><div class="svc-bg"></div><div class="svc-veil"></div></div>
+<section class="svc-feature svc-right svc-hero svc-video-hero" id="desarrollo" style="--img:url('../../assets/bg-dev.jpg')">
+  <div class="svc-bg-sticky"><div class="svc-bg"></div><div class="svc-vbg" aria-hidden="true"><iframe src="https://www.youtube-nocookie.com/embed/wLTNqa8qbNg?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=wLTNqa8qbNg&amp;controls=0&amp;showinfo=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1&amp;disablekb=1&amp;fs=0&amp;iv_load_policy=3" title="Desarrollo de software en TeGeVe" loading="lazy" frameborder="0" allow="autoplay; encrypted-media" tabindex="-1"></iframe></div><div class="svc-veil"></div></div>
   <div class="wrap svc-inner">
     <div class="svc-card reveal">
       <span class="svc-eyebrow">Desarrollo de software a medida</span>
@@ -89,6 +89,11 @@
 <div class="diff-item reveal"><div class="ck">✓</div><div><p style="margin:0">Tus equipos pierden horas en tareas manuales o saltando entre aplicaciones que no se hablan entre sí.</p></div></div>
 <div class="diff-item reveal" data-d="1"><div class="ck">✓</div><div><p style="margin:0">Un proyecto a medida se te ha quedado sin manos senior o sin un proveedor que se integre a tu metodología y mantenga el ritmo de entrega.</p></div></div></div></div></section>
 <section class="sec sec-light"><div class="wrap"><div class="sec-head reveal"><span class="eyebrow">Cómo trabajamos</span><h2 class="h2">Nuestro enfoque.</h2></div><div class="svc-narrow reveal" style="font-size:1.08rem;line-height:1.75;color:var(--t2)">Partimos de tu proceso de negocio, no de un catálogo de tecnología. Diseñamos la aplicación web o móvil alrededor de cómo trabaja tu equipo, con foco en usabilidad, rendimiento y escalabilidad, y la integramos con los sistemas que ya tienes en producción. Trabajamos con el stack que mejor encaje en cada caso (Angular, React, .NET, Java, Node.js, SQL Server u Oracle) y con la profundidad para modernizar sistemas legacy sin parar la operación. Según lo que necesites, lo abordamos como proyecto a medida, Software Factory o Testing Factory, te acompañamos después con soporte evolutivo (AMS) o reforzamos tu equipo con perfiles senior en Staff Augmentation. Nos integramos a tu metodología y entregamos en modalidad nearshore o en tus oficinas, con un equipo estable que conoce tu proyecto y se queda en el tiempo. Un ejemplo: para Banco Comafi unificamos el cálculo del rating crediticio en una única aplicación web (Angular y Java Spring), con foco en usabilidad y trazabilidad, lo que redujo los costes de mantenimiento.</div></div></section>
+<section class="sec sec-dark"><div class="wrap"><div class="sec-head reveal"><span class="eyebrow" style="color:#ff4350">Desarrollo en vídeo</span><h2 class="h2" style="color:#fff">Vélo en acción.</h2><p class="lede" style="color:rgba(255,255,255,.72);margin:10px auto 0;max-width:62ch">Diseñamos, integramos y modernizamos software a medida del negocio. Te lo mostramos en imágenes.</p></div>
+<div class="video-grid">
+  <button type="button" class="video-card reveal" data-yt="wLTNqa8qbNg" aria-label="Reproducir vídeo: Web Business Solutions TeGeVe"><span class="video-thumb"><img src="https://i.ytimg.com/vi/wLTNqa8qbNg/maxresdefault.jpg" onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/wLTNqa8qbNg/hqdefault.jpg'" alt="" loading="lazy"></span><span class="video-play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span><span class="video-label">Web Business Solutions · TeGeVe</span></button>
+  <button type="button" class="video-card reveal" data-d="1" data-yt="E29zoghtw00" aria-label="Reproducir vídeo: Desarrollo e integración de aplicaciones"><span class="video-thumb"><img src="https://i.ytimg.com/vi/E29zoghtw00/maxresdefault.jpg" onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/E29zoghtw00/hqdefault.jpg'" alt="" loading="lazy"></span><span class="video-play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span><span class="video-label">Desarrollo e integración de aplicaciones · .NET</span></button>
+</div></div></section>
 <section class="sec sec-mist"><div class="wrap"><div class="sec-head reveal"><span class="eyebrow">Prueba</span><h2 class="h2">Casos relacionados.</h2></div><div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))"><a href="../../casos/#casos" class="svc-case reveal"><span class="case-svc">Desarrollo a medida</span><h3>Un sistema de rating crediticio unificado y web que reduce costes de mantenimiento</h3><span class="svc-case-meta">Banco Comafi</span></a>
 <a href="../../casos/#casos" class="svc-case reveal"><span class="case-svc">Desarrollo a medida</span><h3>Una Software Factory que mantiene a una aseguradora líder al ritmo de su negocio</h3><span class="svc-case-meta">Aseguradora líder del sector</span></a>
 <a href="../../casos/#casos" class="svc-case reveal"><span class="case-svc">Desarrollo a medida</span><h3>Migración a tarjetas con chip EMV: transacciones más seguras y menos fraude</h3><span class="svc-case-meta">First Data (soluciones globales de pagos)</span></a>
@@ -137,5 +142,22 @@
   </div>
 </div>
 <script src="../../assets/app.js?v=33" defer></script>
+<script>
+(function(){
+  document.querySelectorAll('.video-card[data-yt]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var id = b.getAttribute('data-yt');
+      var lbl = (b.querySelector('.video-label') || {}).textContent || 'Vídeo';
+      var f = document.createElement('iframe');
+      f.className = 'video-iframe';
+      f.src = 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
+      f.title = lbl;
+      f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+      f.setAttribute('allowfullscreen', '');
+      b.replaceWith(f);
+    });
+  });
+})();
+</script>
 </body>
 </html>
