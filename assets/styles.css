@@ -668,3 +668,23 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .ns-cmmi{justify-content:center}
 .ns-cmmi-badge{width:100%;max-width:210px;height:auto;display:block;margin:0 auto 4px}
 .cert-badged .cert-badge-img{width:100%;max-width:174px;height:auto;display:block;margin:2px auto 16px}
+/* ===== SAP: hero con vídeo de fondo en vivo ===== */
+.svc-vbg{position:absolute;inset:0;z-index:0;overflow:hidden;background:#11141C}
+.svc-vbg iframe{position:absolute;top:50%;left:50%;width:100vw;height:56.25vw;min-height:100vh;min-width:177.78vh;transform:translate(-50%,-50%);border:0;pointer-events:none}
+@media(max-width:900px){.svc-vbg{display:none}}
+/* ===== Sección "en vídeo": reproductores premium (facade clic-para-reproducir) ===== */
+.video-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:30px}
+@media(max-width:760px){.video-grid{grid-template-columns:1fr}}
+.video-card{position:relative;display:block;width:100%;aspect-ratio:16/9;border:0;padding:0;margin:0;border-radius:18px;overflow:hidden;cursor:pointer;background:#11141C;box-shadow:0 22px 50px -28px rgba(0,0,0,.75);transition:transform .45s var(--ease-out),box-shadow .45s}
+.video-card:hover{transform:translateY(-5px);box-shadow:0 34px 64px -30px rgba(227,6,19,.45)}
+.video-thumb{position:absolute;inset:0}
+.video-thumb img{width:100%;height:100%;object-fit:cover;display:block;opacity:.84;transition:opacity .4s,transform .6s var(--ease-out)}
+.video-card:hover .video-thumb img{opacity:.96;transform:scale(1.045)}
+.video-card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,14,20,.06),rgba(12,14,20,.6));pointer-events:none}
+.video-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:74px;height:74px;border-radius:50%;background:var(--red);display:grid;place-items:center;box-shadow:0 0 0 0 rgba(227,6,19,.5);transition:transform .3s,background .3s;animation:vplay 2.6s infinite}
+.video-card:hover .video-play{transform:translate(-50%,-50%) scale(1.08);background:var(--red-700)}
+.video-play svg{width:30px;height:30px;color:#fff;margin-left:3px}
+@keyframes vplay{0%{box-shadow:0 0 0 0 rgba(227,6,19,.5)}70%{box-shadow:0 0 0 18px rgba(227,6,19,0)}100%{box-shadow:0 0 0 0 rgba(227,6,19,0)}}
+.video-label{position:absolute;left:18px;right:18px;bottom:15px;z-index:2;color:#fff;font-weight:700;font-size:1.02rem;letter-spacing:-.01em;text-align:left;text-shadow:0 2px 12px rgba(0,0,0,.55)}
+.video-iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:18px;display:block;background:#000}
+@media(prefers-reduced-motion:reduce){.video-play{animation:none}}
