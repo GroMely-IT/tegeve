@@ -1,0 +1,107 @@
+/* ============================================================
+   SISTEMA DE DISEÑO TGV — dirección "informe anual / Big Four"
+   Papel cálido, tinta, un único acento rojo, filetes de 1px,
+   radios 0, sin degradados ni sombras, display serif.
+   Se aplica re-escalando los tokens bajo body.tgv (se propagan
+   a los componentes existentes) + componentes propios.
+   ============================================================ */
+body.tgv{
+  /* Paleta TGV (re-scope de tokens globales) */
+  --red:#E4010A; --red-700:#B80008; --red-600:#E4010A; --red-soft:#FBE7E7; --red-tint:rgba(228,1,10,.06);
+  --ink:#111114; --ink-900:#111114; --ink-800:#16161A; --ink-700:#26262C;
+  --paper:#FBFAF7; --mist:#F4F1EA; --mist-2:#ECE8DF; --line:#E2DDD2; --line-d:rgba(255,255,255,.14);
+  --t1:#111114; --t2:#56524B; --t3:#7C776D;
+  --t1d:#FBFAF7; --t2d:#CFCABF; --t3d:#9A948A;
+  --shadow:none;
+  background:#FBFAF7; color:#111114;
+  font-family:Helvetica,Arial,"Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Display serif para titulares */
+body.tgv h1,body.tgv h2,body.tgv h3,body.tgv h4,
+body.tgv .h1,body.tgv .h2,body.tgv .display,
+body.tgv .tgv-hero-h{
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-weight:600; letter-spacing:-.015em; color:var(--ink);
+}
+body.tgv .lede,body.tgv p,body.tgv li,body.tgv a,body.tgv .btn,
+body.tgv input,body.tgv textarea,body.tgv button{
+  font-family:Helvetica,Arial,"Helvetica Neue",sans-serif;
+}
+
+/* Acento rojo plano (mata degradados de texto) */
+body.tgv .accent{color:var(--red)!important;background:none!important;-webkit-text-fill-color:currentColor!important;-webkit-background-clip:initial!important;background-clip:initial!important}
+
+/* Radios 0 + sin sombras en los componentes del sistema */
+body.tgv .btn,body.tgv .btn-primary,body.tgv .btn-ghost,body.tgv .btn-light,
+body.tgv .btn-outline,body.tgv .btn-ghost-d,body.tgv .nav-cta,body.tgv .nav-ai,
+body.tgv .lang-switch,body.tgv .card,body.tgv .cards .card,body.tgv .stats-grid,
+body.tgv .flagcase,body.tgv .cf-chip,body.tgv .office,body.tgv .diff-item,
+body.tgv input,body.tgv textarea,body.tgv .faq-item,body.tgv .sectors article,
+body.tgv .btn-tgv,body.tgv .tgv-ind,body.tgv .tgv-cta-strip .btn-tgv{
+  border-radius:0!important; box-shadow:none!important;
+}
+
+/* Botón del sistema (CTA único) + nav-cta */
+body.tgv .btn-tgv,body.tgv .nav-cta{
+  display:inline-flex; align-items:center; gap:.5em;
+  background:var(--red); color:#fff!important; font-weight:700; line-height:1;
+  border:1px solid var(--red); text-decoration:none; letter-spacing:.01em;
+  transition:background .2s var(--ease);
+}
+body.tgv .btn-tgv{font-size:1.02rem; padding:1rem 1.7rem}
+body.tgv .btn-tgv:hover,body.tgv .nav-cta:hover{background:#B80008; border-color:#B80008; transform:none}
+body.tgv .nav-cta{padding:.62rem 1.15rem; font-size:.9rem}
+
+/* Botón primario heredado → estilo sistema (rojo plano, radio 0) */
+body.tgv .btn-primary{background:var(--red); border:1px solid var(--red); color:#fff}
+body.tgv .btn-primary:hover{background:#B80008; transform:none}
+body.tgv .btn-ghost,body.tgv .btn-outline{border:1px solid rgba(17,17,20,.22); color:var(--ink); background:transparent}
+
+/* Navegación: papel con filete inferior */
+body.tgv .nav{background:rgba(251,250,247,.92); -webkit-backdrop-filter:saturate(1.4) blur(10px); backdrop-filter:saturate(1.4) blur(10px); border-bottom:1px solid var(--line); box-shadow:none}
+body.tgv .nav.scrolled,body.tgv .nav.is-scrolled{box-shadow:none; border-bottom:1px solid var(--line)}
+body.tgv .nav-links a,body.tgv .nav-drop-t{color:var(--t1)}
+body.tgv .brand img{filter:none}
+
+/* Estructura por filetes entre secciones claras */
+body.tgv .sec-light,body.tgv .sec-mist{border-top:1px solid var(--line)}
+body.tgv .allies{border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--paper)}
+
+/* Una sola franja oscura de autoridad por página (#contacto) */
+body.tgv .sec-dark{background:var(--ink); border-top:0}
+
+/* #porque pasa a claro (filetes, sin tarjetas-glass de fondo oscuro) */
+body.tgv #porque{background:var(--paper); color:var(--ink); border-top:1px solid var(--line)}
+body.tgv #porque .h2{color:var(--ink)}
+body.tgv #porque .lede{color:var(--t2)}
+body.tgv #porque .diff-item{background:var(--paper); border:1px solid var(--line)}
+body.tgv #porque .diff-item:hover{background:var(--mist); transform:none}
+body.tgv #porque .diff-item h4{color:var(--ink)}
+body.tgv #porque .diff-item p{color:var(--t2)}
+body.tgv #porque .diff-item .ck{background:var(--red); color:#fff}
+
+/* Alianzas y tiras de logos: monocromo sobrio */
+body.tgv .allies img,body.tgv .ally img{filter:grayscale(1) contrast(.9) opacity(.7)}
+
+/* ====================== HERO SOBRIO ====================== */
+.tgv-hero{padding:168px 0 60px; background:var(--paper); border-bottom:1px solid var(--line)}
+.tgv-hero-wrap{max-width:var(--max); margin:0 auto; padding:0 24px}
+.tgv-eyebrow{font-size:.74rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--red); margin:0 0 28px}
+.tgv-hero-h{font-size:clamp(2.7rem,6.2vw,5.2rem); line-height:1.02; letter-spacing:-.025em; color:var(--ink); margin:0; max-width:17ch}
+.tgv-hero-sub{margin:26px 0 0; font-size:clamp(1.06rem,1.55vw,1.34rem); line-height:1.5; color:var(--t2); max-width:62ch; font-weight:400}
+.tgv-hero-actions{margin-top:36px}
+.tgv-hero-cred{margin:34px 0 0; padding-top:22px; border-top:1px solid var(--line); font-size:.86rem; letter-spacing:.02em; color:var(--t3); max-width:64ch}
+.tgv-hero-cred strong{color:var(--ink); font-weight:700}
+
+/* ============== Franja de CTA al cierre de secciones ============== */
+.tgv-cta-strip{padding:46px 0; background:var(--paper); border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
+.tgv-cta-strip .wrap{display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap}
+body.tgv .tgv-cta-line{font-family:"Source Serif 4",Georgia,serif; font-size:clamp(1.3rem,2.4vw,1.9rem); color:var(--ink); margin:0; letter-spacing:-.01em; max-width:24ch}
+
+@media(max-width:760px){
+  .tgv-hero{padding:128px 0 44px}
+  .tgv-hero-h{font-size:clamp(2.2rem,9vw,3.2rem)}
+  .tgv-cta-strip .wrap{flex-direction:column; align-items:flex-start}
+}

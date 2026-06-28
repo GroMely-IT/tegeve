@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<meta name="robots" content="noindex">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>TeGeVe — Consultoría y servicios de software | SAP, JD Edwards, IA y desarrollo a medida</title>
 <meta name="description" content="TeGeVe (TGV) es una consultora tecnológica con más de 30 años de trayectoria. Desarrollo de software a medida, IA Empresarial, SAP y Oracle JD Edwards. Equipo cualificado y multidisciplinar, modalidad nearshore. España, Argentina, México y USA, con proyectos en más de 16 países.">
 <meta name="author" content="TeGeVe — TGV">
 <meta name="keywords" content="consultoría de software, SAP, Oracle JD Edwards, inteligencia artificial empresarial, desarrollo de software a medida, integración de aplicaciones, assessment, nearshore, transformación digital, TeGeVe, TGV">
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+
 <link rel="canonical" href="https://tegevem.es/">
 
 <meta property="og:type" content="website">
@@ -30,8 +31,11 @@
 <link rel="apple-touch-icon" href="assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Heebo:wght@500;700;800;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Heebo:wght@500;700;800;900&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://unpkg.com">
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
 
 <!-- ════════════════════════════════════════════════════════════
      GEO / DATOS ESTRUCTURADOS — para que los motores generativos
@@ -129,8 +133,7 @@
 }
 </script>
 
-<link rel="stylesheet" href="assets/styles.css?v=40">
-<link rel="stylesheet" href="assets/tgv.css?v=40">
+<link rel="stylesheet" href="assets/styles-legacy.css?v=39">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -287,7 +290,7 @@
 }
 </script>
 </head>
-<body class="tgv">
+<body>
 <div id="intro" aria-hidden="true"><img src="assets/logo-tight.png" alt="TeGeVe (TGV)"></div>
 <a class="skip" href="#servicios">Saltar al contenido</a>
 
@@ -332,20 +335,94 @@
       </div>
       <button class="nav-ai ai-open-link" aria-label="Abrir asistente con IA Tevi"><svg class="sp" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.5 3.5Q9.5 10.5 16.5 10.5Q9.5 10.5 9.5 17.5Q9.5 10.5 2.5 10.5Q9.5 10.5 9.5 3.5ZM17.5 13Q17.5 17 21.5 17Q17.5 17 17.5 21Q17.5 17 13.5 17Q17.5 17 17.5 13Z"/></svg>Tevi</button>
       <a class="nav-li" href="https://www.linkedin.com/company/tegeve/" target="_blank" rel="noopener noreferrer" aria-label="TeGeVe en LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zm1.78 13.02H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.22.79 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></a>
-      <a href="#contacto" class="nav-cta">Agenda un diagnóstico</a>
+      <a href="#contacto" class="nav-cta">Contáctanos</a>
     </div>
   </div>
 </nav>
 
-<header class="tgv-hero" id="top">
-  <div class="tgv-hero-wrap">
-    <p class="tgv-eyebrow">Consultoría y servicios de software · +30 años</p>
-    <h1 class="tgv-hero-h">Tu ERP no debería frenar tu negocio.</h1>
-    <p class="tgv-hero-sub">Ponemos a punto los sistemas críticos que sostienen tu operación —SAP, Oracle JD&nbsp;Edwards y desarrollo a medida— con equipos senior y más de 30 años resolviendo lo difícil.</p>
-    <div class="tgv-hero-actions"><a href="#contacto" class="btn-tgv">Agenda un diagnóstico →</a></div>
-    <p class="tgv-hero-cred"><strong>CMMI Nivel 3</strong> · +300 profesionales · 4 oficinas · proyectos en 16 países</p>
+<section class="hero-carousel" id="top" aria-roledescription="carrusel" aria-label="Presentación de TeGeVe">
+  <!-- Diapositiva 1: planeta TeGeVe -->
+  <div class="hc-slide hc-hero is-active" data-i="0" role="group" aria-roledescription="diapositiva" aria-label="1 de 5: Soluciones innovadoras">
+    <div class="hero-mesh" aria-hidden="true">
+      <div class="blob b1" data-speed="0.12"></div>
+      <div class="blob b2" data-speed="0.08"></div>
+      <div class="blob b3" data-speed="0.16"></div>
+      <div class="grid-overlay"></div>
+    </div>
+    <div class="hero3d" id="hero3d" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <span class="hero-badge reveal in"><span class="dot"></span> Consultoría y servicios de software · +30 años</span>
+      <h1 class="display reveal in" data-d="1">Transformamos los proyectos tecnológicos más desafiantes en <span class="accent">soluciones innovadoras</span>.</h1>
+      <p class="lede reveal in" data-d="2">Desarrollo de software a medida, <strong style="color:var(--ink)">IA Empresarial</strong>, <strong style="color:var(--ink)">SAP</strong> y <strong style="color:var(--ink)">Oracle JD&nbsp;Edwards</strong>. Un equipo cualificado y multidisciplinar que trabaja en modalidad nearshore o en las oficinas de nuestros clientes.</p>
+      <div class="hero-ctas reveal in" data-d="3">
+        <a href="#contacto" class="btn btn-primary">Iniciar un proyecto <span class="btn-arrow">→</span></a>
+        <a href="#servicios" class="btn btn-ghost">Ver servicios</a>
+      </div>
+    </div>
   </div>
-</header>
+  <!-- Diapositiva 2: Tevi (asistente con IA) -->
+  <div class="hc-slide hc-msg hc-tevi" data-i="1" role="group" aria-roledescription="diapositiva" aria-label="2 de 5: Pregunta a Tevi">
+    <span class="hc-orb" aria-hidden="true"></span>
+    <canvas class="tv-net" aria-hidden="true"></canvas>
+    <div class="hc-veil hc-tevi-veil" aria-hidden="true"></div>
+    <div class="hc-content">
+      <span class="hc-eyebrow">Asistente con IA · Tevi</span>
+      <h2>Pregunta lo que <span style="color:#ff4350">necesites</span> saber.</h2>
+      <p>Tevi responde al instante sobre SAP, Oracle JD&nbsp;Edwards, IA Empresarial, nuestros casos de éxito y cómo trabajamos. Sin formularios, sin esperas.</p>
+      <button class="tv-bar ai-open-link" aria-label="Abrir el asistente Tevi y preguntar">
+        <span class="tv-spark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 3.5Q9.5 10.5 16.5 10.5Q9.5 10.5 9.5 17.5Q9.5 10.5 2.5 10.5Q9.5 10.5 9.5 3.5ZM17.5 13Q17.5 17 21.5 17Q17.5 17 17.5 21Q17.5 17 13.5 17Q17.5 17 17.5 13Z"/></svg></span>
+        <span class="tv-typed" aria-hidden="true"><span class="tv-typed-text"></span><span class="tv-caret"></span></span>
+        <span class="tv-go">Preguntar <span aria-hidden="true">&rarr;</span></span>
+      </button>
+      <div class="tv-chips">
+        <button class="tv-chip" data-q="¿Qué servicios de SAP ofrece TeGeVe: implantación, soporte y evolutivo?" data-qen="What SAP services does TeGeVe offer: implementation, support and evolution?">«¿Qué hacéis con SAP?»</button>
+        <button class="tv-chip" data-q="¿Cómo funciona la modalidad nearshore de TeGeVe desde España?" data-qen="How does TeGeVe's nearshore model work from Spain?">«¿Cómo es el nearshore?»</button>
+        <button class="tv-chip" data-q="¿Qué casos de éxito tiene TeGeVe en banca e industria financiera?" data-qen="What success stories does TeGeVe have in banking and financial services?">«Casos en banca»</button>
+        <button class="tv-chip" data-q="¿Qué es el assessment inicial de TeGeVe y por qué empezáis por ahí?" data-qen="What is TeGeVe's initial assessment and why do you start there?">«¿Qué es el assessment?»</button>
+        <button class="tv-chip" data-q="¿Cómo aplica TeGeVe la IA Empresarial en producción, con casos reales?" data-qen="How does TeGeVe apply Enterprise AI in production, with real cases?">«IA en producción»</button>
+      </div>
+    </div>
+  </div>
+  <!-- Diapositiva 3: partner estratégico (vídeo) -->
+  <div class="hc-slide hc-msg" data-i="2" role="group" aria-roledescription="diapositiva" aria-label="3 de 5: Partner tecnológico">
+    <video class="hc-video" autoplay muted loop playsinline preload="none" poster="assets/bg-tech.jpg" aria-hidden="true"><source src="assets/bg-tech.mp4" type="video/mp4"></video>
+    <div class="hc-veil"></div>
+    <div class="hc-content">
+      <span class="hc-eyebrow">Partner tecnológico</span>
+      <h2>Soluciones inteligentes para tu empresa.</h2>
+      <p>Nos implicamos como partners estratégicos: alineamos tecnología y negocio para que crezcas con solidez.</p>
+      <div class="hero-ctas"><a href="#servicios" class="btn btn-light">Ver servicios</a> <a href="#contacto" class="btn btn-outline">Hablar con un experto</a></div>
+    </div>
+  </div>
+  <!-- Diapositiva 3: SAP S/4HANA -->
+  <div class="hc-slide hc-msg" data-i="3" style="--img:url('assets/bg-sap.jpg')" role="group" aria-roledescription="diapositiva" aria-label="4 de 5: Migración a SAP S/4HANA">
+    <div class="hc-bg"></div><div class="hc-veil"></div>
+    <div class="hc-content">
+      <span class="hc-eyebrow">SAP · Migración a S/4HANA</span>
+      <h2>El salto a SAP S/4HANA, sin sobresaltos.</h2>
+      <p>Te acompañamos en cada paso de la migración —del análisis a producción— con un plan claro y experiencia real.</p>
+      <div class="hero-ctas"><a href="servicios/sap/" class="btn btn-light">Conocer SAP</a> <a href="#contacto" class="btn btn-outline">Iniciar diagnóstico</a></div>
+    </div>
+  </div>
+  <!-- Diapositiva 4: automatización con IA -->
+  <div class="hc-slide hc-msg" data-i="4" style="--img:url('assets/bg-automation.jpg')" role="group" aria-roledescription="diapositiva" aria-label="5 de 5: Automatización con IA">
+    <div class="hc-bg"></div><div class="hc-veil"></div>
+    <div class="hc-content">
+      <span class="hc-eyebrow">IA Empresarial · Automatización</span>
+      <h2>Cuando la automatización transforma el proceso.</h2>
+      <p>Reducimos tiempos y costes con IA y RPA: de una conciliación de cuatro días a cuestión de horas.</p>
+      <div class="hero-ctas"><a href="casos/#casos" class="btn btn-light">Ver caso de éxito</a> <a href="servicios/ia-empresarial/" class="btn btn-outline">Explorar IA</a></div>
+    </div>
+  </div>
+  <div class="scroll-cue" aria-hidden="true"><span class="line"></span>Scroll</div>
+  <div class="hc-dots" role="tablist" aria-label="Diapositivas">
+    <button class="hc-dot on" type="button" data-i="0" aria-label="Diapositiva 1"></button>
+    <button class="hc-dot" type="button" data-i="1" aria-label="Diapositiva 2"></button>
+    <button class="hc-dot" type="button" data-i="2" aria-label="Diapositiva 3"></button>
+    <button class="hc-dot" type="button" data-i="3" aria-label="Diapositiva 4"></button>
+    <button class="hc-dot" type="button" data-i="4" aria-label="Diapositiva 5"></button>
+  </div>
+</section>
 
 <!-- Alianzas -->
 <section class="allies" aria-label="Nuestras alianzas">
@@ -460,13 +537,6 @@
   </div>
 </section>
 
-<section class="tgv-cta-strip">
-  <div class="wrap">
-    <p class="tgv-cta-line">¿Un sistema crítico te está frenando?</p>
-    <a href="#contacto" class="btn-tgv">Agenda un diagnóstico →</a>
-  </div>
-</section>
-
 <!-- SAP -->
 
 <!-- Oracle JD Edwards -->
@@ -490,11 +560,11 @@
 <!-- Por qué elegirnos -->
 <!-- Nosotros -->
 
-<section class="sec sec-light" id="porque">
+<section class="sec sec-dark" id="porque">
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="eyebrow">¿Por qué elegirnos?</span>
-      <h2 class="h2">Experiencia profunda con la cercanía de un socio.</h2>
+      <h2 class="h2" style="color:#fff">Experiencia profunda con la cercanía de un socio.</h2>
       <p class="lede">Porque transformamos los proyectos tecnológicos más desafiantes en soluciones innovadoras. Esto es lo que nos define.</p>
     </div>
     <div class="diff">
@@ -659,7 +729,7 @@
         <h2 class="h2" style="color:#fff;margin:14px 0 16px">¿Tienes un reto tecnológico?<br>Démosle forma.</h2>
         <p class="lede">Cuéntanos tu reto y te propondremos un enfoque con un alcance claro, centrado en el valor de negocio y la optimización de costes.</p>
         <div style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap">
-          <a href="contacto/" class="btn btn-primary btn-tgv">Agenda un diagnóstico →</a>
+          <a href="mailto:info@tegeve.es" class="btn btn-primary">Escríbenos <span class="btn-arrow">→</span></a>
           <button class="btn btn-ghost-d ai-open-link">Pregúntale a la IA</button>
         </div>
       </div>
@@ -731,8 +801,156 @@
   </div>
 </div>
 
-<script src="assets/app.js?v=40" defer></script>
+<script src="assets/app-legacy.js?v=39" defer></script>
 
+<!-- ════════ Objeto 3D de la portada — planeta TeGeVe (Three.js) ════════ -->
+<script type="module">
+import * as THREE from 'three';
+(function(){
+  const host = document.getElementById('hero3d');
+  if (!host) return;
+  let started = false;
+  function start(){
+    if (started || host.clientWidth < 60) return;
+    started = true;
+    try {
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const W = () => host.clientWidth || 1, H = () => host.clientHeight || 1;
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(40, W()/H(), 0.1, 100);
+      camera.position.z = 3.55;
+      const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'low-power' });
+      renderer.setSize(W(), H()); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      host.appendChild(renderer.domElement);
+
+      const R=1, RED=0xE30613;
+      const redCol=new THREE.Color(RED), grayCol=new THREE.Color(0x565C68);
+      const root=new THREE.Group(); root.rotation.z=0.41; scene.add(root);
+      const baseX=-0.18; let pitch=0;
+      const spin=new THREE.Group(); root.add(spin);
+
+      spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*0.99,48,48), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.05 })));
+      // atmósfera (halo rojo, fresnel)
+      root.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.14,48,48), new THREE.ShaderMaterial({
+        transparent:true, side:THREE.BackSide, depthWrite:false,
+        uniforms:{ c:{ value:new THREE.Color(RED) } },
+        vertexShader:'varying vec3 vN; void main(){ vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+        fragmentShader:'varying vec3 vN; uniform vec3 c; void main(){ float i=pow(clamp(0.74-dot(vN,vec3(0.0,0.0,1.0)),0.0,1.0),2.4); gl_FragColor=vec4(c, i*0.30); }'
+      })));
+
+      const ll=(lat,lng,r)=>{ const phi=(90-lat)*Math.PI/180, th=(lng+180)*Math.PI/180;
+        return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(th), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(th)); };
+
+      const OFFICES=[[40.4,-3.7],[19.4,-99.1],[38.0,-97.0],[-34.6,-58.4]];   // ES, MX, US, AR
+      const oPos=OFFICES.map(([la,lo])=>ll(la,lo,R));
+      const mRed=new THREE.MeshBasicMaterial({ color:RED });
+      const pings=[];
+      OFFICES.forEach(([la,lo],k)=>{ const p=ll(la,lo,R*1.014);
+        const m=new THREE.Mesh(new THREE.SphereGeometry(0.034,16,16),mRed); m.position.copy(p); spin.add(m);
+        const g=new THREE.Mesh(new THREE.SphereGeometry(0.085,16,16),new THREE.MeshBasicMaterial({color:RED,transparent:true,opacity:0.16})); g.position.copy(p); spin.add(g);
+        const ringMat=new THREE.MeshBasicMaterial({color:RED,transparent:true,opacity:0.55,side:THREE.DoubleSide,depthWrite:false});
+        const ring=new THREE.Mesh(new THREE.RingGeometry(0.05,0.063,40),ringMat); ring.position.copy(p); ring.lookAt(p.clone().multiplyScalar(2)); spin.add(ring);
+        pings.push({ ring, mat:ringMat, phase:k*0.55 });
+      });
+
+      function covered(lat,lng){
+        if(lat>=36&&lat<=72&&lng>=-26&&lng<=46) return 0;     // Europa -> ES
+        if(lat>=7&&lat<=49.5&&lng>=-125&&lng<=-77) return 1;  // Norte/Centroamérica -> MX/US
+        if(lat>=-56&&lat<=13&&lng>=-82&&lng<=-34) return 2;   // Sudamérica -> AR
+        return -1;
+      }
+      const paintStart=[1.9, 2.3, 2.3, 2.8];   // por oficina (reveal escalonado tras el intro)
+
+      // Continentes con color por vértice + pintado radial desde cada sede
+      let colAttr=null, dotSrc=null, dotT0=null, dotDone=null, painting=false;
+      function buildDots(positions, srcArr, t0Arr){
+        const n=positions.length/3;
+        const g=new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions),3));
+        const cols=new Float32Array(n*3);
+        for(let i=0;i<n;i++){ cols[i*3]=grayCol.r; cols[i*3+1]=grayCol.g; cols[i*3+2]=grayCol.b; }
+        g.setAttribute('color', new THREE.BufferAttribute(cols,3));
+        colAttr=g.getAttribute('color'); dotSrc=srcArr; dotT0=t0Arr; dotDone=new Uint8Array(n);
+        if(reduce){ for(let i=0;i<n;i++) if(dotSrc[i]>=0) dotT0[i]=-1; }
+        spin.add(new THREE.Points(g, new THREE.PointsMaterial({ size:0.014, sizeAttenuation:true, transparent:true, opacity:0.78, vertexColors:true })));
+        painting=true; frame();
+      }
+      function fallback(){
+        const N=2200,a=[],src=[],t0=[],gr=Math.PI*(1+Math.sqrt(5));
+        for(let i=0;i<N;i++){ const t=i/(N-1),inc=Math.acos(1-2*t),az=gr*i;
+          a.push(R*Math.sin(inc)*Math.cos(az),R*Math.cos(inc),R*Math.sin(inc)*Math.sin(az)); src.push(-1); t0.push(Infinity); }
+        buildDots(a,src,t0);
+      }
+      const img=new Image();
+      img.onload=()=>{ try{
+        const sw=img.width, sh=img.height; const cv=document.createElement('canvas'); cv.width=sw; cv.height=sh;
+        const cx=cv.getContext('2d'); cx.drawImage(img,0,0); const d=cx.getImageData(0,0,sw,sh).data;
+        const px=(u,v)=>d[((((v%sh)+sh)%sh)*sw+(((u%sw)+sw)%sw))*4];
+        const uv=(lat,lng)=>[Math.round((lng+180)/360*sw), Math.round((90-lat)/180*sh)];
+        const af=uv(8,21), pa=uv(0,-150); const landDark=px(af[0],af[1])<px(pa[0],pa[1]);
+        const isLand=(u,v)=>landDark?px(u,v)<110:px(u,v)>145;
+        const pos=[],src=[],t0=[],STEP=2,DENS=0.92;
+        for(let v=0;v<sh;v+=STEP){ const lat=90-(v/sh)*180; if(lat<-58||lat>84) continue; const w=Math.cos(lat*Math.PI/180);
+          for(let u=0;u<sw;u+=STEP){ if(!isLand(u,v)) continue; if(Math.random()>w*DENS) continue;
+            const lng=(u/sw)*360-180; const reg=covered(lat,lng);
+            const p=ll(lat+(Math.random()-0.5), lng+(Math.random()-0.5), R*0.999);
+            pos.push(p.x,p.y,p.z);
+            if(reg<0){ src.push(-1); t0.push(Infinity); }
+            else { const oi = reg===0?0 : reg===2?3 : (p.distanceTo(oPos[1])<p.distanceTo(oPos[2])?1:2);
+              src.push(oi); t0.push(paintStart[oi] + p.distanceTo(oPos[oi])*0.9); }
+          }
+        }
+        buildDots(pos,src,t0);
+      }catch(e){ fallback(); } };
+      img.onerror=fallback;
+      img.src='assets/earth-mask.png';
+
+      // Arrastrar para girar (tipo Google Earth) + inercia
+      const dom=renderer.domElement; dom.style.cursor='grab';
+      let dragging=false, lx=0, ly=0, velY=0, velX=0;
+      dom.addEventListener('pointerdown', e=>{ dragging=true; lx=e.clientX; ly=e.clientY; velY=velX=0; dom.style.cursor='grabbing'; try{dom.setPointerCapture(e.pointerId);}catch(_){} });
+      dom.addEventListener('pointermove', e=>{ if(!dragging) return; const dx=e.clientX-lx, dy=e.clientY-ly; lx=e.clientX; ly=e.clientY;
+        spin.rotation.y += dx*0.006; velY=dx*0.006;
+        pitch=Math.max(-1.0,Math.min(0.55, pitch+dy*0.005)); velX=dy*0.005; if(reduce) frame(); });
+      const up=()=>{ if(!dragging) return; dragging=false; dom.style.cursor='grab'; };
+      dom.addEventListener('pointerup', up); dom.addEventListener('pointercancel', up);
+
+      const resize=()=>{ camera.aspect=W()/H(); camera.updateProjectionMatrix(); renderer.setSize(W(),H()); };
+      addEventListener('resize', resize, {passive:true});
+
+      const clock=performance.now(); let running=true;
+      function frame(){
+        const now=(performance.now()-clock)/1000;
+        if(!dragging){ spin.rotation.y += (reduce?0:0.0011) + velY; velY*=0.94; pitch += velX; velX*=0.9; pitch=Math.max(-1.0,Math.min(0.55,pitch)); }
+        root.rotation.x = baseX + pitch;
+        pings.forEach(pg=>{ const p=((now+pg.phase)%2.2)/2.2; pg.ring.scale.setScalar(1+p*3.2); pg.mat.opacity=0.5*(1-p); });
+        if(painting && colAttr){
+          let any=false, allDone=true;
+          for(let i=0;i<dotSrc.length;i++){
+            if(dotDone[i]) continue;
+            if(dotSrc[i]<0){ dotDone[i]=1; continue; }
+            const ts=dotT0[i]; if(now<ts){ allDone=false; continue; }
+            const p=Math.min(1,(now-ts)/0.7);
+            colAttr.array[i*3]=grayCol.r+(redCol.r-grayCol.r)*p;
+            colAttr.array[i*3+1]=grayCol.g+(redCol.g-grayCol.g)*p;
+            colAttr.array[i*3+2]=grayCol.b+(redCol.b-grayCol.b)*p;
+            any=true; if(p<1) allDone=false; else dotDone[i]=1;
+          }
+          if(any) colAttr.needsUpdate=true;
+          if(allDone) painting=false;
+        }
+        renderer.render(scene,camera);
+      }
+      function loop(){ if(!running) return; frame(); requestAnimationFrame(loop); }
+      document.addEventListener('visibilitychange', ()=>{ running=!document.hidden; if(running && !reduce) loop(); });
+      resize();
+      reduce ? frame() : loop();
+    } catch(e){ host.style.display='none'; }
+  }
+  start();
+  if (!started){ const ro=new ResizeObserver(()=>{ start(); if(started) ro.disconnect(); }); ro.observe(host); }
+})();
+</script>
 
 </body>
 </html>
