@@ -615,6 +615,18 @@ document.querySelectorAll('.tv-chip').forEach(function(c){
     activeSvc = b.getAttribute('data-f') || '';
     apply();
   });
+  // Abrir y enfocar el caso indicado por el hash (p. ej. enlaces «Ver caso» desde la home)
+  function openFromHash(){
+    var id = (location.hash || '').slice(1);
+    if(!id) return;
+    var el = document.getElementById(id);
+    if(el && el.classList.contains('case')){
+      el.open = true;
+      el.scrollIntoView({block:'center'});
+    }
+  }
+  window.addEventListener('hashchange', openFromHash);
+  if(location.hash) setTimeout(openFromHash, 80);
 })();
 aiInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = aiInput.value.trim(); if (v) ask(v); } });
 
