@@ -200,7 +200,7 @@ CMMI Nivel 3, firmantes del Pacto Global de la ONU, miembros fundadores de Polo 
 España: +34 952 569 582 · info@tegeve.es (Málaga). Argentina: +54 11 5767-7477 · info@tgv.com.ar (Buenos Aires). México: +52 81 2092 2323 · info@tgv-group.com. Estados Unidos: +1 561 306-5121 · info@tgvamericas.net (Florida). Correo general: info@tegeve.es. En la web hay un formulario de contacto.
 
 # Dónde mirar en la web
-Servicios: /servicios/ (y el detalle en /servicios/sap/, /servicios/oracle-jd-edwards/, /servicios/ia-empresarial/ y /servicios/desarrollo-a-medida/). Historia, equipo y reconocimientos: /nosotros/. Casos de éxito, sectores y clientes: /casos/. Contacto y oficinas: /contacto/.
+Servicios: /servicios/ (y el detalle en /servicios/sap/, /servicios/oracle-jd-edwards/, /servicios/ia-empresarial/, /servicios/desarrollo-a-medida/ y /servicios/modernizacion-legacy/). Historia, equipo y reconocimientos: /nosotros/. Casos de éxito, sectores y clientes: /casos/. Contacto y oficinas: /contacto/.
 `;
 
 function siteContext(){
