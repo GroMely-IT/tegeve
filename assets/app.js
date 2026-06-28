@@ -323,14 +323,14 @@ const escapeHtml = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'
 const suggest = (exclude) => KB.filter(k => k !== exclude).sort(()=>0.5-Math.random()).slice(0,3).map(k=>k.q);
 var SITE_ROOT = (function(){ var s=(document.querySelector('script[src*="app.js"]')||{}).src||''; return s ? s.replace(/assets\/app\.js.*$/, '') : ''; })();
 var PAGE_LABELS = {nosotros:'Nosotros', servicios:'Servicios', casos:'Casos de éxito', contacto:'Contacto'};
-var SVC_LABELS = {'sap':'SAP','oracle-jd-edwards':'Oracle JD Edwards','ia-empresarial':'IA Empresarial','desarrollo-a-medida':'Desarrollo a medida'};
+var SVC_LABELS = {'sap':'SAP','oracle-jd-edwards':'Oracle JD Edwards','ia-empresarial':'IA Empresarial','desarrollo-a-medida':'Desarrollo a medida','modernizacion-legacy':'Modernización legacy','assessment':'Assessment'};
 var LINK_STYLE = ' style="color:var(--red);font-weight:600;text-decoration:underline"';
 function formatAI(text){
   return escapeHtml(text)
     .replace(/(info@[a-z0-9.\-]+\.[a-z]{2,})/gi, '<a href="mailto:$1">$1</a>')
     // UNA sola pasada (sub-ruta de servicio primero en la alternancia) para no
     // reprocesar los <a> ya creados y evitar enlaces anidados.
-    .replace(/\/servicios\/(sap|oracle-jd-edwards|ia-empresarial|desarrollo-a-medida)\/|\/(nosotros|servicios|casos|contacto)\//g, function(m, sub, base){
+    .replace(/\/servicios\/(sap|oracle-jd-edwards|ia-empresarial|desarrollo-a-medida|modernizacion-legacy|assessment)\/|\/(nosotros|servicios|casos|contacto)\//g, function(m, sub, base){
       if(sub) return '<a href="'+SITE_ROOT+'servicios/'+sub+'/"'+LINK_STYLE+'>'+SVC_LABELS[sub]+'</a>';
       return '<a href="'+SITE_ROOT+base+'/"'+LINK_STYLE+'>'+PAGE_LABELS[base]+'</a>';
     })
@@ -389,7 +389,7 @@ function scrollToTerms(terms){
   return false;
 }
 function offerNavigate(answer, q){
-  var m = answer.match(/\/servicios\/(sap|oracle-jd-edwards|ia-empresarial|desarrollo-a-medida)\/|\/(nosotros|servicios|casos|contacto)\//);
+  var m = answer.match(/\/servicios\/(sap|oracle-jd-edwards|ia-empresarial|desarrollo-a-medida|modernizacion-legacy|assessment)\/|\/(nosotros|servicios|casos|contacto)\//);
   if(!m) return;
   var path = m[1] ? 'servicios/'+m[1]+'/' : m[2]+'/';
   var label = m[1] ? SVC_LABELS[m[1]] : PAGE_LABELS[m[2]];
