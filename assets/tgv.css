@@ -179,3 +179,30 @@ body.tgv .diff-item .ck{background:var(--red); color:#fff}
 body.tgv .svc-chips span,body.tgv .video-card,body.tgv .svc-qa,body.tgv .svc-card,
 body.tgv .case,body.tgv .cf-chip,body.tgv #caseSearch,body.tgv .case-dtag,body.tgv .case-metric{border-radius:0!important}
 body.tgv .case{box-shadow:none}
+
+/* ============ Carrusel integrado al sistema TGV ============ */
+/* Slides oscuras (hc-msg): titular serif en blanco, texto legible */
+body.tgv .hc-msg h1,body.tgv .hc-msg h2{color:#fff}
+body.tgv .hc-msg p{color:rgba(255,255,255,.86)}
+body.tgv .hc-slide .accent{color:#E4010A;-webkit-text-fill-color:#E4010A;background:none}
+body.tgv .btn-light{border-radius:0}
+/* Botón secundario (outline) sobre slides oscuras: borde claro legible */
+body.tgv .hc-msg .btn-outline{border:1px solid rgba(255,255,255,.45);color:#fff;background:transparent}
+body.tgv .hc-msg .btn-outline:hover{border-color:#fff;background:rgba(255,255,255,.08)}
+/* Slide 1 (planeta): atenuar los blobs de color para encajar con lo sobrio */
+body.tgv .hero-mesh .blob{filter:saturate(.6)}
+
+/* Visual abstracto de "flujos de trabajo" (slides 4 y 5) */
+.hc-flow{position:absolute;inset:0;background:#0c0d12;overflow:hidden}
+.hc-flowslide .hc-veil{background:linear-gradient(90deg,rgba(12,13,18,.92) 0%,rgba(12,13,18,.72) 46%,rgba(12,13,18,.36) 100%)}
+.hc-flow svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hc-flow .fl-base{stroke:rgba(255,255,255,.10);stroke-width:1.5;fill:none}
+.hc-flow .fl-flow{stroke:#E4010A;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-dasharray:7 200;animation:flpkt 3.4s linear infinite}
+.hc-flow .fl-flow.f2{stroke:rgba(255,255,255,.6);animation-duration:4.6s;animation-delay:-1.2s}
+.hc-flow .fl-flow.f3{animation-duration:3.9s;animation-delay:-2.1s}
+.hc-flow--b .fl-flow{animation-direction:normal}
+.hc-flow .fl-node{fill:#0c0d12;stroke:rgba(255,255,255,.24);stroke-width:1.5}
+.hc-flow .fl-node-r{fill:#E4010A;animation:flpulse 2.6s ease-in-out infinite}
+@keyframes flpkt{to{stroke-dashoffset:-207}}
+@keyframes flpulse{0%,100%{opacity:.5}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.hc-flow .fl-flow,.hc-flow .fl-node-r{animation:none}}
