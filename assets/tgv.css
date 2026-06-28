@@ -105,3 +105,31 @@ body.tgv .tgv-cta-line{font-family:"Source Serif 4",Georgia,serif; font-size:cla
   .tgv-hero-h{font-size:clamp(2.2rem,9vw,3.2rem)}
   .tgv-cta-strip .wrap{flex-direction:column; align-items:flex-start}
 }
+
+/* ====================== INDUSTRIAS (editorial) ====================== */
+body.tgv .tgv-industrias .ind-list{display:flex; flex-direction:column; margin-top:8px}
+body.tgv .ind-row{display:grid; grid-template-columns:minmax(0,.92fr) 1fr; gap:52px; align-items:center; padding:56px 0; border-top:1px solid var(--line)}
+body.tgv .ind-row:first-child{border-top:0}
+body.tgv .ind-row--rev .ind-media{order:2}
+body.tgv .ind-media{overflow:hidden; border:1px solid var(--line); aspect-ratio:4/3; background:var(--mist-2)}
+body.tgv .ind-media img{width:100%; height:100%; object-fit:cover; filter:grayscale(1) contrast(1.03) brightness(.98); transition:filter .6s var(--ease), transform .7s var(--ease); will-change:transform}
+body.tgv .ind-row:hover .ind-media img{filter:grayscale(0) contrast(1); transform:scale(1.045)}
+body.tgv .ind-k{display:block; font-size:.78rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--red); margin:0 0 16px}
+body.tgv .ind-k .n{font-family:"Source Serif 4",Georgia,serif; font-size:1.05rem; margin-right:9px; letter-spacing:0}
+body.tgv .ind-h{font-family:"Source Serif 4",Georgia,serif; font-weight:600; font-size:clamp(1.55rem,2.7vw,2.35rem); line-height:1.08; letter-spacing:-.02em; color:var(--ink); margin:0 0 14px}
+body.tgv .ind-problem{color:var(--t2); font-size:1.02rem; line-height:1.52; margin:0 0 24px; max-width:48ch}
+body.tgv .ind-case{border-left:2px solid var(--red); padding:1px 0 1px 18px; margin:0 0 24px}
+body.tgv .ind-case-l,body.tgv .ind-svcs-l{display:block; font-size:.7rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--t3); margin-bottom:7px}
+body.tgv .ind-case p{color:var(--t1); font-size:1.01rem; line-height:1.5; margin:0}
+body.tgv .ind-case strong{font-weight:700}
+body.tgv .ind-case a{color:var(--red); font-weight:700; text-decoration:none; white-space:nowrap}
+body.tgv .ind-case a:hover{text-decoration:underline}
+body.tgv .ind-svcs{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+body.tgv .ind-svcs-l{width:100%}
+body.tgv .ind-tag{font-size:.82rem; color:var(--t2); border:1px solid var(--line); padding:5px 11px}
+@media(max-width:860px){
+  body.tgv .ind-row{grid-template-columns:1fr; gap:22px; padding:38px 0}
+  body.tgv .ind-row--rev .ind-media{order:0}
+  body.tgv .ind-media{aspect-ratio:16/10}
+  body.tgv .ind-row:hover .ind-media img{transform:none}
+}
