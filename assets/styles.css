@@ -670,7 +670,7 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .cert-badged .cert-badge-img{width:100%;max-width:174px;height:auto;display:block;margin:2px auto 16px}
 /* ===== SAP: hero con vídeo de fondo en vivo ===== */
 .svc-vbg{position:absolute;inset:0;z-index:0;overflow:hidden;background:#11141C}
-.svc-vbg iframe{position:absolute;top:50%;left:50%;width:118vw;height:66.38vw;min-height:118vh;min-width:209.8vh;transform:translate(-50%,-50%);border:0;pointer-events:none}
+.svc-vbg iframe{position:absolute;top:50%;left:50%;height:100%;width:177.78vh;transform:translate(-50%,-50%);border:0;pointer-events:none}
 .svc-vbg::after{content:"";position:absolute;inset:0;z-index:1;background:#0b0d13;opacity:.42;pointer-events:none}
 @media(max-width:900px){.svc-vbg{display:none}}
 /* ===== Sección "en vídeo": reproductores premium (facade clic-para-reproducir) ===== */
