@@ -188,12 +188,403 @@ async function handleTevi(request, env) {
   }
 }
 
+// ════════════════════════════════════════════════════════════════
+//  TEVI AGENT — agente comercial consultivo (Claude Sonnet)
+//  Módulo INDEPENDIENTE: no comparte estado ni rutas con Tevi.
+//   • Modelo de pago: Claude Sonnet (api.anthropic.com), secreto
+//     ANTHROPIC_API_KEY. Si no está, degrada con un mensaje amable.
+//   • Persistencia total en KV (binding TEVI_AGENT_KV): se guarda la
+//     conversación íntegra (cada mensaje, fecha/hora, duración, idioma),
+//     un resumen acumulado, los datos extraídos del lead y el informe.
+//   • Optimización de tokens: prompt caching del bloque de sistema
+//     (persona + conocimiento, estable) + ventana de historial acotada
+//     + resumen rodante automático cuando la conversación se alarga.
+//   • Leads anónimos: si nunca da datos, se guarda igual marcado ANÓNIMO.
+//   • Arquitectura preparada (sin implementar) para CRM/HubSpot, email,
+//     Google Calendar, Microsoft 365, WhatsApp y API de reuniones:
+//     ver dispatchLead() al final de generateReport().
+// ════════════════════════════════════════════════════════════════
+
+const AGENT_MODEL = "claude-sonnet-4-6"; // Claude Sonnet (de pago, por decisión del cliente)
+const AGENT_API = "https://api.anthropic.com/v1/messages";
+const AGENT_MAXLEN = 1600;   // tope por mensaje recibido (caracteres)
+const AGENT_WINDOW = 10;     // nº de turnos recientes que se envían al modelo
+const AGENT_SUMMARIZE_AT = 16; // a partir de aquí, se resume lo más antiguo
+
+// País del visitante (lo da Cloudflare en request.cf.country) → nombre legible,
+// para que el agente adapte la variante del idioma y para el informe a Gabriel.
+const COUNTRY_NAMES = {
+  ES: "España", AR: "Argentina", UY: "Uruguay", MX: "México", CO: "Colombia", CL: "Chile",
+  PE: "Perú", VE: "Venezuela", EC: "Ecuador", BO: "Bolivia", PY: "Paraguay", CR: "Costa Rica",
+  PA: "Panamá", DO: "República Dominicana", GT: "Guatemala", HN: "Honduras", SV: "El Salvador",
+  NI: "Nicaragua", PR: "Puerto Rico", CU: "Cuba", US: "Estados Unidos", BR: "Brasil",
+  PT: "Portugal", IT: "Italia", FR: "Francia", DE: "Alemania", GB: "Reino Unido", IE: "Irlanda",
+  CH: "Suiza", AT: "Austria", BE: "Bélgica", NL: "Países Bajos", CA: "Canadá",
+};
+const countryName = (c) => COUNTRY_NAMES[c] || c;
+
+// Conocimiento de TGV, desde la óptica del agente comercial. Reutiliza el KB de
+// Tevi (hechos verificados) y añade el vocabulario de cartera que maneja TGV.
+const AGENT_KB = FALLBACK_KB + `
+CARTERA DE SERVICIOS (vocabulario y capacidades reales de TeGeVe; no inventes nada fuera de esto):
+- Staff Augmentation / Ampliación de equipos IT (perfiles senior, nearshore).
+- SAP: consultoría, soporte (AMS) y el camino a SAP S/4HANA (BTP, Fiori, HANA, ABAP, CPI).
+- Oracle JD Edwards (EnterpriseOne y World): implantación, upgrades, Orchestrator/IoT y soporte.
+- Desarrollo de software a medida y Software Factory / Testing Factory.
+- IA Empresarial: agentes de IA, automatización (RPA), integraciones entre sistemas.
+- Business Intelligence y analítica: Power BI, BI, cuadros de mando, datos.
+- Cloud (AWS, Azure), arquitectura empresarial y modernización tecnológica de sistemas legacy (COBOL, AS/400, DB2).
+- Transformación digital, ciberseguridad, servicios gestionados (managed services) y consultoría tecnológica.
+Persona de cierre: Gabriel Grosso, Director de TeGeVe (TGV). Cuando tenga sentido, el objetivo es coordinar con él una reunión o diagnóstico.`;
+
+// Persona del agente: el mejor comercial tecnológico / consultor senior de
+// transformación digital. Habla como una persona, no como un bot.
+function agentSystem(lang) {
+  const L = {
+    es: "español", en: "inglés", pt: "portugués de Brasil",
+    it: "italiano", fr: "francés", de: "alemán",
+  };
+  const idioma = L[lang] || L.es;
+  return `Eres el «Agente de TeGeVe», el agente comercial de TeGeVe (también conocida como TGV), una consultora tecnológica con más de 30 años de trayectoria. Te identificas SIEMPRE como «el Agente de TeGeVe» (nunca como «consultor de TGV»). Actúas con la experiencia del mejor comercial de tecnología del mundo y de un consultor senior de transformación digital: con calma, cercanía y escucha activa. NO eres un chatbot, ni un formulario, ni un sistema automático: eres una persona conversando.
+
+IDIOMA Y VARIANTE: responde SIEMPRE en ${idioma}, con naturalidad y registro profesional pero humano. Por defecto, en español usa el español de España (peninsular, «tú/vosotros»). Si sabes de qué país se conecta la persona, adapta la VARIANTE a ese país de forma natural: Argentina o Uruguay → español rioplatense con voseo («vos tenés», «¿cómo andás?»); México → español de México; y de forma análoga para otros países e idiomas (p. ej. portugués de Brasil frente al de Portugal). REGLA QUE MANDA SOBRE TODO: si la persona te escribe en otra variante o te pide que le hables de otra forma, sigue SIEMPRE a la persona por encima del país.
+
+CÓMO ERES:
+- Hablas como una persona real, no como una IA. Cuando te presentes, di con naturalidad que eres el Agente de TeGeVe; no te describas como «consultor de TGV» ni recites que eres un sistema.
+- Al hablar de la empresa, refiérete SIEMPRE a ella como «TeGeVe» (TGV es solo su nombre corto interno; no lo uses como nombre principal con la persona).
+- Transmites experiencia, calma y profesionalidad. Eres cercano, empático y sientes curiosidad genuina por el negocio de quien te habla.
+- Respuestas CORTAS y conversacionales: 2 a 4 frases. Nada de bloques largos, listas densas ni discursos de folleto.
+- Haces UNA pregunta cada vez, no un interrogatorio. Escuchas más de lo que hablas.
+- Nunca presionas ni vendes de forma agresiva. Aconsejas; no empujas.
+
+CÓMO LLEVAS LA CONVERSACIÓN (de forma fluida, sin guion rígido ni etiquetas):
+1) Te presentas, rompes el hielo y generas confianza.
+2) Entiendes el contexto: a qué se dedican, su rol, su día a día.
+3) Descubres el problema con preguntas inteligentes y adaptadas a lo que cuentan.
+4) Detectas oportunidades aunque no las mencionen.
+5) Solo cuando entiendes de verdad, recomiendas una solución de TeGeVe, de forma consultiva.
+6) Captas datos con naturalidad, sin presionar y sin pedir muchos a la vez.
+
+CONOCIMIENTO Y LÍMITES:
+- Conoces TeGeVe a fondo (ver CONOCIMIENTO abajo). Recomienda solo servicios reales de TeGeVe; nunca inventes servicios, cifras ni clientes.
+- Si no sabes algo concreto, pregúntalo o di con naturalidad que lo confirmas con el equipo (info@tegeve.es). Nunca te lo inventes.
+- No compares TeGeVe con otras consultoras ni menciones competidores.
+
+DATOS DEL CLIENTE (captación natural):
+- Antes de pedir un dato personal, explica brevemente para qué lo quieres (p. ej. "para que Gabriel pueda prepararte algo a medida").
+- Nunca insistas si la persona no quiere darlos: sigue ayudando con normalidad igualmente.
+- Pide un dato cada vez, cuando encaje en la conversación; nunca varios de golpe.
+
+OBJETIVO:
+- Tu meta no es responder preguntas: es entender a la persona, detectar oportunidades, asesorar, generar confianza y, CUANDO TENGA SENTIDO, conseguir una reunión o diagnóstico con Gabriel Grosso (Director de TeGeVe). No fuerces la reunión si aún no hay encaje.
+
+MEMORIA: recuerda todo lo que ya te han contado en esta conversación; no repitas preguntas y construye una imagen clara del cliente.
+
+CONOCIMIENTO SOBRE TEGEVE:
+${AGENT_KB}`;
+}
+
+// Llamada a Claude (Anthropic Messages API). `system` es un array de bloques
+// (el primero lleva cache_control para abaratar los tokens en cada turno).
+// Devuelve el texto, o "" si el modelo declina; lanza si la API falla.
+async function callAnthropic(env, system, messages, maxTokens) {
+  const body = JSON.stringify({ model: AGENT_MODEL, max_tokens: maxTokens || 1024, system, messages });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const r = await fetch(AGENT_API, {
+      method: "POST",
+      headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body,
+    });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.stop_reason === "refusal") return "";
+      return (d.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+    }
+    // 429 (rate limit) y 5xx (sobrecarga) son transitorios: reintenta una vez.
+    if (attempt === 0 && (r.status === 429 || r.status >= 500)) { await new Promise((res) => setTimeout(res, 400)); continue; }
+    throw new Error("anthropic " + r.status + " " + (await r.text()).slice(0, 300));
+  }
+}
+
+// ---- Persistencia en KV (degrada a memoria nula si no hay binding) ----
+const leadKey = (id) => "lead:" + id;
+async function loadLead(env, id) {
+  if (!env.TEVI_AGENT_KV) return null;
+  try { return await env.TEVI_AGENT_KV.get(leadKey(id), "json"); } catch { return null; }
+}
+async function saveLead(env, id, rec) {
+  if (!env.TEVI_AGENT_KV) return;
+  try { await env.TEVI_AGENT_KV.put(leadKey(id), JSON.stringify(rec)); } catch { /* no romper la conversación */ }
+}
+function newLead(id, lang, now) {
+  return {
+    id, lang,
+    fecha: new Date(now).toISOString().slice(0, 10),
+    hora: new Date(now).toISOString().slice(11, 19),
+    createdAt: now, updatedAt: now, durationMs: 0, geoCountry: "",
+    status: "ANONIMO",                 // pasa a IDENTIFICADO al captar email/teléfono/nombre
+    transcript: [],                    // TODO lo dicho: {role, content, ts}
+    summary: "", summaryUpTo: 0,       // resumen rodante + índice ya resumido
+    datos: { nombre: "", empresa: "", cargo: "", email: "", telefono: "", ciudad: "", pais: "", sector: "" },
+    report: null, turns: 0, emailed: false,
+  };
+}
+
+// Captura heurística barata (sin gastar tokens): email y teléfono del usuario.
+const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+const PHONE_RE = /(\+?\d[\d\s().-]{7,}\d)/;
+function captureContact(rec, text) {
+  const em = text.match(EMAIL_RE); if (em && !rec.datos.email) rec.datos.email = em[0];
+  const ph = text.match(PHONE_RE); if (ph && !rec.datos.telefono) rec.datos.telefono = ph[1].trim();
+  if (rec.datos.email || rec.datos.telefono || rec.datos.nombre) rec.status = "IDENTIFICADO";
+}
+
+// Resumen rodante: si la conversación se alarga, comprime lo más antiguo en
+// `summary` y deja solo los últimos turnos verbatim (acota los tokens enviados).
+async function summarizeIfNeeded(env, rec) {
+  const live = rec.transcript.length - rec.summaryUpTo;
+  if (live <= AGENT_SUMMARIZE_AT) return;
+  const cut = rec.transcript.length - 8; // conservamos los 8 últimos
+  const chunk = rec.transcript.slice(rec.summaryUpTo, cut)
+    .map((m) => (m.role === "user" ? "Cliente: " : "Yo: ") + m.content).join("\n");
+  try {
+    const sum = await callAnthropic(
+      env,
+      [{ type: "text", text: "Resume en español, en pocas frases y en tercera persona, los puntos clave de esta parte de una conversación comercial (contexto del cliente, problema, oportunidades, datos y compromisos). Conserva nombres, empresa, sector y cifras." }],
+      [{ role: "user", content: (rec.summary ? "Resumen previo:\n" + rec.summary + "\n\n" : "") + "Conversación a integrar:\n" + chunk }],
+      400
+    );
+    if (sum) { rec.summary = sum; rec.summaryUpTo = cut; }
+  } catch { /* si falla, seguimos sin resumir */ }
+}
+
+// Construye los mensajes que se envían al modelo: ventana reciente, empezando
+// siempre por un turno de usuario (la API lo exige).
+function buildWindow(rec) {
+  let win = rec.transcript.slice(rec.summaryUpTo).slice(-AGENT_WINDOW * 2)
+    .map((m) => ({ role: m.role, content: m.content }));
+  while (win.length && win[0].role !== "user") win.shift();
+  return win;
+}
+
+async function handleTeviAgent(request, env) {
+  const origin = request.headers.get("Origin") || "";
+  const h = corsHeaders(origin);
+  if (request.method === "OPTIONS") return new Response(null, { headers: h });
+  if (request.method !== "POST") return json({ error: "Use POST." }, 405, h);
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "Invalid JSON." }, 400, h); }
+
+  const sessionId = String(body.sessionId || "").trim().slice(0, 80) || "anon-" + Date.now();
+  const lang = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
+  const action = body.action === "end" ? "end" : "chat";
+  const now = Date.now();
+  // País del visitante por Cloudflare (XX = desconocido, T1 = Tor).
+  const geoCountry = ((request.cf && request.cf.country) || request.headers.get("CF-IPCountry") || "").toUpperCase();
+
+  // Carga o crea el registro (con respaldo del historial que envíe el cliente,
+  // por si no hay KV: así el agente sigue teniendo memoria de la sesión).
+  let rec = (await loadLead(env, sessionId)) || newLead(sessionId, lang, now);
+  rec.lang = lang;
+  if (geoCountry && geoCountry !== "XX" && geoCountry !== "T1") rec.geoCountry = geoCountry;
+  if (!rec.transcript.length && Array.isArray(body.history)) {
+    rec.transcript = body.history
+      .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+      .map((m) => ({ role: m.role, content: m.content.slice(0, AGENT_MAXLEN), ts: now }));
+  }
+
+  // Si no hay clave de Claude, degradamos con elegancia (nunca rompe el sitio).
+  if (!env.ANTHROPIC_API_KEY) {
+    const msg = {
+      es: "Ahora mismo estoy poniéndome en marcha. Mientras tanto, cuéntame tu reto a info@tegeve.es y te respondemos enseguida.",
+      en: "I'm just getting set up. In the meantime, tell us your challenge at info@tegeve.es and we'll get right back to you.",
+      pt: "Estou a preparar tudo agora mesmo. Enquanto isso, conte-nos o seu desafio em info@tegeve.es e respondemos logo.",
+      it: "Mi sto preparando proprio ora. Nel frattempo, scrivici la tua sfida a info@tegeve.es e ti rispondiamo subito.",
+      fr: "Je suis en train de me préparer. En attendant, écrivez-nous votre défi à info@tegeve.es et nous revenons vers vous très vite.",
+      de: "Ich werde gerade eingerichtet. Schreiben Sie uns in der Zwischenzeit Ihre Herausforderung an info@tegeve.es und wir melden uns umgehend.",
+    };
+    return json({ reply: msg[lang] || msg.es, sessionId, degraded: true }, 200, h);
+  }
+
+  try {
+    if (action === "end") {
+      const report = await generateReport(env, rec, now);
+      return json({ ok: true, sessionId, report }, 200, h);
+    }
+
+    const message = String(body.message || "").trim().slice(0, AGENT_MAXLEN);
+    if (!message) return json({ error: "Empty message." }, 400, h);
+
+    rec.transcript.push({ role: "user", content: message, ts: now });
+    captureContact(rec, message);
+    await summarizeIfNeeded(env, rec);
+
+    // Bloque de sistema: persona+KB estable (cacheado) + contexto volátil aparte.
+    const geoHint = rec.geoCountry
+      ? "La persona parece conectarse desde " + countryName(rec.geoCountry) + " (" + rec.geoCountry + "). Adapta la variante del idioma a ese país de forma natural, salvo que la persona escriba o pida otra cosa.\n\n"
+      : "";
+    const ctx = geoHint + (rec.summary ? "Resumen de la conversación hasta ahora:\n" + rec.summary + "\n\n" : "") +
+      "Datos del cliente conocidos: " + JSON.stringify(rec.datos) + ". No vuelvas a pedir los que ya tienes.";
+    const system = [
+      { type: "text", text: agentSystem(lang), cache_control: { type: "ephemeral" } },
+      { type: "text", text: ctx },
+    ];
+
+    const reply = await callAnthropic(env, system, buildWindow(rec), 1024) ||
+      (lang === "es" ? "Perdona, ¿me lo cuentas con otras palabras?" : "Sorry, could you put that another way?");
+
+    rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
+    rec.turns = rec.transcript.filter((m) => m.role === "user").length;
+    rec.updatedAt = Date.now();
+    rec.durationMs = rec.updatedAt - rec.createdAt;
+    await saveLead(env, sessionId, rec);
+
+    return json({ reply, sessionId, geo: rec.geoCountry }, 200, h);
+  } catch (err) {
+    return json({ error: "Agent unavailable.", detail: String(err).slice(0, 200) }, 502, h);
+  }
+}
+
+// Genera el INFORME COMERCIAL para Gabriel al cerrar la conversación y lo guarda
+// en KV. Devuelve el objeto del informe (o null si no hay material suficiente).
+async function generateReport(env, rec, now) {
+  if (rec.turns < 2 && rec.transcript.filter((m) => m.role === "user").length < 2) return null;
+  const full = rec.transcript.map((m) => (m.role === "user" ? "Cliente: " : "Asesor: ") + m.content).join("\n");
+  const schema = `Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin texto alrededor) con estas claves exactas, en español, usando "" o "sin dato" cuando no se sepa:
+{"nombre":"","empresa":"","cargo":"","email":"","telefono":"","ciudad":"","pais":"","sector":"","dolorPrincipal":"","objetivo":"","tecnologiasMencionadas":"","erp":"","sistemas":"","servicioRecomendado":"","nivelOportunidad":"alto|medio|bajo","urgencia":"alta|media|baja","probabilidadCierre":"alta|media|baja","intencionDetectada":"","oportunidadesDetectadas":"","resumenEjecutivo":"","accionesRecomendadas":"","fechaPropuestaReunion":"","horarioPropuesto":"","observaciones":"","proximoPaso":""}`;
+  let report = null;
+  try {
+    const out = await callAnthropic(
+      env,
+      [{ type: "text", text: "Eres un analista comercial de TeGeVe. A partir de la conversación, redacta el informe para Gabriel (Director de TeGeVe). Sé fiel a lo dicho; no inventes datos. " + schema }],
+      [{ role: "user", content: (rec.summary ? "Resumen:\n" + rec.summary + "\n\n" : "") + "Conversación completa:\n" + full }],
+      1200
+    );
+    const m = out && out.match(/\{[\s\S]*\}/);
+    if (m) { try { report = JSON.parse(m[0]); } catch { report = { raw: out }; } }
+    else report = { raw: out || "" };
+  } catch (e) { report = { error: String(e).slice(0, 200) }; }
+
+  // Mezcla los datos ya captados heurísticamente (no se pierden).
+  if (report && typeof report === "object") {
+    for (const k of ["nombre", "empresa", "cargo", "email", "telefono", "ciudad", "pais", "sector"]) {
+      if (rec.datos[k] && (!report[k] || report[k] === "sin dato")) report[k] = rec.datos[k];
+    }
+  }
+  rec.report = report;
+  rec.status = (report && (report.email || report.telefono || report.nombre)) ? "IDENTIFICADO" : rec.status;
+  rec.updatedAt = now; rec.durationMs = now - rec.createdAt;
+  await saveLead(env, rec.id, rec);
+  await dispatchLead(env, rec); // hook de integraciones (CRM/email/calendar...) — no-op por ahora
+  return report;
+}
+
+// ---- Envío del lead por email (la conversación completa + el informe) ----
+const LEAD_TO_DEFAULT = "ggrosso@tegeve.es";
+const ESC = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const REPORT_LABELS = {
+  nombre: "Nombre", empresa: "Empresa", cargo: "Cargo", email: "Email", telefono: "Teléfono",
+  ciudad: "Ciudad", pais: "País", sector: "Sector", dolorPrincipal: "Dolor principal",
+  objetivo: "Objetivo", tecnologiasMencionadas: "Tecnologías mencionadas", erp: "ERP", sistemas: "Sistemas",
+  servicioRecomendado: "Servicio recomendado", nivelOportunidad: "Nivel de oportunidad", urgencia: "Urgencia",
+  probabilidadCierre: "Probabilidad de cierre", intencionDetectada: "Intención detectada",
+  oportunidadesDetectadas: "Oportunidades detectadas", resumenEjecutivo: "Resumen ejecutivo",
+  accionesRecomendadas: "Acciones recomendadas", fechaPropuestaReunion: "Fecha propuesta de reunión",
+  horarioPropuesto: "Horario propuesto", observaciones: "Observaciones", proximoPaso: "Próximo paso",
+};
+function emailHtml(rec) {
+  const r = rec.report || {};
+  const mins = Math.round((rec.durationMs || 0) / 60000);
+  let rows = "";
+  for (const k in REPORT_LABELS) if (r[k]) rows += `<tr><td style="padding:5px 10px;border:1px solid #eee;background:#fafafa;font-weight:bold;white-space:nowrap;vertical-align:top">${REPORT_LABELS[k]}</td><td style="padding:5px 10px;border:1px solid #eee">${ESC(r[k])}</td></tr>`;
+  if (r.raw) rows += `<tr><td style="padding:5px 10px;border:1px solid #eee;font-weight:bold">Informe</td><td style="padding:5px 10px;border:1px solid #eee"><pre style="white-space:pre-wrap;font:inherit">${ESC(r.raw)}</pre></td></tr>`;
+  const conv = rec.transcript.map((m) => `<p style="margin:4px 0"><b style="color:${m.role === "user" ? "#111" : "#E4010A"}">${m.role === "user" ? "Cliente" : "Agente"}:</b> ${ESC(m.content)}</p>`).join("");
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:680px">
+  <h2 style="color:#E4010A;margin:0 0 4px">Tevi Agent — lead ${ESC(rec.status)}</h2>
+  <p style="color:#555;margin:0 0 16px">Sesión <b>${ESC(rec.id)}</b> · ${ESC(rec.fecha)} ${ESC(rec.hora)} · ${mins} min · idioma ${ESC(rec.lang)}${rec.geoCountry ? " · IP " + ESC(countryName(rec.geoCountry)) : ""}</p>
+  <h3 style="margin:16px 0 6px">Informe comercial</h3>
+  <table style="border-collapse:collapse;width:100%;font-size:14px">${rows || "<tr><td>Sin datos suficientes</td></tr>"}</table>
+  <h3 style="margin:20px 0 6px">Conversación completa</h3>
+  <div style="font-size:14px;line-height:1.5">${conv}</div>
+</div>`;
+}
+function emailText(rec) {
+  const r = rec.report || {};
+  let s = `TEVI AGENT — lead ${rec.status}\nSesión ${rec.id} · ${rec.fecha} ${rec.hora} · idioma ${rec.lang}${rec.geoCountry ? " · IP " + countryName(rec.geoCountry) : ""}\n\nINFORME COMERCIAL:\n`;
+  for (const k in REPORT_LABELS) if (r[k]) s += `- ${REPORT_LABELS[k]}: ${r[k]}\n`;
+  if (r.raw) s += r.raw + "\n";
+  s += `\nCONVERSACIÓN COMPLETA:\n` + rec.transcript.map((m) => (m.role === "user" ? "Cliente: " : "Agente: ") + m.content).join("\n");
+  return s;
+}
+// Manda el email. Usa Resend si hay RESEND_API_KEY; si no, FormSubmit (sin clave,
+// requiere una activación única del correo). El fallo de email nunca rompe nada.
+async function sendLeadEmail(env, rec) {
+  if (rec.emailed) return;
+  const to = env.LEAD_EMAIL || LEAD_TO_DEFAULT;
+  const empresa = (rec.report && rec.report.empresa) || rec.datos.empresa || "lead";
+  const subject = `Tevi Agent · ${rec.status} · ${empresa} · ${rec.fecha}`;
+  try {
+    if (env.RESEND_API_KEY) {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: env.RESEND_FROM || "Tevi Agent <onboarding@resend.dev>", to: [to], subject, html: emailHtml(rec), text: emailText(rec) }),
+      });
+      if (r.ok) rec.emailed = true;
+      else console.error("lead email (resend) failed", r.status, await r.text().catch(() => "")); // visible en `wrangler tail`
+    } else {
+      const r = await fetch("https://formsubmit.co/ajax/" + encodeURIComponent(to), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ _subject: subject, _template: "box", sesion: rec.id, estado: rec.status, fecha: rec.fecha + " " + rec.hora, informe_y_conversacion: emailText(rec) }),
+      });
+      // FormSubmit responde 200 aunque el buzón no esté activado: hay que mirar el flag success.
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && (j.success === true || j.success === "true")) rec.emailed = true;
+      else console.error("lead email (formsubmit) not delivered", r.status, JSON.stringify(j).slice(0, 200));
+    }
+  } catch (e) { console.error("lead email error", String(e).slice(0, 200)); /* el email nunca rompe la conversación */ }
+}
+
+// Punto único de integraciones. Hoy: envía el lead por email a Gabriel y deja el
+// registro completo en KV. Preparado para CRM/HubSpot/Calendar/WhatsApp (añadir aquí).
+async function dispatchLead(env, rec) {
+  await sendLeadEmail(env, rec);
+  await saveLead(env, rec.id, rec); // persiste el flag emailed
+}
+
+// Endpoint de administración: lista los leads guardados (protegido por
+// AGENT_ADMIN_KEY). GET /api/tevi-agent/leads?key=...  (&id=<sessionId> para uno).
+async function handleAgentLeads(request, env) {
+  const url = new URL(request.url);
+  const key = url.searchParams.get("key") || "";
+  if (!env.AGENT_ADMIN_KEY || key !== env.AGENT_ADMIN_KEY) return new Response("Not found", { status: 404 });
+  if (!env.TEVI_AGENT_KV) return json({ error: "KV no configurado." }, 200, {});
+  const id = url.searchParams.get("id");
+  if (id) return json((await loadLead(env, id)) || { error: "no encontrado" }, 200, {});
+  const list = await env.TEVI_AGENT_KV.list({ prefix: "lead:" });
+  const rows = [];
+  for (const k of list.keys) {
+    const r = await env.TEVI_AGENT_KV.get(k.name, "json");
+    if (r) rows.push({ id: r.id, fecha: r.fecha, hora: r.hora, status: r.status, geo: r.geoCountry || "", emailed: !!r.emailed, turns: r.turns, datos: r.datos, proximoPaso: r.report && r.report.proximoPaso });
+  }
+  return json({ total: rows.length, leads: rows }, 200, {});
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    // API de Tevi (mismo origen → sin problemas de CORS)
+    // API de Tevi (asistente informativo, modelos gratis) — sin tocar.
     if (url.pathname === "/api/tevi" || url.pathname === "/api/tevi/") {
       return handleTevi(request, env);
+    }
+    // API de Tevi Agent (agente comercial consultivo, Claude Sonnet).
+    if (url.pathname === "/api/tevi-agent" || url.pathname === "/api/tevi-agent/") {
+      return handleTeviAgent(request, env);
+    }
+    if (url.pathname === "/api/tevi-agent/leads") {
+      return handleAgentLeads(request, env);
     }
     // Todo lo demás: el sitio estático (lo sirve el binding ASSETS).
     return env.ASSETS.fetch(request);

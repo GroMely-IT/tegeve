@@ -17,5 +17,10 @@
   },
   // Workers AI (gratis, sin clave externa) para el asistente Tevi.
   "ai": { "binding": "AI" },
+  // KV: almacenamiento permanente de las conversaciones e informes de Tevi Agent
+  // (cada sesión completa, leads anónimos e identificados). Binding: TEVI_AGENT_KV.
+  "kv_namespaces": [
+    { "binding": "TEVI_AGENT_KV", "id": "bf9d0bdccb644ce48f1a0a4ddc541c4e" }
+  ],
   "observability": { "enabled": true }
 }
