@@ -1,3 +1,4 @@
 # Local tooling / editor
 .claude/
 .DS_Store
+.wrangler/

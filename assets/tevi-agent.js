@@ -90,7 +90,8 @@
   var elBody = panel.querySelector("#taBody");
   var elIn = panel.querySelector("#taInput");
   var elSnd = panel.querySelector("#taSend");
-  var started = false, busy = false;
+  var started = false, busy = false, idleTimer = null;
+  var IDLE_MS = 90000; // tras 90s sin escribir (y ≥2 mensajes), cerramos solos y enviamos el email
 
   function applyText() {
     var x = t();
@@ -129,10 +130,29 @@
     else state.msgs.forEach(function (m) { bubble(m.content, m.role === "user" ? "user" : "bot"); });
   }
 
-  async function send() {
-    var msg = elIn.value.trim();
+  // Respuestas rápidas (chips), con el MISMO diseño que Tevi (.chips/.chip).
+  // Son opcionales: la persona puede pulsar una opción o escribir libremente.
+  function clearChips() { var c = elBody.querySelector(".chips"); if (c) c.remove(); }
+  function addChips(items) {
+    clearChips();
+    var c = document.createElement("div"); c.className = "chips";
+    items.forEach(function (txt) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = txt;
+      b.addEventListener("click", function () { send(txt); });
+      c.appendChild(b);
+    });
+    elBody.appendChild(c); elBody.scrollTop = elBody.scrollHeight;
+  }
+
+  // `forced` (string) = texto de un chip pulsado; si no, se toma del input.
+  async function send(forced) {
+    var msg = (typeof forced === "string" ? forced : elIn.value).trim();
     if (!msg || busy) return;
-    elIn.value = ""; bubble(msg, "user");
+    clearChips(); // al responder, se quitan las opciones anteriores
+    if (typeof forced !== "string") elIn.value = "";
+    bubble(msg, "user");
+    if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; } // hay actividad: cancela el cierre por inactividad
     var hist = state.msgs.slice(-12); // contexto previo (sin el mensaje actual, que va aparte)
     state.msgs.push({ role: "user", content: msg }); state.ended = false; save();
     busy = true; elSnd.disabled = true; typing(true);
@@ -145,12 +165,15 @@
       var reply = (d && d.reply) || t().err;
       bubble(reply, "bot");
       state.msgs.push({ role: "assistant", content: reply }); save();
+      if (d && d.chips && d.chips.length) addChips(d.chips); // opciones para elegir con un clic
     } catch (e) { typing(false); bubble(t().err, "bot"); }
     busy = false; elSnd.disabled = false; elIn.focus();
+    scheduleIdleEnd(); // arranca el temporizador de inactividad tras cada intercambio
   }
 
   // Cierre: genera informe y lo envía por email (una vez por sesión con material).
   function endSession() {
+    if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
     var users = state.msgs.filter(function (m) { return m.role === "user"; }).length;
     if (state.ended || users < 2) return;
     state.ended = true; save();
@@ -159,6 +182,9 @@
         body: JSON.stringify({ sessionId: state.id, action: "end", lang: lang() }) });
     } catch (e) {}
   }
+  // Cierre automático por inactividad: si la persona deja de escribir, se envía
+  // el informe + email sin necesidad de que cierre el panel ni salga de la página.
+  function scheduleIdleEnd() { if (idleTimer) clearTimeout(idleTimer); idleTimer = setTimeout(endSession, IDLE_MS); }
 
   // ── Exclusión mutua con Tevi (solo uno abierto) ──
   var teviPanel = document.getElementById("aiPanel");

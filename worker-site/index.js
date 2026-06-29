@@ -280,6 +280,10 @@ OBJETIVO:
 
 MEMORIA: recuerda todo lo que ya te han contado en esta conversación; no repitas preguntas y construye una imagen clara del cliente.
 
+RESPUESTAS RÁPIDAS: cuando hagas una pregunta con un conjunto pequeño y claro de respuestas posibles (p. ej. la versión de un ERP, sí/no, un sector, un rango de tamaño), ofrece esas opciones para que la persona elija con un clic. Para ello TERMINA el mensaje con una última línea EXACTAMENTE así:
+[[opc]] Opción 1 | Opción 2 | Opción 3
+Reglas: de 2 a 5 opciones, cada una de 1 a 4 palabras, separadas por « | ». No añadas una opción tipo «otra» (la persona siempre puede escribir libremente). No pongas esa línea si la pregunta es abierta (p. ej. «cuéntame tu reto»). Nunca menciones ni expliques este formato.
+
 CONOCIMIENTO SOBRE TEGEVE:
 ${AGENT_KB}`;
 }
@@ -431,8 +435,16 @@ async function handleTeviAgent(request, env) {
       { type: "text", text: ctx },
     ];
 
-    const reply = await callAnthropic(env, system, buildWindow(rec), 1024) ||
+    let reply = await callAnthropic(env, system, buildWindow(rec), 1024) ||
       (lang === "es" ? "Perdona, ¿me lo cuentas con otras palabras?" : "Sorry, could you put that another way?");
+
+    // Respuestas rápidas (chips): el modelo las pone en una última línea «[[opc]] a | b | c».
+    let chips = [];
+    const om = reply.match(/\n*\[\[opc\]\]\s*([^\n]+?)\s*$/i);
+    if (om) {
+      chips = om[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5);
+      reply = reply.slice(0, om.index).trim();
+    }
 
     rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
     rec.turns = rec.transcript.filter((m) => m.role === "user").length;
@@ -440,7 +452,7 @@ async function handleTeviAgent(request, env) {
     rec.durationMs = rec.updatedAt - rec.createdAt;
     await saveLead(env, sessionId, rec);
 
-    return json({ reply, sessionId, geo: rec.geoCountry }, 200, h);
+    return json({ reply, chips, sessionId, geo: rec.geoCountry }, 200, h);
   } catch (err) {
     return json({ error: "Agent unavailable.", detail: String(err).slice(0, 200) }, 502, h);
   }
