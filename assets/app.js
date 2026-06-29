@@ -10,7 +10,7 @@ document.getElementById('year').textContent = new Date().getFullYear();
 /* Efecto imán: el botón/icono se atrae suavemente hacia el cursor */
 (function(){
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || matchMedia('(hover: none)').matches) return;
-  document.querySelectorAll('.nav-cta, .nav-li').forEach(function(el){
+  document.querySelectorAll('.nav-cta, .nav-li, .nav-ai, .ai-fab').forEach(function(el){
     var s = el.classList.contains('nav-li') ? 0.5 : 0.35;
     el.addEventListener('pointermove', function(e){
       var r = el.getBoundingClientRect();
@@ -153,7 +153,7 @@ function buildKB(){ return faqItems.map(item => ({
 })); }
 let KB = buildKB();
 document.addEventListener('langchange', function(){ KB = buildKB(); });
-function tlang(){ return (window.__lang === 'en') ? 'en' : 'es'; }
+function tlang(){ var l=window.__lang||'es'; return ({es:1,en:1,pt:1,it:1,fr:1,de:1})[l]?l:'es'; }
 function stripHtml(h){ var d=document.createElement('div'); d.innerHTML=h; return (d.textContent||'').replace(/\s+/g,' ').trim(); }
 function ctxClean(t){ return (t||'').replace(/\s+/g,' ').trim(); }
 function ctxSection(sel){ var el=document.querySelector(sel); return el ? ctxClean(el.textContent) : ''; }
@@ -251,6 +251,30 @@ const TEVI = {
     chips: ['What services do you offer?', 'What is SAP?', 'What is the nearshore model?', 'What makes TeGeVe different?'],
     noans: 'I do not have an exact answer for that, but the TeGeVe team does. Write to <a href="mailto:info@tegeve.es">info@tegeve.es</a> and we will help. In the meantime, are any of these useful?',
     noansChips: ['What services do you offer?', 'How do we get started?', 'How can I contact TeGeVe?']
+  },
+  pt: {
+    greet: '👋 Olá, sou o <b>Tevi</b>, o assistente da TeGeVe. Posso explicar o que fazemos (SAP, JD&nbsp;Edwards, IA, desenvolvimento sob medida…) e também conceitos como “o que é um ERP?”. Em que posso ajudar?',
+    chips: ['Que serviços vocês oferecem?', 'O que é SAP?', 'O que é o modelo nearshore?', 'O que torna a TeGeVe diferente?'],
+    noans: 'Não tenho uma resposta exata para isso, mas a equipe da TeGeVe tem. Escreva para <a href="mailto:info@tegeve.es">info@tegeve.es</a> e ajudamos você. Enquanto isso, alguma destas te interessa?',
+    noansChips: ['Que serviços vocês oferecem?', 'Como começamos a trabalhar juntos?', 'Como posso entrar em contato com a TeGeVe?']
+  },
+  it: {
+    greet: '👋 Ciao, sono <b>Tevi</b>, l\'assistente di TeGeVe. Posso spiegarti cosa facciamo (SAP, JD&nbsp;Edwards, IA, sviluppo su misura…) e anche concetti come “cos\'è un ERP?”. Come posso aiutarti?',
+    chips: ['Quali servizi offrite?', 'Cos\'è SAP?', 'Cos\'è il modello nearshore?', 'Cosa rende TeGeVe diversa?'],
+    noans: 'Non ho una risposta esatta a questo, ma il team di TeGeVe sì. Scrivici a <a href="mailto:info@tegeve.es">info@tegeve.es</a> e ti aiutiamo. Nel frattempo, ti interessa una di queste?',
+    noansChips: ['Quali servizi offrite?', 'Come iniziamo a lavorare insieme?', 'Come posso contattare TeGeVe?']
+  },
+  fr: {
+    greet: '👋 Bonjour, je suis <b>Tevi</b>, l\'assistant de TeGeVe. Je peux t\'expliquer ce que nous faisons (SAP, JD&nbsp;Edwards, IA, développement sur mesure…) et aussi des concepts comme « qu\'est-ce qu\'un ERP ? ». Comment puis-je t\'aider ?',
+    chips: ['Quels services proposez-vous ?', 'Qu\'est-ce que SAP ?', 'Qu\'est-ce que le modèle nearshore ?', 'Qu\'est-ce qui rend TeGeVe différent ?'],
+    noans: 'Je n\'ai pas de réponse exacte à cela, mais l\'équipe de TeGeVe oui. Écris-nous à <a href="mailto:info@tegeve.es">info@tegeve.es</a> et nous t\'aidons. En attendant, l\'une de celles-ci t\'intéresse ?',
+    noansChips: ['Quels services proposez-vous ?', 'Comment commençons-nous à travailler ensemble ?', 'Comment puis-je contacter TeGeVe ?']
+  },
+  de: {
+    greet: '👋 Hallo, ich bin <b>Tevi</b>, der Assistent von TeGeVe. Ich kann dir erklären, was wir machen (SAP, JD&nbsp;Edwards, KI, maßgeschneiderte Entwicklung…) und auch Konzepte wie „Was ist ein ERP?“. Wie kann ich helfen?',
+    chips: ['Welche Leistungen bietet ihr?', 'Was ist SAP?', 'Was ist das Nearshore-Modell?', 'Was macht TeGeVe anders?'],
+    noans: 'Darauf habe ich keine genaue Antwort, aber das Team von TeGeVe schon. Schreib uns an <a href="mailto:info@tegeve.es">info@tegeve.es</a> und wir helfen dir. Interessiert dich in der Zwischenzeit eine davon?',
+    noansChips: ['Welche Leistungen bietet ihr?', 'Wie fangen wir an zusammenzuarbeiten?', 'Wie kann ich TeGeVe kontaktieren?']
   }
 };
 const SYN = {
@@ -522,15 +546,20 @@ document.querySelectorAll('.tv-chip').forEach(function(c){
   var el=document.querySelector('.tv-typed-text'); if(!el) return;
   var rm=matchMedia('(prefers-reduced-motion:reduce)').matches;
   var L={es:["¿Qué es la IA Empresarial de TeGeVe?","¿Tenéis experiencia en Oracle JD Edwards?","¿Cómo empezamos un proyecto?","¿Qué certificaciones tenéis?","¿Desde qué países dais servicio?"],
-         en:["What is TeGeVe's Enterprise AI?","Do you have Oracle JD Edwards experience?","How do we start a project?","What certifications do you hold?","From which countries do you operate?"]};
-  var arr=L[(window.__lang==='en')?'en':'es'];
+         en:["What is TeGeVe's Enterprise AI?","Do you have Oracle JD Edwards experience?","How do we start a project?","What certifications do you hold?","From which countries do you operate?"],
+         pt:["O que é a IA Empresarial da TeGeVe?","Vocês têm experiência em Oracle JD Edwards?","Como começamos um projeto?","Que certificações vocês têm?","De quais países vocês atendem?"],
+         it:["Cos'è l'IA aziendale di TeGeVe?","Avete esperienza con Oracle JD Edwards?","Come iniziamo un progetto?","Quali certificazioni avete?","Da quali paesi operate?"],
+         fr:["Qu'est-ce que l'IA d'entreprise de TeGeVe ?","Avez-vous de l'expérience sur Oracle JD Edwards ?","Comment démarrons-nous un projet ?","Quelles certifications avez-vous ?","Depuis quels pays intervenez-vous ?"],
+         de:["Was ist die Enterprise-KI von TeGeVe?","Habt ihr Erfahrung mit Oracle JD Edwards?","Wie starten wir ein Projekt?","Welche Zertifizierungen habt ihr?","Aus welchen Ländern seid ihr tätig?"]};
+  function pickL(lg){ return L[lg] || L.en || L.es; }
+  var arr=pickL(window.__lang);
   if(rm){ el.textContent=arr[0]; return; }
   var i=0,j=0,del=false,to;
   function loop(){ var w=arr[i]; el.textContent=del?w.slice(0,j--):w.slice(0,j++); var t=del?40:75;
     if(!del&&j===w.length+1){del=true;t=1600;} else if(del&&j===0){del=false;i=(i+1)%arr.length;t=300;}
     to=setTimeout(loop,t); }
   loop();
-  document.addEventListener('langchange',function(e){ arr=L[(e.detail&&e.detail.lang==='en')?'en':'es']; i=0;j=0;del=false; });
+  document.addEventListener('langchange',function(e){ arr=pickL(e.detail&&e.detail.lang); i=0;j=0;del=false; });
 })();
 
 /* Fondo de red neuronal animada en la diapositiva de Tevi */

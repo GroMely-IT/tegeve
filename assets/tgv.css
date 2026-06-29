@@ -229,3 +229,8 @@ body.tgv .client-logo--sm{height:17px;margin-top:2px}
 body.tgv .client-logo--tst{display:block;height:21px;margin:14px 0 0;max-width:150px}
 body.tgv .case:hover .client-logo,body.tgv .case[open] .client-logo,body.tgv .ind-row:hover .client-logo,body.tgv .svc-case:hover .client-logo,body.tgv .tgv-tst-card:hover .client-logo,body.tgv .tgv-tst-card[open] .client-logo,body.tgv #caso-destacado:hover .client-logo,body.tgv .client-logo:hover{filter:none;opacity:1;transform:scale(1.03)}
 @media(prefers-reduced-motion:reduce){body.tgv .client-logo{transition:none}}
+/* En las fichas de caso, el logo va GRANDE y a lo ancho */
+body.tgv .case .case-client{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin-top:12px;max-width:none}
+body.tgv .case .case-client .client-logo{height:auto;max-height:52px;width:auto;margin:0}
+body.tgv .case .case-client .client-logo:only-child{max-width:100%}
+body.tgv .case .case-client .client-logo:not(:only-child){max-width:44%}
