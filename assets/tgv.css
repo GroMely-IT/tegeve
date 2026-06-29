@@ -222,9 +222,10 @@ body.tgv .lang-menu .lang-opt:hover{background:var(--mist);color:var(--red)}
 body.tgv .lang-menu .lang-opt.on{color:var(--red)}
 @media(max-width:900px){ body.tgv .lang-menu{position:static;border:0;border-top:1px solid var(--line);min-width:0} }
 
-/* ============ Logo de cliente (Kimberly-Clark): monocromo -> color al hover ============ */
-body.tgv .kc-logo{display:inline-block;height:22px;width:auto;max-width:170px;vertical-align:middle;filter:grayscale(1) brightness(.45) contrast(1.1);opacity:.92;transition:filter .45s var(--ease),opacity .45s var(--ease),transform .45s var(--ease)}
-body.tgv .kc-logo--ind{display:block;height:26px;margin:4px 0 14px}
-body.tgv .kc-logo--sm{height:15px;margin-top:2px}
-body.tgv .case:hover .kc-logo,body.tgv .case[open] .kc-logo,body.tgv .ind-row:hover .kc-logo,body.tgv .svc-case:hover .kc-logo,body.tgv .kc-logo:hover{filter:none;opacity:1;transform:scale(1.03)}
-@media(prefers-reduced-motion:reduce){body.tgv .kc-logo{transition:none}}
+/* ============ Logos de cliente: monocromo (tinta) -> color de marca al hover ============ */
+body.tgv .client-logo{display:inline-block;height:22px;width:auto;max-width:180px;vertical-align:middle;filter:grayscale(1) brightness(.45) contrast(1.1);opacity:.92;transition:filter .45s var(--ease),opacity .45s var(--ease),transform .45s var(--ease)}
+body.tgv .client-logo--ind{display:block;height:30px;margin:4px 0 14px}
+body.tgv .client-logo--sm{height:17px;margin-top:2px}
+body.tgv .client-logo--tst{display:block;height:21px;margin:14px 0 0;max-width:150px}
+body.tgv .case:hover .client-logo,body.tgv .case[open] .client-logo,body.tgv .ind-row:hover .client-logo,body.tgv .svc-case:hover .client-logo,body.tgv .tgv-tst-card:hover .client-logo,body.tgv .tgv-tst-card[open] .client-logo,body.tgv #caso-destacado:hover .client-logo,body.tgv .client-logo:hover{filter:none;opacity:1;transform:scale(1.03)}
+@media(prefers-reduced-motion:reduce){body.tgv .client-logo{transition:none}}
