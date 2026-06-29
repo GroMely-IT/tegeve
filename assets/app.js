@@ -343,6 +343,15 @@ function greet(){
   addMsg(L.greet, 'bot');
   addChips(L.chips);
 }
+// Si se cambia de idioma y Tevi solo ha saludado (sin conversación real), re-saluda en el nuevo idioma.
+document.addEventListener('langchange', function(){
+  if(!aiStarted) return;
+  var hasUser = teviLog.some(function(it){ return it.t==='msg' && it.who==='user'; });
+  if(hasUser) return;
+  teviLog = []; teviHistory = [];
+  if(aiBody) aiBody.innerHTML = '';
+  greet();
+});
 const escapeHtml = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const suggest = (exclude) => KB.filter(k => k !== exclude).sort(()=>0.5-Math.random()).slice(0,3).map(k=>k.q);
 var SITE_ROOT = (function(){ var s=(document.querySelector('script[src*="app.js"]')||{}).src||''; return s ? s.replace(/assets\/app\.js.*$/, '') : ''; })();
