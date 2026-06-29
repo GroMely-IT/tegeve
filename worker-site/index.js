@@ -167,7 +167,7 @@ async function handleTevi(request, env) {
   const question = String(body.question || "").trim().slice(0, 600);
   if (!question) return json({ error: "Empty question." }, 400, h);
 
-  const lang = body.lang === "en" ? "en" : "es";
+  const lang = ({es:1,en:1,pt:1,it:1,fr:1,de:1})[body.lang] ? body.lang : "es";
   const ctx = String(body.context || "").trim().slice(0, 60000) || FALLBACK_KB;
   const history = Array.isArray(body.history)
     ? body.history
