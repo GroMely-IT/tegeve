@@ -108,7 +108,16 @@
   function esc(s) { return s.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function rich(s) {
     var h = esc(s);
-    h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    // Enlaces markdown [texto](url | /ruta) — red de seguridad si el modelo los usa.
+    h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g, function (m, text, href) {
+      var ext = /^https?:/.test(href);
+      return '<a href="' + href + '"' + (ext ? ' target="_blank" rel="noopener"' : "") + ">" + text + "</a>";
+    });
+    // URLs absolutas sueltas.
+    h = h.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+    // Rutas RELATIVAS del propio sitio (/servicios/sap/#casos-relacionados, /casos/) → mismo origen.
+    h = h.replace(/(^|[\s(])(\/[a-z0-9][a-z0-9\/_-]*(?:#[a-z0-9-]+)?)/g, '$1<a href="$2">$2</a>');
+    // Emails.
     h = h.replace(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g, '<a href="mailto:$1">$1</a>');
     return h.replace(/\n/g, "<br>");
   }
@@ -235,6 +244,19 @@
   window.addEventListener("langchange", applyText);   // cambio de idioma del sitio
   window.addEventListener("languagechange", applyText);
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", injectButton);
-  else injectButton();
+  // Abrir Tevi Agent desde cualquier elemento con .agent-open-link (p. ej. el
+  // botón del carrusel). data-aq opcional siembra el primer mensaje del usuario.
+  function wireOpeners() {
+    document.querySelectorAll(".agent-open-link").forEach(function (b) {
+      if (b.__taWired) return; b.__taWired = true;
+      b.addEventListener("click", function () {
+        open();
+        var q = b.getAttribute("data-aq") || b.getAttribute("data-q"); // reutiliza data-q de las tarjetas del carrusel
+        if (q) setTimeout(function () { send(q); }, 350);
+      });
+    });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { injectButton(); wireOpeners(); });
+  else { injectButton(); wireOpeners(); }
 })();

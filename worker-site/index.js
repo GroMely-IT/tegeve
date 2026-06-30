@@ -237,6 +237,113 @@ CARTERA DE SERVICIOS (vocabulario y capacidades reales de TeGeVe; no inventes na
 - Transformación digital, ciberseguridad, servicios gestionados (managed services) y consultoría tecnológica.
 Persona de cierre: Gabriel Grosso, Director de TeGeVe (TGV). Cuando tenga sentido, el objetivo es coordinar con él una reunión o diagnóstico.`;
 
+// Mapa del sitio (rutas públicas + anclas) verificado contra el HTML real, para
+// que el agente lleve a la persona a la sección EXACTA cuando la respuesta esté ahí.
+const SITE_MAP = `/ (Home):
+  #servicios-overview — Visión general de servicios y capacidades
+  #desarrollo-a-medida — Software a medida e integración de sistemas
+  #consultoria-sap — Implantación, soporte y migración a S/4HANA
+  #oracle-jd-edwards — Implementación, upgrades y soporte JDE EnterpriseOne
+  #ia-empresarial — Agentes de IA, RPA y automatización inteligente
+  #assessment-y-auditorias — Evaluaciones y auditorías para optimizar costes
+  #industria-financiera-legacy — Banca y modernización de legacy COBOL AS/400
+  #por-industria — Soluciones por sector y vertical de negocio
+  #financiera-transacciones-seguras — Industria financiera, medios de pago y fraude
+  #energia-conciliacion-horas — Energía: IA que automatiza conciliación de fondos
+  #publico-inspecciones-offline — Sector público: app offline-first para inspecciones
+  #retail-decisiones-datos — Retail y alimentación: business intelligence y datos
+  #caso-bandera-migraciones — Caso destacado Migraciones: 4.000 inspecciones offline
+  #por-que-elegirnos — Diferenciadores y razones para elegir TeGeVe
+  #modalidad-nearshore-eficiente — Modelo nearshore eficiente en costes
+  #faq-titulo — Preguntas frecuentes sobre servicios y conceptos
+  #contacto-titulo — Contacto y agenda de diagnóstico
+/casos/ (Casos de éxito):
+  #control-permanencia-offline — app móvil offline para inspecciones de campo
+  #ia-conciliacion-fci — IA que automatiza conciliación de fondos en SAP
+  #ia-planificacion-logistica — IA de ruteo y planificación logística diaria
+  #jd-edwards-agroindustrial — implantación y soporte ERP JD Edwards en agro
+  #seguridad-jd-edwards-nutrien — assessment de seguridad y accesos en JD Edwards
+  #monitor-integraciones-sap — monitor SAP Fiori de integraciones de RRHH
+  #soporte-sap-continuo — mesa de ayuda y soporte SAP funcional remoto
+  #bi-tendencias-consumo — business intelligence y analítica para gran consumo
+  #rating-crediticio-web — desarrollo web de rating crediticio bancario
+  #software-factory-aseguradora — software factory y mantenimiento evolutivo en seguros
+  #migracion-emv-chip — migración a tarjetas EMV y antifraude en pagos
+  #legacy-medios-de-pago — integración de sistemas legacy en medios de pago
+  #bva-erp-motta — assessment y selección de ERP basada en datos
+  #grandes-organizaciones-confian — clientes y organizaciones de referencia
+/contacto/ (Contacto):
+  #oficina-espana — contacto oficina de España (email y teléfono)
+  #oficina-argentina — contacto oficina de Argentina
+  #oficina-mexico — contacto oficina de México
+  #oficina-estados-unidos — contacto oficina de Estados Unidos
+/nosotros/ (Nosotros: equipo, historia, valores):
+  #nuestra-historia — Historia y trayectoria (34 años, 4 países)
+  #nuestros-valores — Valores corporativos y cultura de trabajo
+  #nuestro-equipo — Equipo y profesionales
+  #testimonios-clientes — Testimonios y opiniones de clientes
+  #valores-reconocimientos — Certificaciones (CMMI), premios y reconocimientos
+/servicios/ (Servicios: índice):
+  #servicio-sap — Consultoría SAP: implantación, S/4HANA y AMS
+  #servicio-oracle-jd-edwards — Oracle JD Edwards: implantación, upgrades y soporte
+  #servicio-ia-empresarial-bi — IA empresarial, BI y automatización RPA
+  #servicio-desarrollo-a-medida — Desarrollo a medida de apps e integraciones
+  #servicio-modernizacion-legacy — Modernización de legacy COBOL, AS/400 y mainframe
+  #servicio-assessment — Assessment y Business Value Assessment
+  #modelos-de-servicio — Modelos de contratación y formas de colaborar
+  #software-factory — Fábrica de software dedicada
+  #staff-augmentation — Sumar perfiles senior al equipo del cliente
+  #nearshore — Modalidad nearshore (misma franja horaria, costes)
+/servicios/sap/ (Consultoría SAP):
+  #que-hacemos — Tecnologías y módulos SAP (S/4HANA, BTP, Fiori, ABAP, CPI)
+  #como-lo-hacemos — Modalidades de servicio SAP
+  #cuando-nos-llaman — Problemas SAP típicos del cliente
+  #nuestro-enfoque — Metodología en proyectos SAP
+  #casos-relacionados — Casos de éxito SAP
+  #preguntas-frecuentes-sap — Preguntas frecuentes sobre SAP
+  #hablamos-proyecto-sap — Contacto para iniciar proyecto SAP
+/servicios/oracle-jd-edwards/ (Oracle JD Edwards):
+  #que-hacemos — Capacidades JD Edwards (EnterpriseOne, World, Orchestrator)
+  #como-lo-hacemos — Modelos de entrega: implementación, AMS, factory
+  #cuando-nos-llaman — Situaciones que motivan el contacto
+  #nuestro-enfoque — Metodología integral en JDE
+  #casos-relacionados — Casos de éxito en JDE
+  #faq-oracle-jd-edwards — Preguntas frecuentes sobre JDE
+  #hablamos-de-jde — Contacto JDE
+/servicios/ia-empresarial/ (IA Empresarial y BI):
+  #que-hacemos — Servicios de IA (agentes, RPA, BI, Power BI)
+  #como-lo-hacemos — Modalidades de entrega
+  #cuando-nos-llaman — Problemas que motivan el contacto
+  #nuestro-enfoque — Metodología BI, IA y RPA a producción
+  #casos-relacionados — Casos de éxito de IA y BI
+  #preguntas-frecuentes — Preguntas frecuentes sobre IA y BI
+  #hablamos-de-ia — Contacto y diagnóstico de IA
+/servicios/desarrollo-a-medida/ (Desarrollo a medida):
+  #que-hacemos — Tecnologías y servicios de desarrollo
+  #como-lo-hacemos — Software factory, AMS, staff augmentation
+  #cuando-nos-llaman — Señales que motivan desarrollo a medida
+  #nuestro-enfoque — Método centrado en el proceso de negocio
+  #casos-relacionados — Casos de éxito de desarrollo
+  #faq-desarrollo-a-medida — Preguntas frecuentes
+  #hablamos-de-tu-software — Contacto
+/servicios/modernizacion-legacy/ (Modernización de legacy):
+  #que-hacemos — Tecnologías legacy (COBOL, AS/400, DB2, mainframe)
+  #como-lo-hacemos — Assessment, modernización gradual, integración, AMS
+  #cuando-nos-llaman — Síntomas que motivan modernizar legacy
+  #nuestro-enfoque — Modernización por fases, sin big bang
+  #casos-relacionados — Casos de éxito de modernización legacy
+  #preguntas-frecuentes — Preguntas frecuentes sobre legacy
+  #hablamos-modernizar — Contacto para modernizar legacy
+/servicios/assessment/ (Assessment / BVA):
+  #que-hacemos — Alcance y entregables (BVA, As Is/To Be)
+  #como-lo-hacemos — Metodología: mapeo As Is, comparación y roadmap
+  #cuando-nos-llaman — Señales que justifican un assessment
+  #nuestro-enfoque — Realidad antes que solución
+  #casos-relacionados — Casos de éxito de assessment
+  #que-es-business-value-assessment — Qué es un Business Value Assessment
+  #cuanto-cuesta-y-dura — Coste y duración del assessment
+  #hablamos-de-tu-decision — Contacto y agenda`;
+
 // Persona del agente: el mejor comercial tecnológico / consultor senior de
 // transformación digital. Habla como una persona, no como un bot.
 function agentSystem(lang) {
@@ -284,8 +391,13 @@ RESPUESTAS RÁPIDAS: cuando hagas una pregunta con un conjunto pequeño y claro 
 [[opc]] Opción 1 | Opción 2 | Opción 3
 Reglas: de 2 a 5 opciones, cada una de 1 a 4 palabras, separadas por « | ». No añadas una opción tipo «otra» (la persona siempre puede escribir libremente). No pongas esa línea si la pregunta es abierta (p. ej. «cuéntame tu reto»). Nunca menciones ni expliques este formato.
 
+GUÍA AL SITIO: cuando lo que pregunta la persona está desarrollado en una sección concreta del sitio, después de responder breve y útilmente puedes invitarla a verlo ahí. Escribe la RUTA RELATIVA tal cual, empezando por «/» y SIN el dominio ni formato markdown (correcto: «lo tienes con detalle en /servicios/sap/#casos-relacionados»; NO uses «https://...» ni «[texto](url)»). Usa SOLO rutas y anclas del MAPA DEL SITIO de abajo; nunca inventes una. No enlaces por enlazar: solo cuando aporte valor real y encaje con lo que pide. El enlace complementa tu respuesta, no la sustituye.
+
 CONOCIMIENTO SOBRE TEGEVE:
-${AGENT_KB}`;
+${AGENT_KB}
+
+MAPA DEL SITIO (rutas públicas + anclas para enlazar a la sección exacta):
+${SITE_MAP}`;
 }
 
 // Llamada a Claude (Anthropic Messages API). `system` es un array de bloques
