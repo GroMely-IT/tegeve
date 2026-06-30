@@ -14,6 +14,17 @@
   if (window.__teviAgentLoaded) return;
   window.__teviAgentLoaded = true;
 
+  // Estilos de la pantalla de bienvenida (el resto reutiliza las clases de Tevi).
+  var STYLE = ".ta-welcome{text-align:center;padding:22px 12px 4px;animation:taWel .4s ease}"
+    + "@keyframes taWel{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}"
+    + ".ta-welcome .ta-wel-av{width:56px;height:56px;margin:0 auto 12px;border-radius:50%;background:var(--red,#E4010A);display:flex;align-items:center;justify-content:center;color:#fff}"
+    + ".ta-welcome .ta-wel-av svg{width:30px;height:30px}"
+    + ".ta-welcome h3{margin:0 0 6px;font:600 1.14rem/1.3 inherit;color:var(--ink,#111114)}"
+    + ".ta-welcome p{margin:0;font-size:.92rem;color:#5f5b53;line-height:1.5}"
+    + ".ta-welcome + .chips{justify-content:center;margin-top:16px}"
+    + "@media(prefers-reduced-motion:reduce){.ta-welcome{animation:none}}";
+  var stEl = document.createElement("style"); stEl.textContent = STYLE; document.head.appendChild(stEl);
+
   var NO_WORKER = /github\.io$/.test(location.hostname);
   var BASE = NO_WORKER ? "https://tegeve.gabrielgrosso.workers.dev" : "";
   var EP = BASE + "/api/tevi-agent";
@@ -57,6 +68,23 @@
       err: "Entschuldigung, da hat etwas geklemmt. Versuchen wir es gleich noch einmal?" },
   };
   function t() { return T[lang()] || T.es; }
+
+  // Pantalla de bienvenida: encabezado (h), invitación (p) y opciones de inicio (s).
+  var WEL = {
+    es: { h: "Hola, soy el Agente de TeGeVe", p: "¿Qué te trae por aquí? Elige una opción o escríbeme.",
+      s: ["Tengo un reto con SAP", "Modernizar un sistema antiguo", "IA y automatización", "Desarrollo a medida", "Solo estoy explorando"] },
+    en: { h: "Hi, I'm the TeGeVe Agent", p: "What brings you here? Pick an option or just type.",
+      s: ["I have an SAP challenge", "Modernize a legacy system", "AI and automation", "Custom development", "Just exploring"] },
+    pt: { h: "Olá, sou o Agente da TeGeVe", p: "O que traz você aqui? Escolha uma opção ou escreva.",
+      s: ["Tenho um desafio com SAP", "Modernizar um sistema antigo", "IA e automação", "Desenvolvimento sob medida", "Só estou explorando"] },
+    it: { h: "Ciao, sono l'Agente di TeGeVe", p: "Cosa ti porta qui? Scegli un'opzione o scrivimi.",
+      s: ["Ho una sfida con SAP", "Modernizzare un sistema legacy", "IA e automazione", "Sviluppo su misura", "Sto solo esplorando"] },
+    fr: { h: "Bonjour, je suis l'Agent TeGeVe", p: "Qu'est-ce qui vous amène ? Choisissez une option ou écrivez-moi.",
+      s: ["J'ai un défi avec SAP", "Moderniser un système ancien", "IA et automatisation", "Développement sur mesure", "Je regarde juste"] },
+    de: { h: "Hallo, ich bin der TeGeVe-Agent", p: "Was führt Sie her? Wählen Sie eine Option oder schreiben Sie einfach.",
+      s: ["Ich habe eine SAP-Herausforderung", "Ein Altsystem modernisieren", "KI und Automatisierung", "Individuelle Entwicklung", "Ich schaue mich nur um"] },
+  };
+  function wel() { return WEL[lang()] || WEL.es; }
 
   // ── Sesión SOLO en memoria: cada carga de página (incluido un refresco)
   //    empieza limpia. El histórico completo se guarda igualmente en el
@@ -133,9 +161,20 @@
     else if (!on && ex) ex.remove();
   }
 
+  function renderWelcome() {
+    var w = wel();
+    var box = document.createElement("div");
+    box.className = "ta-welcome";
+    box.innerHTML = '<div class="ta-wel-av">' + AV + "</div><h3></h3><p></p>";
+    box.querySelector("h3").textContent = w.h;
+    box.querySelector("p").textContent = w.p;
+    elBody.appendChild(box);
+    state.msgs.push({ role: "assistant", content: w.h + " " + w.p }); save(); // el saludo entra en el historial
+    addChips(w.s); // opciones de inicio: al pulsarlas se envían como primer mensaje
+  }
   function replay() {
     elBody.innerHTML = "";
-    if (!state.msgs.length) { bubble(t().hi, "bot"); state.msgs.push({ role: "assistant", content: t().hi }); save(); }
+    if (!state.msgs.length) renderWelcome();
     else state.msgs.forEach(function (m) { bubble(m.content, m.role === "user" ? "user" : "bot"); });
   }
 
@@ -159,6 +198,7 @@
     var msg = (typeof forced === "string" ? forced : elIn.value).trim();
     if (!msg || busy) return;
     clearChips(); // al responder, se quitan las opciones anteriores
+    var welBox = elBody.querySelector(".ta-welcome"); if (welBox) welBox.remove(); // sale de la pantalla de bienvenida
     if (typeof forced !== "string") elIn.value = "";
     bubble(msg, "user");
     if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; } // hay actividad: cancela el cierre por inactividad
