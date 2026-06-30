@@ -222,14 +222,17 @@
   // ── Botón «Tevi Agent» junto al de Tevi, con su MISMO diseño (.nav-ai) ──
   function injectButton() {
     if (document.querySelector(".nav-ai-agent")) return;
-    var ref = document.querySelector(".nav-ai");           // el botón de Tevi
+    // Tevi ya no está en el menú: si existiera su .nav-ai vamos detrás; si no,
+    // delante de LinkedIn (.nav-li) o, en su defecto, del CTA (.nav-cta).
+    var ref = document.querySelector(".nav-ai") || document.querySelector(".nav-li") || document.querySelector(".nav-cta");
     if (!ref || !ref.parentNode) return;
     var b = document.createElement("button");
     b.type = "button"; b.className = "nav-ai nav-ai-agent";
     b.setAttribute("aria-label", t().open);
     b.innerHTML = SPARK + t().btn;
     b.addEventListener("click", open);
-    ref.parentNode.insertBefore(b, ref.nextSibling);
+    if (ref.classList.contains("nav-ai")) ref.parentNode.insertBefore(b, ref.nextSibling);
+    else ref.parentNode.insertBefore(b, ref);
   }
 
   // ── Eventos ──
