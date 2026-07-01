@@ -393,6 +393,10 @@ Reglas: de 2 a 5 opciones, cada una de 1 a 4 palabras, separadas por « | ». No
 
 GUÍA AL SITIO: cuando lo que pregunta la persona está desarrollado en una sección concreta del sitio, después de responder breve y útilmente puedes invitarla a verlo ahí. Escribe la RUTA RELATIVA tal cual, empezando por «/» y SIN el dominio ni formato markdown (correcto: «lo tienes con detalle en /servicios/sap/#casos-relacionados»; NO uses «https://...» ni «[texto](url)»). Usa SOLO rutas y anclas del MAPA DEL SITIO de abajo; nunca inventes una. No enlaces por enlazar: solo cuando aporte valor real y encaje con lo que pide. El enlace complementa tu respuesta, no la sustituye.
 
+AGENDAR REUNIÓN: cuando la conversación llegue a un punto en que una reunión con Gabriel Grosso (Director de TeGeVe) aporte valor, propónsela con naturalidad y, para dejársela lista, pídele su email (explícale que es para enviarle la invitación ya preparada). Cuando te dé el email —y a ser posible acordad un día y una hora concretos (futuros y laborables, usando la fecha de hoy del contexto)— confírmale con calidez que le envías la invitación y TERMINA el mensaje con una última línea EXACTAMENTE así:
+[[cita]] nombre=<nombre de la persona>; email=<su email>; fecha=<AAAA-MM-DD>; hora=<HH:MM>
+Reglas: el email es OBLIGATORIO en esa línea; incluye el nombre si lo sabes; si no habéis fijado día/hora, propón tú una fecha y hora concretas. Emite esa línea UNA sola vez, cuando ya tengas el email. Nunca menciones ni expliques ese formato; la persona no debe ver esa línea.
+
 CONOCIMIENTO SOBRE TEGEVE:
 ${AGENT_KB}
 
@@ -442,7 +446,7 @@ function newLead(id, lang, now) {
     transcript: [],                    // TODO lo dicho: {role, content, ts}
     summary: "", summaryUpTo: 0,       // resumen rodante + índice ya resumido
     datos: { nombre: "", empresa: "", cargo: "", email: "", telefono: "", ciudad: "", pais: "", sector: "" },
-    report: null, turns: 0, emailed: false,
+    report: null, turns: 0, emailed: false, cita: null,
   };
 }
 
@@ -540,7 +544,8 @@ async function handleTeviAgent(request, env) {
     const geoHint = rec.geoCountry
       ? "La persona parece conectarse desde " + countryName(rec.geoCountry) + " (" + rec.geoCountry + "). Adapta la variante del idioma a ese país de forma natural, salvo que la persona escriba o pida otra cosa.\n\n"
       : "";
-    const ctx = geoHint + (rec.summary ? "Resumen de la conversación hasta ahora:\n" + rec.summary + "\n\n" : "") +
+    const dateHint = "Hoy es " + new Date().toISOString().slice(0, 10) + " (úsalo para proponer días concretos y futuros).\n\n";
+    const ctx = dateHint + geoHint + (rec.summary ? "Resumen de la conversación hasta ahora:\n" + rec.summary + "\n\n" : "") +
       "Datos del cliente conocidos: " + JSON.stringify(rec.datos) + ". No vuelvas a pedir los que ya tienes.";
     const system = [
       { type: "text", text: agentSystem(lang), cache_control: { type: "ephemeral" } },
@@ -556,6 +561,20 @@ async function handleTeviAgent(request, env) {
     if (om) {
       chips = om[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5);
       reply = reply.slice(0, om.index).trim();
+    }
+
+    // Cita/reunión: el modelo la pone en una última línea «[[cita]] nombre=..; email=..; fecha=..; hora=..».
+    const cm = reply.match(/\n*\[\[cita\]\]\s*([^\n]+?)\s*$/i);
+    if (cm) {
+      const f = {};
+      cm[1].split(";").forEach((p) => { const i = p.indexOf("="); if (i > 0) f[p.slice(0, i).trim().toLowerCase()] = p.slice(i + 1).trim(); });
+      reply = reply.slice(0, cm.index).trim();
+      if (f.email) {
+        rec.datos.email = rec.datos.email || f.email;
+        if (f.nombre) rec.datos.nombre = rec.datos.nombre || f.nombre;
+        rec.status = "IDENTIFICADO";
+      }
+      await sendCita(env, rec, { nombre: f.nombre, email: f.email, fecha: f.fecha, hora: f.hora });
     }
 
     rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
@@ -627,6 +646,7 @@ function emailHtml(rec) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:680px">
   <h2 style="color:#E4010A;margin:0 0 4px">Tevi Agent — lead ${ESC(rec.status)}</h2>
   <p style="color:#555;margin:0 0 16px">Sesión <b>${ESC(rec.id)}</b> · ${ESC(rec.fecha)} ${ESC(rec.hora)} · ${mins} min · idioma ${ESC(rec.lang)}${rec.geoCountry ? " · IP " + ESC(countryName(rec.geoCountry)) : ""}</p>
+  ${rec.cita && rec.cita.sent ? `<p style="margin:0 0 14px;color:#E4010A"><b>Reunión enviada:</b> ${ESC(rec.cita.summary)} — ${ESC(rec.cita.fecha)} ${ESC(rec.cita.hora)} (España) · ${ESC(rec.cita.email)}</p>` : ""}
   <h3 style="margin:16px 0 6px">Informe comercial</h3>
   <table style="border-collapse:collapse;width:100%;font-size:14px">${rows || "<tr><td>Sin datos suficientes</td></tr>"}</table>
   <h3 style="margin:20px 0 6px">Conversación completa</h3>
@@ -669,6 +689,80 @@ async function sendLeadEmail(env, rec) {
       else console.error("lead email (formsubmit) not delivered", r.status, JSON.stringify(j).slice(0, 200));
     }
   } catch (e) { console.error("lead email error", String(e).slice(0, 200)); /* el email nunca rompe la conversación */ }
+}
+
+// ---- Invitación de reunión (.ics) enviada a Gabriel y a la persona ----
+// UTF-8 → base64 (btoa solo maneja Latin1; «Reunión» lleva acento).
+function b64utf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+const VTZ_MADRID = [
+  "BEGIN:VTIMEZONE", "TZID:Europe/Madrid",
+  "BEGIN:DAYLIGHT", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU", "END:DAYLIGHT",
+  "BEGIN:STANDARD", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU", "END:STANDARD",
+  "END:VTIMEZONE",
+].join("\r\n");
+const pad2 = (n) => (n < 10 ? "0" + n : "" + n);
+function icsLocal(d) { return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) + "T" + pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + "00"; }
+function icsEsc(s) { return String(s).replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n"); }
+function buildIcs(summary, nombre, email, fecha, hora, sessionId) {
+  const [Y, M, D] = fecha.split("-").map(Number);
+  const [h, mi] = hora.split(":").map(Number);
+  const start = new Date(Date.UTC(Y, M - 1, D, h, mi));      // aritmética en UTC, se emite como hora local Madrid
+  const end = new Date(start.getTime() + 30 * 60000);
+  return [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TeGeVe//Tevi Agent//ES", "CALSCALE:GREGORIAN", "METHOD:REQUEST",
+    VTZ_MADRID,
+    "BEGIN:VEVENT",
+    "UID:cita-" + sessionId + "-" + Date.now() + "@tegevem.es",
+    "DTSTAMP:" + icsLocal(new Date()) + "Z",
+    "DTSTART;TZID=Europe/Madrid:" + icsLocal(start),
+    "DTEND;TZID=Europe/Madrid:" + icsLocal(end),
+    "SUMMARY:" + icsEsc(summary),
+    "ORGANIZER;CN=Gabriel Grosso:mailto:ggrosso@tegeve.es",
+    "ATTENDEE;CN=" + icsEsc(nombre || "Invitado") + ";ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:" + email,
+    "ATTENDEE;CN=Gabriel Grosso;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:ggrosso@tegeve.es",
+    "STATUS:CONFIRMED", "SEQUENCE:0", "TRANSP:OPAQUE",
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+}
+// Manda la invitación (a Gabriel y a la persona). Una sola vez por sesión.
+async function sendCita(env, rec, cita) {
+  if (rec.cita && rec.cita.sent) return;
+  const email = String(cita.email || "").trim();
+  if (!EMAIL_RE.test(email)) return;
+  const nombre = String(cita.nombre || rec.datos.nombre || "").trim();
+  // Valida fecha/hora; si faltan o son pasadas, propone hoy+2 días a las 10:00 (Madrid).
+  let fecha = cita.fecha, hora = cita.hora;
+  const okDate = /^\d{4}-\d{2}-\d{2}$/.test(fecha || "");
+  const t = okDate ? Date.parse(fecha + "T00:00:00Z") : NaN;
+  if (!okDate || isNaN(t) || t < Date.now() - 86400000) fecha = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  if (!/^\d{1,2}:\d{2}$/.test(hora || "")) hora = "10:00";
+  const summary = "Reunión con " + (nombre ? nombre + " y TeGeVe" : "TeGeVe");
+  const ics = buildIcs(summary, nombre, email, fecha, hora, rec.id);
+  const to = env.LEAD_EMAIL || LEAD_TO_DEFAULT;
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#111"><p>Invitación de reunión:</p><h2 style="color:#E4010A;margin:4px 0">${ESC(summary)}</h2><p>${ESC(fecha)} · ${ESC(hora)} (hora de España). Adjuntamos la cita (<b>reunion.ics</b>) para añadirla al calendario.</p></div>`;
+  const text = summary + "\n" + fecha + " " + hora + " (hora de España). Cita adjunta: reunion.ics";
+  try {
+    if (env.RESEND_API_KEY) {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: env.RESEND_FROM || "Tevi Agent <onboarding@resend.dev>",
+          to: [to, email], subject: summary, html, text,
+          attachments: [{ filename: "reunion.ics", content: b64utf8(ics), content_type: "text/calendar; method=REQUEST; charset=utf-8" }],
+        }),
+      });
+      if (r.ok) rec.cita = { sent: true, nombre, email, fecha, hora, summary };
+      else console.error("cita (resend) failed", r.status, await r.text().catch(() => ""));
+    } else {
+      console.error("cita: sin RESEND_API_KEY, no se envía la invitación");
+    }
+  } catch (e) { console.error("cita error", String(e).slice(0, 200)); }
+  await saveLead(env, rec.id, rec);
 }
 
 // Punto único de integraciones. Hoy: envía el lead por email a Gabriel y deja el
