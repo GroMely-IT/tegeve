@@ -30,6 +30,16 @@
     + "#taPanel .ta-mic{flex:0 0 auto;width:42px;border:1px solid var(--line,#dcd8cf);background:#fff;color:#5f5b53;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:0}"
     + "#taPanel .ta-mic.on{background:var(--red,#E4010A);border-color:var(--red,#E4010A);color:#fff;animation:taPulse 1.1s infinite}"
     + "@keyframes taPulse{0%,100%{opacity:1}50%{opacity:.6}}"
+    // Botón flotante (FAB) del agente: círculo rojo con latido + etiqueta «IA».
+    + "#taFab{position:fixed;right:18px;bottom:18px;z-index:118;display:flex;align-items:center;gap:9px;background:none;border:0;cursor:pointer;padding:0}"
+    + "#taFab .ta-fab-dot{width:56px;height:56px;border-radius:50%;background:var(--red,#E4010A);color:#fff;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 10px 26px -10px rgba(228,1,10,.55);animation:taBeat 2.4s ease-in-out infinite}"
+    + "#taFab .ta-fab-dot svg{width:26px;height:26px}"
+    + "#taFab .ta-fab-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--red,#E4010A);opacity:0;animation:taRing 2.4s ease-out infinite}"
+    + "@keyframes taBeat{0%,50%,100%{transform:scale(1)}58%{transform:scale(1.08)}66%{transform:scale(1)}73%{transform:scale(1.05)}80%{transform:scale(1)}}"
+    + "#taFab .ta-fab-tag{background:#111114;color:#fff;font-size:.72rem;font-weight:600;letter-spacing:.05em;padding:6px 10px;white-space:nowrap}"
+    + "#taFab.ta-fab-hide{display:none}"
+    + "#taFab:hover .ta-fab-dot{animation-play-state:paused;transform:scale(1.06)}"
+    + "@media(prefers-reduced-motion:reduce){#taFab .ta-fab-dot,#taFab .ta-fab-dot::after{animation:none}}"
     // Ventana flotante: la cabecera arrastra el panel (doble clic = volver a su sitio).
     + "#taPanel .ai-head{cursor:grab;user-select:none;-webkit-user-select:none}"
     + "#taPanel.ta-dragging .ai-head{cursor:grabbing}"
@@ -170,6 +180,18 @@
     + '<button class="ai-send" id="taSend" type="button" aria-label="Enviar">' + SEND + '</button></div>';
   document.body.appendChild(panel);
 
+  // ── BOTÓN FLOTANTE (FAB): entrada al agente siempre a la vista, sobre todo
+  //    en móvil. Late como un corazón y la etiqueta deja claro que es una IA. ──
+  var FAB_T = { es: "IA de TeGeVe", en: "TeGeVe AI", pt: "IA da TeGeVe", it: "IA di TeGeVe", fr: "IA TeGeVe", de: "TeGeVe-KI" };
+  var fabBtn = document.createElement("button");
+  fabBtn.type = "button"; fabBtn.id = "taFab";
+  fabBtn.setAttribute("aria-label", "Tevi Agent");
+  fabBtn.innerHTML = '<span class="ta-fab-tag"></span><span class="ta-fab-dot">' + AV + "</span>";
+  document.body.appendChild(fabBtn);
+  function fabTag() { fabBtn.querySelector(".ta-fab-tag").textContent = FAB_T[lang()] || FAB_T.es; }
+  fabTag();
+  function fabSync() { fabBtn.classList.toggle("ta-fab-hide", panel.classList.contains("open") || teviOpen()); }
+
   var elBody = panel.querySelector("#taBody");
   var elIn = panel.querySelector("#taInput");
   var elSnd = panel.querySelector("#taSend");
@@ -234,9 +256,9 @@
     box.querySelector("p").textContent = w.p;
     elBody.appendChild(box);
     state.msgs.push({ role: "assistant", content: w.h + " " + w.p }); save(); // el saludo entra en el historial
-    // Opciones de inicio: el tour guiado primero y luego los retos típicos.
+    // Opciones de inicio: presentación con voz, tour guiado y los retos típicos.
     tourOffered = true;
-    addChips([{ label: tourT().start, fn: startTour }].concat(w.s));
+    addChips([{ label: presT().chip, fn: startPres }, { label: tourT().start, fn: startTour }].concat(w.s));
   }
   function replay() {
     elBody.innerHTML = "";
@@ -379,9 +401,11 @@
     if (tour) { setTimeout(startTour, 900); }          // el agente aceptó el tour: arranca solo
     else {
       var list = (chips && chips.length) ? chips.slice(0) : [];
-      // Al principio de la conversación (primera respuesta), ofrece también el tour.
+      // Al principio de la conversación (primera respuesta), ofrece también
+      // la presentación con voz y el tour.
       if (!tourOffered && state.msgs.filter(function (m) { return m.role === "user"; }).length <= 1) {
         tourOffered = true;
+        list.push({ label: presT().chip, fn: startPres });
         list.push({ label: tourT().start, fn: startTour });
       }
       if (list.length) addChips(list);
@@ -429,6 +453,7 @@
   async function send(forced) {
     var msg = (typeof forced === "string" ? forced : elIn.value).trim();
     if (!msg || busy) return;
+    if (presOn) { presStopAudio(); presOn = false; } // escribir corta la presentación
     clearChips(); // al responder, se quitan las opciones anteriores
     var welBox = elBody.querySelector(".ta-welcome"); if (welBox) welBox.remove(); // sale de la pantalla de bienvenida
     if (typeof forced !== "string") elIn.value = "";
@@ -480,21 +505,27 @@
   if (teviPanel && "MutationObserver" in window) {
     new MutationObserver(function () {
       if (teviPanel.classList.contains("open") && panel.classList.contains("open")) close();
+      fabSync(); // el FAB se esconde también cuando Tevi está abierto
     }).observe(teviPanel, { attributes: true, attributeFilter: ["class"] });
   }
+  fabBtn.addEventListener("click", function () { open(); });
+  fabSync();
 
   function open() {
     closeTevi();                                  // al abrir el Agente, se cierra Tevi
     applyText();
     panel.classList.add("open");
     var fab = document.getElementById("aiFab"); if (fab) fab.classList.add("is-hidden");
+    fabSync();
     if (!started) { started = true; replay(); }
     setTimeout(function () { elIn.focus(); }, 250);
   }
   function close() {
     stopVoice(); // si estaba en modo voz, se apagan micro y locución
+    if (presOn) { presStopAudio(); presOn = false; } // y la presentación también
     panel.classList.remove("open");
     var fab = document.getElementById("aiFab"); if (fab && !teviOpen()) fab.classList.remove("is-hidden");
+    fabSync();
     endSession();
   }
 
@@ -569,6 +600,7 @@
   // OJO: app.js emite «langchange» en document SIN burbujeo — escuchar en window no sirve.
   function onLangChange() {
     applyText();
+    fabTag();
     var hasUser = state.msgs.some(function (m) { return m.role === "user"; });
     if (hasUser || !started) return;               // conversación real en marcha: no se toca
     if (!elBody.querySelector(".ta-welcome")) return;
@@ -664,6 +696,7 @@
   }
   function startVoice() {
     if (!SR || voiceOn) return;
+    if (presOn) { presStopAudio(); presOn = false; } // el micro releva a la presentación
     voiceOn = true; vPaused = false;
     if (!started) { started = true; replay(); }
     var head = panel.querySelector(".ai-head");
@@ -689,9 +722,12 @@
     if (curAudio) { try { curAudio.pause(); } catch (e) {} curAudio = null; }
   }
   var speakGen = 0; // token de generación: una lectura nueva invalida las pendientes
+  var speakCb = null; // callback de fin de locución (lo usa la presentación para auto-avanzar)
   function speakEnd(gen) {
     if (gen !== speakGen) return;
     curAudio = null;
+    var cb = speakCb; speakCb = null;
+    if (cb) { cb(); return; }
     if (voiceOn) { vPaused = false; vListen(); }   // fin de la locución: vuelve a escuchar
   }
   function speakLocal(clean, gen) {
@@ -704,10 +740,11 @@
       speechSynthesis.speak(u);
     } catch (e) { speakEnd(gen); }
   }
-  function speak(text) {
-    if (!voiceOn) return;
+  function speak(text, cb) {
+    if (!voiceOn && !presOn) { if (cb) cb(); return; }
     var clean = String(text).replace(/https?:\/\/\S+/g, "").replace(/\/[a-z0-9\/_#-]{4,}/g, "").trim();
     var gen = ++speakGen;
+    speakCb = cb || null;
     if (!clean) { speakEnd(gen); return; }
     vSet("speak", vt().speak, clean.slice(0, 150) + (clean.length > 150 ? "…" : ""));
     if (!ttsPremium) { speakLocal(clean, gen); return; }
@@ -822,6 +859,20 @@
   };
   function tourT() { return TOUR_T[lang()] || TOUR_T.es; }
   function tourNarr(s) { return s.x[lang()] || s.x.es; }
+  // MODO PRESENTACIÓN: el mismo recorrido, pero narrado EN VOZ con auto-avance
+  // (como un comercial presentando la compañía); al final pregunta la necesidad
+  // y propone la reunión (mensaje y chips de cierre del tour).
+  var presOn = false;
+  var PRES_T = {
+    es: { chip: "Preséntame TeGeVe (con voz)", intro: "Encantado. Te presento TeGeVe en un par de minutos, como en una primera reunión: breve y al grano. Vamos allá." },
+    en: { chip: "Introduce me to TeGeVe (with voice)", intro: "My pleasure. Let me introduce TeGeVe in a couple of minutes, like a first meeting: brief and to the point. Here we go." },
+    pt: { chip: "Apresente-me a TeGeVe (com voz)", intro: "Com prazer. Vou apresentar a TeGeVe em alguns minutos, como numa primeira reunião: breve e direto ao ponto. Vamos lá." },
+    it: { chip: "Presentami TeGeVe (con voce)", intro: "Con piacere. Ti presento TeGeVe in un paio di minuti, come in un primo incontro: breve e al punto. Cominciamo." },
+    fr: { chip: "Présentez-moi TeGeVe (avec la voix)", intro: "Avec plaisir. Je vous présente TeGeVe en quelques minutes, comme lors d'un premier rendez-vous : bref et précis. C'est parti." },
+    de: { chip: "Stellen Sie mir TeGeVe vor (mit Stimme)", intro: "Sehr gern. Ich stelle Ihnen TeGeVe in wenigen Minuten vor, wie in einem ersten Gespräch: kurz und auf den Punkt. Los geht's." },
+  };
+  function presT() { return PRES_T[lang()] || PRES_T.es; }
+  function presStopAudio() { speakGen++; speakCb = null; ttsStop(); }
   function tourShow(i) { // narración + foco + controles del paso i (ya en su página)
     var s = TOUR[i]; if (!s) return tourEnd();
     var hash = s.u.split("#")[1] || "";
@@ -829,9 +880,11 @@
     state.msgs.push({ role: "assistant", content: tourNarr(s) }); save();
     if (hash) setTimeout(function () { spotlight(hash); }, 400);
     var last = i === TOUR.length - 1;
-    var chips = [{ label: last ? tourT().stop : tourT().next, fn: function () { if (last) tourEnd(); else tourStep(i + 1); } }];
-    if (!last) chips.push({ label: tourT().stop, fn: tourEnd });
+    var chips = [{ label: last ? tourT().stop : tourT().next, fn: function () { if (presOn) presStopAudio(); if (last) tourEnd(); else tourStep(i + 1); } }];
+    if (!last) chips.push({ label: tourT().stop, fn: function () { if (presOn) presStopAudio(); tourEnd(); } });
     addChips(chips);
+    // En presentación: se narra el paso y, al terminar la voz, avanza solo.
+    if (presOn) speak(tourNarr(s), function () { setTimeout(function () { if (presOn) { if (last) tourEnd(); else tourStep(i + 1); } }, 700); });
   }
   function tourStep(i) {
     var s = TOUR[i]; if (!s) return tourEnd();
@@ -839,14 +892,14 @@
     if (normPath(path) === normPath(location.pathname)) { tourShow(i); return; }
     var ok = false;
     try {
-      sessionStorage.setItem(TOUR_KEY, String(i));
+      sessionStorage.setItem(TOUR_KEY, JSON.stringify({ i: i, p: presOn ? 1 : 0 }));
       sessionStorage.setItem(CARRY, JSON.stringify({ state: state, hash: "" }));
       ok = true;
     } catch (e) {}
     if (ok) {
       guided = true;               // navegación guiada: no cierra la sesión
       setTimeout(function () { guided = false; }, 4000); // por si la navegación no llega a ocurrir
-      location.href = s.u;         // otra página: la conversación y el tour viajan
+      location.href = s.u;         // otra página: la conversación y el tour/presentación viajan
     } else tourEnd();              // sin sessionStorage no podemos cruzar de página
   }
   function tourEnd() {
@@ -855,11 +908,29 @@
     state.msgs.push({ role: "assistant", content: tourT().end }); save();
     addChips(tourT().endChips);
     elBody.scrollTop = elBody.scrollHeight;
+    // Cierre comercial hablado; al terminar, la presentación se apaga.
+    if (presOn) speak(tourT().end, function () { presOn = false; });
   }
   function startTour() {
+    if (presOn) { presStopAudio(); presOn = false; }
     clearChips();
     var w = elBody.querySelector(".ta-welcome"); if (w) w.remove();
     tourStep(0);
+  }
+  function startPres() {
+    presStopAudio();
+    presOn = true;
+    clearChips();
+    var w = elBody.querySelector(".ta-welcome"); if (w) w.remove();
+    var intro = presT().intro;
+    bubble(intro, "bot");
+    state.msgs.push({ role: "assistant", content: intro }); save();
+    // Al terminar la locución de apertura arranca el recorrido; si el audio no
+    // llega a sonar (autoplay bloqueado), la red de seguridad avanza igual.
+    var advanced = false;
+    var go = function () { if (!advanced && presOn) { advanced = true; tourStep(0); } };
+    speak(intro, go);
+    setTimeout(go, 15000);
   }
 
   // ── CO-NAVEGACIÓN: el agente te lleva a la sección exacta (scroll + foco) ──
@@ -909,21 +980,31 @@
       // Si hay un tour en marcha, este es su siguiente paso en la nueva página.
       var ti = null;
       try { ti = sessionStorage.getItem(TOUR_KEY); if (ti != null) sessionStorage.removeItem(TOUR_KEY); } catch (e2) {}
+      var tj = null;
+      if (ti != null) { try { tj = JSON.parse(ti); } catch (e3) { tj = { i: +ti || 0 }; } }
       setTimeout(function () {
         open();
-        if (ti != null) setTimeout(function () { tourShow(+ti); }, 450);
-        else if (c.hash) setTimeout(function () { spotlight(c.hash); }, 500);
+        if (tj) {
+          presOn = !!tj.p; // la presentación con voz continúa en la página nueva
+          setTimeout(function () { tourShow(tj.i || 0); }, 450);
+        } else if (c.hash) setTimeout(function () { spotlight(c.hash); }, 500);
       }, 350);
     } catch (e) {}
   })();
 
-  // ── APERTURA PROACTIVA: Tevi Agent saluda solo, según la página (1 vez/sesión) ──
-  var PRO_KEY = "tgv_agent_pro";
-  var proDone = false; try { proDone = !!sessionStorage.getItem(PRO_KEY); } catch (e) {}
+  // ── APERTURA PROACTIVA: Tevi Agent saluda solo, según la página. Puede
+  //    saludar también al navegar a OTRAS páginas (una vez por página), con un
+  //    tope de 3 aperturas por sesión de navegación para no resultar pesado. ──
+  var PRO_KEY = "tgv_agent_pro2";
+  var proState = { n: 0, pages: {} };
+  try { var _ps = JSON.parse(sessionStorage.getItem(PRO_KEY) || "0"); if (_ps && _ps.pages) proState = _ps; } catch (e) {}
+  var proDone = proState.n >= 3 || !!proState.pages[normPath(location.pathname)];
   function proactive() {
     if (proDone || busy || started || state.msgs.length) return;
     if (panel.classList.contains("open") || teviOpen()) return;
-    proDone = true; try { sessionStorage.setItem(PRO_KEY, "1"); } catch (e) {}
+    proDone = true;
+    proState.n++; proState.pages[normPath(location.pathname)] = 1;
+    try { sessionStorage.setItem(PRO_KEY, JSON.stringify(proState)); } catch (e) {}
     started = true;            // sin pantalla de bienvenida: el saludo ES la apertura
     open();
     elBody.innerHTML = "";
@@ -938,9 +1019,9 @@
         if (d && d.reply) {
           bubble(d.reply, "bot");
           state.msgs.push({ role: "assistant", content: d.reply }); save();
-          // El saludo proactivo ofrece el tour como primera opción.
+          // El saludo proactivo ofrece la presentación y el tour como primeras opciones.
           tourOffered = true;
-          addChips([{ label: tourT().start, fn: startTour }].concat((d.chips && d.chips.length) ? d.chips : wel().s));
+          addChips([{ label: presT().chip, fn: startPres }, { label: tourT().start, fn: startTour }].concat((d.chips && d.chips.length) ? d.chips : wel().s));
           speak(d.reply);
         } else { renderWelcome(); }
       })
