@@ -513,8 +513,21 @@
       if (!guided && !hiddenTimer) hiddenTimer = setTimeout(endSession, 150000);
     } else if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
   });
-  window.addEventListener("langchange", applyText);   // cambio de idioma del sitio
-  window.addEventListener("languagechange", applyText);
+  // Cambio de idioma del sitio (incluido el automático por IP): se refrescan los
+  // textos del panel y, si la conversación aún no ha empezado (solo bienvenida),
+  // se vuelve a pintar la bienvenida en el idioma nuevo.
+  // OJO: app.js emite «langchange» en document SIN burbujeo — escuchar en window no sirve.
+  function onLangChange() {
+    applyText();
+    var hasUser = state.msgs.some(function (m) { return m.role === "user"; });
+    if (hasUser || !started) return;               // conversación real en marcha: no se toca
+    if (!elBody.querySelector(".ta-welcome")) return;
+    state.msgs = []; save();
+    elBody.innerHTML = "";
+    renderWelcome();
+  }
+  document.addEventListener("langchange", onLangChange);
+  window.addEventListener("languagechange", onLangChange);
 
   // Abrir Tevi Agent desde cualquier elemento con .agent-open-link (p. ej. el
   // botón del carrusel). data-aq opcional siembra el primer mensaje del usuario.
