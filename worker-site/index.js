@@ -391,6 +391,12 @@ RESPUESTAS RÁPIDAS: cuando hagas una pregunta con un conjunto pequeño y claro 
 [[opc]] Opción 1 | Opción 2 | Opción 3
 Reglas: de 2 a 5 opciones, cada una de 1 a 4 palabras, separadas por « | ». No añadas una opción tipo «otra» (la persona siempre puede escribir libremente). No pongas esa línea si la pregunta es abierta (p. ej. «cuéntame tu reto»). Nunca menciones ni expliques este formato.
 
+TARJETAS EN EL CHAT: puedes acompañar tu respuesta (nunca sustituirla) con tarjetas visuales o una calculadora interactiva dentro del chat. Para ello añade UNA línea propia EXACTAMENTE así:
+[[ui]] servicios: clave | clave — tarjetas de servicios (2 o 3). Claves válidas: sap, jde, ia, desarrollo, legacy, assessment, staff, factory, nearshore.
+[[ui]] casos: clave | clave — tarjetas de casos reales (2 o 3). Claves válidas: inspecciones, conciliacion, logistica, jde-agro, seguridad-jde, monitor-sap, soporte-sap, bi-consumo, rating, factory-seguros, emv, legacy-pagos, bva-motta.
+[[ui]] roi — calculadora interactiva de ahorro por automatización (la persona mueve los controles y ve su número).
+Cuándo usarlas: «servicios» si la persona explora qué hacemos o compara varias áreas; «casos» si un caso real refuerza tu recomendación (elige los más afines a su sector o problema); «roi» si hablan de costes, ahorro, productividad o el caso de negocio de automatizar. Máximo UNA línea [[ui]] por mensaje y solo cuando aporte de verdad: la mayoría de tus mensajes NO la llevan. Puede convivir con la línea [[opc]] (cada una en su propia línea). Puedes anunciarla con naturalidad («te dejo aquí dos casos reales»), pero nunca menciones ni expliques el formato.
+
 GUÍA AL SITIO: cuando lo que pregunta la persona está desarrollado en una sección concreta del sitio, después de responder breve y útilmente puedes invitarla a verlo ahí. Escribe la RUTA RELATIVA tal cual, empezando por «/» y SIN el dominio ni formato markdown (correcto: «lo tienes con detalle en /servicios/sap/#casos-relacionados»; NO uses «https://...» ni «[texto](url)»). Usa SOLO rutas y anclas del MAPA DEL SITIO de abajo; nunca inventes una. No enlaces por enlazar: solo cuando aporte valor real y encaje con lo que pide. El enlace complementa tu respuesta, no la sustituye.
 
 AGENDAR REUNIÓN: cuando una reunión con Gabriel Grosso (Director de TeGeVe) aporte valor, propónsela con naturalidad. Para prepararla, pídele su email y acorda con la persona una franja concreta (qué día y a qué hora le viene bien; futuros y laborables, usando la fecha de hoy del contexto). EN CUANTO tengas los tres datos —EMAIL + día + hora—, tu SIGUIENTE mensaje DEBE confirmar y enviar la invitación: confírmale con calidez (dile que incluye el enlace de videollamada) y TERMINA ese mismo mensaje con una última línea EXACTAMENTE así:
@@ -590,7 +596,7 @@ async function handleTeviAgent(request, env, ctx) {
       let ochips = [];
       const oom = opener.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
       if (oom) { ochips = oom[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5); opener = opener.replace(oom[0], ""); }
-      opener = opener.replace(/^[ \t]*\[\[(?:opc|cita)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+      opener = opener.replace(/^[ \t]*\[\[(?:opc|cita|ui)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
       if (!opener) return json({ reply: "", sessionId }, 200, h);
       rec.transcript.push({ role: "assistant", content: opener, ts: now });
       rec.updatedAt = Date.now();
@@ -654,8 +660,25 @@ async function handleTeviAgent(request, env, ctx) {
         }
         await sendCita(env, rec, { nombre: f.nombre, email: f.email, dia: f.dia, fecha: f.fecha, hora: f.hora });
       }
+
+      // UI generativa: línea «[[ui]] roi» o «[[ui]] servicios|casos: clave | clave»
+      // → el cliente pinta tarjetas o la calculadora bajo el mensaje.
+      let ui = null;
+      const um = reply.match(/^[ \t]*\[\[ui\]\][ \t]*(.+?)[ \t]*$/im);
+      if (um) {
+        reply = reply.replace(um[0], "");
+        const spec = um[1].trim();
+        if (/^roi\b/i.test(spec)) ui = { type: "roi" };
+        else {
+          const mm = spec.match(/^(servicios|casos)\s*:\s*(.+)$/i);
+          if (mm) {
+            const keys = mm[2].split("|").map((s) => s.trim().toLowerCase()).filter(Boolean).slice(0, 3);
+            if (keys.length) ui = { type: mm[1].toLowerCase(), keys };
+          }
+        }
+      }
       // Red de seguridad: si quedara algún marcador suelto, nunca debe verlo la persona.
-      reply = reply.replace(/^[ \t]*\[\[(?:opc|cita)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+      reply = reply.replace(/^[ \t]*\[\[(?:opc|cita|ui)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
 
       rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
       rec.turns = rec.transcript.filter((m) => m.role === "user").length;
@@ -664,7 +687,7 @@ async function handleTeviAgent(request, env, ctx) {
       // Alerta de lead caliente al identificarse (email/teléfono) o agendar reunión.
       if (rec.status === "IDENTIFICADO" && !rec.alerted) await sendHotAlert(env, rec);
       await saveLead(env, sessionId, rec);
-      return { reply, chips };
+      return { reply, chips, ui };
     };
 
     // STREAMING (SSE): el texto va llegando al navegador token a token; al final
@@ -678,7 +701,7 @@ async function handleTeviAgent(request, env, ctx) {
         try {
           const raw = await callAnthropicStream(env, system, buildWindow(rec), 1024, (t) => emit({ d: t }));
           const fin = await doFinish(raw);
-          await emit({ done: true, reply: fin.reply, chips: fin.chips, sessionId, geo: rec.geoCountry });
+          await emit({ done: true, reply: fin.reply, chips: fin.chips, ui: fin.ui, sessionId, geo: rec.geoCountry });
         } catch (err) {
           await emit({ error: "Agent unavailable.", detail: String(err).slice(0, 120) });
         }
@@ -689,7 +712,7 @@ async function handleTeviAgent(request, env, ctx) {
     }
 
     const fin = await doFinish(await callAnthropic(env, system, buildWindow(rec), 1024));
-    return json({ reply: fin.reply, chips: fin.chips, sessionId, geo: rec.geoCountry }, 200, h);
+    return json({ reply: fin.reply, chips: fin.chips, ui: fin.ui, sessionId, geo: rec.geoCountry }, 200, h);
   } catch (err) {
     return json({ error: "Agent unavailable.", detail: String(err).slice(0, 200) }, 502, h);
   }

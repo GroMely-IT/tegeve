@@ -41,7 +41,23 @@
     + "#taPanel.open{animation:taGenie .5s cubic-bezier(.26,1.32,.4,1) both}"
     + "@keyframes taGenie{0%{opacity:0;transform:translateY(46px) scale(.55,.28)}60%{opacity:1}100%{opacity:1;transform:none}}"
     + "@media(prefers-reduced-motion:reduce){#taPanel.open{animation:taFadeIn .2s ease both}}"
-    + "@keyframes taFadeIn{from{opacity:0}to{opacity:1}}";
+    + "@keyframes taFadeIn{from{opacity:0}to{opacity:1}}"
+    // UI generativa: tarjetas (servicios/casos) y calculadora de ahorro en el chat.
+    + "#taPanel .ta-cards{display:flex;flex-direction:column;gap:8px;margin:2px 0 6px;animation:taWel .4s ease}"
+    + "#taPanel .ta-card{display:block;border:1px solid var(--line,#dcd8cf);background:#fff;padding:10px 12px;text-decoration:none;color:var(--ink,#111114)}"
+    + "#taPanel .ta-card:hover{border-color:var(--red,#E4010A)}"
+    + "#taPanel .ta-card b{display:block;font-size:.9rem}"
+    + "#taPanel .ta-card span{display:block;font-size:.82rem;color:#5f5b53;margin:2px 0 4px;line-height:1.45}"
+    + "#taPanel .ta-card i{font-style:normal;font-size:.78rem;color:var(--red,#E4010A);font-weight:600}"
+    + "#taPanel .ta-roi{border:1px solid var(--line,#dcd8cf);background:#fff;padding:12px 14px;margin:2px 0 6px;animation:taWel .4s ease}"
+    + "#taPanel .ta-roi h5{margin:0 0 4px;font-size:.92rem;color:var(--ink,#111114)}"
+    + "#taPanel .ta-roi label{display:block;font-size:.78rem;color:#5f5b53;margin:9px 0 1px}"
+    + "#taPanel .ta-roi label b{float:right;color:var(--ink,#111114)}"
+    + "#taPanel .ta-roi input[type=range]{width:100%;margin:0;accent-color:var(--red,#E4010A)}"
+    + "#taPanel .ta-roi .ta-roi-out{margin:12px 0 0;font-size:.78rem;color:#5f5b53}"
+    + "#taPanel .ta-roi .ta-roi-out b{display:block;font-size:1.45rem;line-height:1.2;color:var(--red,#E4010A)}"
+    + "#taPanel .ta-roi small{display:block;color:#8a857b;font-size:.72rem;line-height:1.45;margin:8px 0 10px}"
+    + "#taPanel .ta-roi .chip{width:100%;text-align:center}";
   var stEl = document.createElement("style"); stEl.textContent = STYLE; document.head.appendChild(stEl);
 
   var NO_WORKER = /github\.io$/.test(location.hostname);
@@ -223,12 +239,117 @@
     elBody.appendChild(c); elBody.scrollTop = elBody.scrollHeight;
   }
 
-  // Los marcadores internos ([[opc]]/[[cita]]) nunca deben verse, ni a medio llegar.
+  // ── UI GENERATIVA: tarjetas de servicios/casos y calculadora de ahorro ──
+  // Catálogo con datos REALES del sitio (títulos, resúmenes y anclas verificadas).
+  // El agente solo elige CLAVES; el texto y el enlace salen de aquí (nada inventado).
+  // Textos en es/en; el resto de idiomas usa en.
+  var CARDS = {
+    servicios: {
+      sap:        { t: "Consultoría SAP",         u: "/servicios/sap/",                 es: "Implantación, S/4HANA, Fiori y soporte AMS.", en: "Implementation, S/4HANA, Fiori and AMS support." },
+      jde:        { t: "Oracle JD Edwards",       u: "/servicios/oracle-jd-edwards/",   es: "Implantación, upgrades, Orchestrator y soporte.", en: "Implementation, upgrades, Orchestrator and support." },
+      ia:         { t: "IA Empresarial y BI",     u: "/servicios/ia-empresarial/",      es: "Agentes de IA, RPA, automatización y analítica.", en: "AI agents, RPA, automation and analytics." },
+      desarrollo: { t: "Desarrollo a medida",     u: "/servicios/desarrollo-a-medida/", es: "Aplicaciones e integraciones hechas para tu negocio.", en: "Applications and integrations built for your business." },
+      legacy:     { t: "Modernización de legacy", u: "/servicios/modernizacion-legacy/", es: "COBOL, AS/400 y mainframe, por fases y sin big bang.", en: "COBOL, AS/400 and mainframe — phased, no big bang." },
+      assessment: { t: "Assessment / BVA",        u: "/servicios/assessment/",          es: "Auditoría y hoja de ruta para decidir con datos.", en: "Audit and roadmap to decide with data." },
+      staff:      { t: "Staff Augmentation",      u: "/servicios/#staff-augmentation",  es: "Perfiles senior que se suman a tu equipo.", en: "Senior profiles joining your team." },
+      factory:    { t: "Software Factory",        u: "/servicios/#software-factory",    es: "Fábrica de software dedicada, con calidad CMMI 3.", en: "Dedicated software factory, CMMI level 3 quality." },
+      nearshore:  { t: "Nearshore",               u: "/servicios/#nearshore",           es: "Misma franja horaria, costes eficientes.", en: "Same time zone, efficient costs." }
+    },
+    casos: {
+      inspecciones:      { t: "Inspecciones offline",        u: "/casos/#control-permanencia-offline", es: "App móvil offline-first para 4.000 inspecciones de campo.", en: "Offline-first mobile app for 4,000 field inspections." },
+      conciliacion:      { t: "Conciliación con IA",         u: "/casos/#ia-conciliacion-fci",         es: "Conciliación de fondos en SAP: de 4 días a horas.", en: "Fund reconciliation in SAP: from 4 days to hours." },
+      logistica:         { t: "IA en logística",             u: "/casos/#ia-planificacion-logistica",  es: "Ruteo y planificación logística diaria con IA.", en: "Daily logistics routing and planning with AI." },
+      "jde-agro":        { t: "JD Edwards en agro",          u: "/casos/#jd-edwards-agroindustrial",   es: "Implantación y soporte ERP JD Edwards en agroindustria.", en: "JD Edwards ERP implementation and support in agribusiness." },
+      "seguridad-jde":   { t: "Seguridad en JD Edwards",     u: "/casos/#seguridad-jd-edwards-nutrien", es: "Assessment de seguridad y accesos en JD Edwards.", en: "Security and access assessment in JD Edwards." },
+      "monitor-sap":     { t: "Monitor de integraciones",    u: "/casos/#monitor-integraciones-sap",   es: "Monitor SAP Fiori de integraciones de RRHH.", en: "SAP Fiori monitor for HR integrations." },
+      "soporte-sap":     { t: "Soporte SAP continuo",        u: "/casos/#soporte-sap-continuo",        es: "Mesa de ayuda y soporte SAP funcional remoto.", en: "Remote SAP functional support and help desk." },
+      "bi-consumo":      { t: "BI en gran consumo",          u: "/casos/#bi-tendencias-consumo",       es: "Business intelligence y analítica para gran consumo.", en: "Business intelligence and analytics for consumer goods." },
+      rating:            { t: "Rating crediticio",           u: "/casos/#rating-crediticio-web",       es: "Desarrollo web de rating crediticio bancario.", en: "Web development of a banking credit-rating tool." },
+      "factory-seguros": { t: "Factory en seguros",          u: "/casos/#software-factory-aseguradora", es: "Software factory y mantenimiento evolutivo en seguros.", en: "Software factory and evolutionary maintenance in insurance." },
+      emv:               { t: "Migración EMV",               u: "/casos/#migracion-emv-chip",          es: "Migración a tarjetas EMV y antifraude en pagos.", en: "Migration to EMV cards and payment anti-fraud." },
+      "legacy-pagos":    { t: "Legacy en medios de pago",    u: "/casos/#legacy-medios-de-pago",       es: "Integración de sistemas legacy en medios de pago.", en: "Legacy system integration in payments." },
+      "bva-motta":       { t: "Selección de ERP con datos",  u: "/casos/#bva-erp-motta",               es: "Assessment y selección de ERP basada en datos.", en: "Data-driven ERP assessment and selection." }
+    }
+  };
+  var CARD_CTA = { es: "Ver en el sitio →", en: "See on the site →" };
+  function cardL() { return lang() === "es" ? "es" : "en"; }
+  function renderCards(type, keys) {
+    var cat = CARDS[type]; if (!cat || !keys) return null;
+    var wrap = document.createElement("div"); wrap.className = "ta-cards";
+    var n = 0;
+    keys.forEach(function (k) {
+      var c = cat[k]; if (!c || n >= 3) return; n++;
+      var a = document.createElement("a");
+      a.className = "ta-card"; a.href = c.u;
+      a.innerHTML = "<b></b><span></span><i></i>";
+      a.querySelector("b").textContent = c.t;
+      a.querySelector("span").textContent = c[cardL()] || c.es;
+      a.querySelector("i").textContent = CARD_CTA[cardL()];
+      wrap.appendChild(a);
+    });
+    return n ? wrap : null;
+  }
+  // Calculadora de ahorro: la persona mueve los controles (los datos son suyos)
+  // y puede devolver el resultado a la conversación con un clic.
+  var ROI_T = {
+    es: { t: "Calculadora rápida de ahorro", p: "Personas implicadas", c: "Coste por hora (€)", h: "Horas/semana en tareas repetitivas", a: "Parte automatizable", o: "Ahorro anual estimado", n: "Estimación orientativa sobre 46 semanas/año. Los datos los pones tú: mueve los controles.", b: "Comentar este cálculo",
+      m: function (v) { return "Según la calculadora, saldría un ahorro estimado de " + v.out + " €/año (" + v.p + " personas, " + v.c + " €/hora, " + v.h + " h/semana, " + v.a + " % automatizable). ¿Lo vemos para nuestro caso?"; } },
+    en: { t: "Quick savings calculator", p: "People involved", c: "Cost per hour (€)", h: "Hours/week on repetitive tasks", a: "Automatable share", o: "Estimated annual savings", n: "Rough estimate over 46 weeks/year. The numbers are yours: move the sliders.", b: "Discuss this estimate",
+      m: function (v) { return "The calculator shows estimated savings of €" + v.out + "/year (" + v.p + " people, €" + v.c + "/hour, " + v.h + " h/week, " + v.a + "% automatable). Is that realistic in our case?"; } },
+    pt: { t: "Calculadora rápida de economia", p: "Pessoas envolvidas", c: "Custo por hora (€)", h: "Horas/semana em tarefas repetitivas", a: "Parte automatizável", o: "Economia anual estimada", n: "Estimativa aproximada sobre 46 semanas/ano. Os números são seus: mova os controles.", b: "Comentar este cálculo",
+      m: function (v) { return "Pela calculadora, a economia estimada seria de € " + v.out + "/ano (" + v.p + " pessoas, € " + v.c + "/hora, " + v.h + " h/semana, " + v.a + "% automatizável). Isso é realista no nosso caso?"; } },
+    it: { t: "Calcolatore rapido di risparmio", p: "Persone coinvolte", c: "Costo orario (€)", h: "Ore/settimana su attività ripetitive", a: "Quota automatizzabile", o: "Risparmio annuo stimato", n: "Stima indicativa su 46 settimane/anno. I numeri sono tuoi: muovi i cursori.", b: "Parlarne insieme",
+      m: function (v) { return "Il calcolatore stima un risparmio di " + v.out + " €/anno (" + v.p + " persone, " + v.c + " €/ora, " + v.h + " h/settimana, " + v.a + "% automatizzabile). È realistico nel nostro caso?"; } },
+    fr: { t: "Calculateur rapide d'économies", p: "Personnes concernées", c: "Coût par heure (€)", h: "Heures/semaine sur tâches répétitives", a: "Part automatisable", o: "Économie annuelle estimée", n: "Estimation indicative sur 46 semaines/an. Les chiffres sont les vôtres : bougez les curseurs.", b: "En parler ensemble",
+      m: function (v) { return "Le calculateur estime une économie de " + v.out + " €/an (" + v.p + " personnes, " + v.c + " €/heure, " + v.h + " h/semaine, " + v.a + " % automatisable). Est-ce réaliste dans notre cas ?"; } },
+    de: { t: "Schneller Einspar-Rechner", p: "Beteiligte Personen", c: "Kosten pro Stunde (€)", h: "Stunden/Woche für repetitive Aufgaben", a: "Automatisierbarer Anteil", o: "Geschätzte jährliche Einsparung", n: "Grobe Schätzung über 46 Wochen/Jahr. Die Zahlen sind Ihre: bewegen Sie die Regler.", b: "Diese Rechnung besprechen",
+      m: function (v) { return "Der Rechner zeigt eine geschätzte Einsparung von " + v.out + " €/Jahr (" + v.p + " Personen, " + v.c + " €/Stunde, " + v.h + " Std./Woche, " + v.a + " % automatisierbar). Ist das in unserem Fall realistisch?"; } },
+  };
+  function renderRoi() {
+    var L = ROI_T[lang()] || ROI_T.es;
+    var box = document.createElement("div"); box.className = "ta-roi";
+    function row(label, id, min, max, step, val, unit) {
+      return "<label>" + esc(label) + " <b><span id='" + id + "v'></span>" + unit + "</b></label>"
+        + "<input type='range' id='" + id + "' min='" + min + "' max='" + max + "' step='" + step + "' value='" + val + "'>";
+    }
+    box.innerHTML = "<h5>" + esc(L.t) + "</h5>"
+      + row(L.p, "taRoiP", 1, 50, 1, 3, "")
+      + row(L.c, "taRoiC", 15, 120, 5, 35, " €")
+      + row(L.h, "taRoiH", 1, 40, 1, 6, " h")
+      + row(L.a, "taRoiA", 10, 90, 5, 60, " %")
+      + "<div class='ta-roi-out'>" + esc(L.o) + "<b id='taRoiOut'></b></div>"
+      + "<small>" + esc(L.n) + "</small>"
+      + "<button type='button' class='chip' id='taRoiBtn'>" + esc(L.b) + "</button>";
+    var get = function (id) { return +box.querySelector("#" + id).value; };
+    function calc() {
+      var p = get("taRoiP"), c = get("taRoiC"), h = get("taRoiH"), a = get("taRoiA");
+      var out = Math.round(p * c * h * 46 * a / 100);
+      box.querySelector("#taRoiPv").textContent = p;
+      box.querySelector("#taRoiCv").textContent = c;
+      box.querySelector("#taRoiHv").textContent = h;
+      box.querySelector("#taRoiAv").textContent = a;
+      box.querySelector("#taRoiOut").textContent = out.toLocaleString(lang() === "en" ? "en-GB" : "de-DE") + " €";
+      return { p: p, c: c, h: h, a: a, out: out.toLocaleString(lang() === "en" ? "en-GB" : "de-DE") };
+    }
+    box.querySelectorAll("input[type=range]").forEach(function (r) { r.addEventListener("input", calc); });
+    box.querySelector("#taRoiBtn").addEventListener("click", function () { send(L.m(calc())); });
+    calc();
+    return box;
+  }
+  // Pinta el widget que pida el servidor ({type:"roi"} o {type:"servicios|casos",keys:[…]}).
+  function renderUI(ui) {
+    if (!ui || !ui.type) return;
+    var el = ui.type === "roi" ? renderRoi() : renderCards(ui.type, ui.keys);
+    if (el) { elBody.appendChild(el); elBody.scrollTop = elBody.scrollHeight; }
+  }
+
+  // Los marcadores internos ([[opc]]/[[cita]]/[[ui]]) nunca deben verse, ni a medio llegar.
   function stripMk(s) { return s.replace(/^[ \t]*\[\[.*$/gm, ""); }
-  // Cierre común de una respuesta del agente: historial, chips, foco de sección y voz.
-  function addBotReply(reply, chips, el) {
+  // Cierre común de una respuesta del agente: historial, chips, widget, foco de sección y voz.
+  function addBotReply(reply, chips, el, ui) {
     if (el) el.innerHTML = rich(reply); else bubble(reply, "bot");
     state.msgs.push({ role: "assistant", content: reply }); save();
+    renderUI(ui);
     if (chips && chips.length) addChips(chips);
     autoSpot(reply);
     speak(reply);
@@ -254,7 +375,7 @@
           elBody.scrollTop = elBody.scrollHeight;
         } else if (ev.done) {
           finished = true; typing(false);
-          addBotReply(ev.reply || stripMk(acc).trim(), ev.chips || [], el);
+          addBotReply(ev.reply || stripMk(acc).trim(), ev.chips || [], el, ev.ui);
         } else if (ev.error && !el) {
           typing(false); bubble(t().err, "bot");
           finished = true;
@@ -290,7 +411,7 @@
         await readStream(r); // respuesta en vivo, token a token
       } else {
         var d = await r.json(); typing(false);
-        addBotReply((d && d.reply) || t().err, (d && d.chips) || []);
+        addBotReply((d && d.reply) || t().err, (d && d.chips) || [], null, d && d.ui);
       }
     } catch (e) { typing(false); bubble(t().err, "bot"); }
     busy = false; elSnd.disabled = false; elIn.focus();
