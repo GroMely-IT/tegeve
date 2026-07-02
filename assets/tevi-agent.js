@@ -527,20 +527,47 @@
     try { srec.start(); } catch (e) { micStop(); }
   });
   var ttsOn = false, ttsBtn = panel.querySelector("#taTts");
+  var ttsPremium = true, curAudio = null; // premium hasta que el servidor diga que no (204)
   if (!("speechSynthesis" in window) && ttsBtn) ttsBtn.style.display = "none";
+  function ttsStop() {
+    try { speechSynthesis.cancel(); } catch (e) {}
+    if (curAudio) { try { curAudio.pause(); } catch (e) {} curAudio = null; }
+  }
   if (ttsBtn) ttsBtn.addEventListener("click", function () {
     ttsOn = !ttsOn; ttsBtn.classList.toggle("on", ttsOn);
-    if (!ttsOn) { try { speechSynthesis.cancel(); } catch (e) {} }
+    if (!ttsOn) ttsStop();
   });
-  function speak(text) {
-    if (!ttsOn || !("speechSynthesis" in window)) return;
+  function speakLocal(clean) {
+    if (!("speechSynthesis" in window)) return;
     try {
       speechSynthesis.cancel();
-      // No leemos URLs ni rutas en voz alta (suenan fatal).
-      var u = new SpeechSynthesisUtterance(String(text).replace(/https?:\/\/\S+/g, "").replace(/\/[a-z0-9\/_#-]{4,}/g, ""));
+      var u = new SpeechSynthesisUtterance(clean);
       u.lang = VLANG[lang()] || "es-ES";
       speechSynthesis.speak(u);
     } catch (e) {}
+  }
+  // Lectura en voz alta: voz premium (ElevenLabs vía /tts del worker) si el
+  // servidor la tiene configurada; si no o si falla, la voz del navegador.
+  // No leemos URLs ni rutas (suenan fatal).
+  function speak(text) {
+    if (!ttsOn) return;
+    var clean = String(text).replace(/https?:\/\/\S+/g, "").replace(/\/[a-z0-9\/_#-]{4,}/g, "").trim();
+    if (!clean) return;
+    if (!ttsPremium) { speakLocal(clean); return; }
+    ttsStop();
+    fetch(EP + "/tts", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: clean.slice(0, 480), lang: lang() }),
+    })
+      .then(function (r) {
+        if (r.status === 204 || !r.ok) { ttsPremium = false; speakLocal(clean); return; }
+        return r.blob().then(function (b) {
+          if (!ttsOn) return;
+          curAudio = new Audio(URL.createObjectURL(b));
+          curAudio.play().catch(function () { speakLocal(clean); });
+        });
+      })
+      .catch(function () { ttsPremium = false; speakLocal(clean); });
   }
 
   // ── TOUR GUIADO: recorrido demo por las secciones clave (multi-página) ──

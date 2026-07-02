@@ -1081,6 +1081,37 @@ async function handleAgentLeads(request, env) {
   return json({ total: rows.length, leads: rows }, 200, {});
 }
 
+// Voz premium (ElevenLabs) para la lectura en voz alta del panel. Si no está el
+// secreto ELEVENLABS_API_KEY responde 204 y el cliente usa la voz del navegador.
+// Modelo flash (multilingüe, baja latencia); voz configurable con ELEVENLABS_VOICE_ID.
+async function handleAgentTts(request, env) {
+  const origin = request.headers.get("Origin") || "";
+  const h = corsHeaders(origin);
+  if (request.method === "OPTIONS") return new Response(null, { headers: h });
+  if (request.method !== "POST") return json({ error: "Use POST." }, 405, h);
+  if (!env.ELEVENLABS_API_KEY) return new Response(null, { status: 204, headers: h });
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "Invalid JSON." }, 400, h); }
+  const text = String(body.text || "").trim().slice(0, 500); // tope de coste por lectura
+  if (!text) return new Response(null, { status: 204, headers: h });
+  const voice = env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // voz prehecha (Rachel), multilingüe con flash
+  try {
+    const r = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + voice + "?output_format=mp3_44100_64", {
+      method: "POST",
+      headers: { "xi-api-key": env.ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ text, model_id: "eleven_flash_v2_5" }),
+    });
+    if (!r.ok) {
+      console.error("elevenlabs tts", r.status, (await r.text().catch(() => "")).slice(0, 200));
+      return new Response(null, { status: 204, headers: h }); // el cliente cae a la voz del navegador
+    }
+    return new Response(r.body, { status: 200, headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store", ...h } });
+  } catch (e) {
+    console.error("elevenlabs tts", String(e).slice(0, 160));
+    return new Response(null, { status: 204, headers: h });
+  }
+}
+
 // Dashboard de leads EN VIVO (HTML servido por el worker, mismo secreto que /leads).
 // GET /api/tevi-agent/panel?key=AGENT_ADMIN_KEY — se refresca solo cada 30 s.
 async function handleAgentPanel(request, env) {
@@ -1196,6 +1227,9 @@ export default {
     }
     if (url.pathname === "/api/tevi-agent/panel" || url.pathname === "/api/tevi-agent/panel/") {
       return handleAgentPanel(request, env);
+    }
+    if (url.pathname === "/api/tevi-agent/tts") {
+      return handleAgentTts(request, env);
     }
     // Todo lo demás: el sitio estático (lo sirve el binding ASSETS).
     return env.ASSETS.fetch(request);
