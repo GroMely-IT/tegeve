@@ -138,14 +138,17 @@
   var IDLE_MS = 90000; // tras 90s sin escribir (y ≥2 mensajes), cerramos solos y enviamos el email
 
   // WhatsApp directo de Gabriel (mensaje prellenado por idioma).
+  // NOTA: cuando Meta active la resolución web de usernames (wa.me/<usuario>,
+  // hoy devuelve not_found para TODOS los usernames), cambiar WA_LINK a
+  // "https://wa.me/gabrielgrosso" para ocultar el número.
+  var WA_LINK = "https://wa.me/34682255515";
   var WAMSG = { es: "Hola Gabriel, vengo de la web de TeGeVe.", en: "Hi Gabriel, I'm coming from the TeGeVe website.", pt: "Olá Gabriel, venho do site da TeGeVe.", it: "Ciao Gabriel, arrivo dal sito TeGeVe.", fr: "Bonjour Gabriel, je viens du site TeGeVe.", de: "Hallo Gabriel, ich komme von der TeGeVe-Website." };
   function applyText() {
     var x = t();
     panel.querySelector(".ta-title").textContent = x.title;
     panel.querySelector(".ta-sub").textContent = x.sub;
-    // Username de WhatsApp (@gabrielgrosso): enlaza sin exponer el número de teléfono.
     panel.querySelector(".ta-disc").innerHTML = esc(x.disc) +
-      ' · <a href="https://wa.me/gabrielgrosso?text=' + encodeURIComponent(WAMSG[lang()] || WAMSG.es) + '" target="_blank" rel="noopener">WhatsApp</a>';
+      ' · <a href="' + WA_LINK + '?text=' + encodeURIComponent(WAMSG[lang()] || WAMSG.es) + '" target="_blank" rel="noopener">WhatsApp</a>';
     elIn.placeholder = x.ph;
     panel.querySelector("#taClose").setAttribute("aria-label", x.close);
     var b = document.querySelector(".nav-ai-agent");
