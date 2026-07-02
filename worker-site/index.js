@@ -1160,32 +1160,40 @@ async function ttsGemini(env, text, lg) {
   try { voices = JSON.parse(env.GEMINI_TTS_VOICES || "{}") || {}; } catch (e) {}
   const voice = voices[lg] || env.GEMINI_TTS_VOICE || "Kore";
   const model = env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
-  try {
-    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
-      method: "POST",
-      headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text }] }],
-        generationConfig: {
-          responseModalities: ["AUDIO"],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
-        },
-      }),
-    });
-    if (!r.ok) {
-      console.error("gemini tts", r.status, (await r.text().catch(() => "")).slice(0, 200));
-      return null;
-    }
-    const d = await r.json();
-    const parts = (((d.candidates || [])[0] || {}).content || {}).parts || [];
-    const part = parts.find((p) => p.inlineData && p.inlineData.data);
-    if (!part) return null;
-    const mm = /rate=(\d+)/.exec(part.inlineData.mimeType || "");
-    const bin = atob(part.inlineData.data);
-    const pcm = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) pcm[i] = bin.charCodeAt(i);
-    return wavFromPcm(pcm, mm ? +mm[1] : 24000);
-  } catch (e) { console.error("gemini tts", String(e).slice(0, 160)); return null; }
+  // El modelo preview a veces devuelve 200 sin audio: se reintenta UNA vez.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+        method: "POST",
+        headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+          },
+        }),
+      });
+      if (!r.ok) {
+        console.error("gemini tts", r.status, (await r.text().catch(() => "")).slice(0, 200));
+      } else {
+        const d = await r.json();
+        const parts = (((d.candidates || [])[0] || {}).content || {}).parts || [];
+        const part = parts.find((p) => p.inlineData && p.inlineData.data);
+        if (part) {
+          const mm = /rate=(\d+)/.exec(part.inlineData.mimeType || "");
+          const bin = atob(part.inlineData.data);
+          const pcm = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) pcm[i] = bin.charCodeAt(i);
+          return wavFromPcm(pcm, mm ? +mm[1] : 24000);
+        }
+        // 200 sin audio: deja rastro de qué devolvió (finishReason, bloqueo, texto…).
+        console.error("gemini tts sin audio", JSON.stringify(d).slice(0, 400));
+      }
+    } catch (e) { console.error("gemini tts", String(e).slice(0, 160)); }
+    if (attempt === 0) await new Promise((res) => setTimeout(res, 350));
+  }
+  return null;
 }
 // Gemini devuelve PCM crudo (16-bit mono): se le antepone la cabecera WAV para
 // que el navegador lo reproduzca tal cual.
