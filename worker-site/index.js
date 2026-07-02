@@ -397,6 +397,10 @@ TARJETAS EN EL CHAT: puedes acompañar tu respuesta (nunca sustituirla) con tarj
 [[ui]] roi — calculadora interactiva de ahorro por automatización (la persona mueve los controles y ve su número).
 Cuándo usarlas: «servicios» si la persona explora qué hacemos o compara varias áreas; «casos» si un caso real refuerza tu recomendación (elige los más afines a su sector o problema); «roi» si hablan de costes, ahorro, productividad o el caso de negocio de automatizar. Máximo UNA línea [[ui]] por mensaje y solo cuando aporte de verdad: la mayoría de tus mensajes NO la llevan. Puede convivir con la línea [[opc]] (cada una en su propia línea). Puedes anunciarla con naturalidad («te dejo aquí dos casos reales»), pero nunca menciones ni expliques el formato.
 
+TERMÓMETRO INTERNO: al final de CADA respuesta añade SIEMPRE, en su propia línea, EXACTAMENTE:
+[[score]] N
+donde N es un entero de 0 a 100 con la temperatura comercial de la conversación hasta ahora: 0-25 curiosidad sin proyecto; 30-50 interés real pero sin urgencia ni proyecto definido; 55-70 necesidad clara identificada; 75-100 oportunidad caliente (necesidad + urgencia, presupuesto, datos de contacto o petición de reunión). Sube o baja el número según avance la conversación; sé honesto, no optimista. Esta línea es interna: nunca la menciones, nunca la expliques y no cuenta como parte de tu mensaje.
+
 GUÍA AL SITIO: cuando lo que pregunta la persona está desarrollado en una sección concreta del sitio, después de responder breve y útilmente puedes invitarla a verlo ahí. Escribe la RUTA RELATIVA tal cual, empezando por «/» y SIN el dominio ni formato markdown (correcto: «lo tienes con detalle en /servicios/sap/#casos-relacionados»; NO uses «https://...» ni «[texto](url)»). Usa SOLO rutas y anclas del MAPA DEL SITIO de abajo; nunca inventes una. No enlaces por enlazar: solo cuando aporte valor real y encaje con lo que pide. El enlace complementa tu respuesta, no la sustituye.
 
 AGENDAR REUNIÓN: cuando una reunión con Gabriel Grosso (Director de TeGeVe) aporte valor, propónsela con naturalidad. Para prepararla, pídele su email y acorda con la persona una franja concreta (qué día y a qué hora le viene bien; futuros y laborables, usando la fecha de hoy del contexto). EN CUANTO tengas los tres datos —EMAIL + día + hora—, tu SIGUIENTE mensaje DEBE confirmar y enviar la invitación: confírmale con calidez (dile que incluye el enlace de videollamada) y TERMINA ese mismo mensaje con una última línea EXACTAMENTE así:
@@ -489,6 +493,7 @@ function newLead(id, lang, now) {
     datos: { nombre: "", empresa: "", cargo: "", email: "", telefono: "", ciudad: "", pais: "", sector: "" },
     report: null, turns: 0, emailed: false, cita: null,
     alerted: false, geoOrg: "", page: "", followedUp: false,
+    score: 0, scoreMax: 0,               // termómetro comercial 0-100 (lo emite el modelo)
   };
 }
 
@@ -596,7 +601,7 @@ async function handleTeviAgent(request, env, ctx) {
       let ochips = [];
       const oom = opener.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
       if (oom) { ochips = oom[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5); opener = opener.replace(oom[0], ""); }
-      opener = opener.replace(/^[ \t]*\[\[(?:opc|cita|ui)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+      opener = opener.replace(/^[ \t]*\[\[(?:opc|cita|ui|score)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
       if (!opener) return json({ reply: "", sessionId }, 200, h);
       rec.transcript.push({ role: "assistant", content: opener, ts: now });
       rec.updatedAt = Date.now();
@@ -677,15 +682,23 @@ async function handleTeviAgent(request, env, ctx) {
           }
         }
       }
+      // Termómetro comercial: línea «[[score]] N» (interna, la emite en cada turno).
+      const scm = reply.match(/^[ \t]*\[\[score\]\][ \t]*(\d{1,3})[ \t]*$/im);
+      if (scm) {
+        reply = reply.replace(scm[0], "");
+        rec.score = Math.max(0, Math.min(100, parseInt(scm[1], 10)));
+        if (rec.score > (rec.scoreMax || 0)) rec.scoreMax = rec.score;
+      }
       // Red de seguridad: si quedara algún marcador suelto, nunca debe verlo la persona.
-      reply = reply.replace(/^[ \t]*\[\[(?:opc|cita|ui)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+      reply = reply.replace(/^[ \t]*\[\[(?:opc|cita|ui|score)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
 
       rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
       rec.turns = rec.transcript.filter((m) => m.role === "user").length;
       rec.updatedAt = Date.now();
       rec.durationMs = rec.updatedAt - rec.createdAt;
-      // Alerta de lead caliente al identificarse (email/teléfono) o agendar reunión.
-      if (rec.status === "IDENTIFICADO" && !rec.alerted) await sendHotAlert(env, rec);
+      // Alerta de lead caliente: al identificarse (email/teléfono), agendar reunión
+      // o cuando el termómetro marca oportunidad clara aunque aún no haya datos.
+      if (!rec.alerted && (rec.status === "IDENTIFICADO" || (rec.score || 0) >= 75)) await sendHotAlert(env, rec);
       await saveLead(env, sessionId, rec);
       return { reply, chips, ui };
     };
@@ -774,7 +787,7 @@ function emailHtml(rec) {
   const conv = rec.transcript.map((m) => `<p style="margin:4px 0"><b style="color:${m.role === "user" ? "#111" : "#E4010A"}">${m.role === "user" ? "Cliente" : "Agente"}:</b> ${ESC(m.content)}</p>`).join("");
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:680px">
   <h2 style="color:#E4010A;margin:0 0 4px">Tevi Agent — lead ${ESC(rec.status)}</h2>
-  <p style="color:#555;margin:0 0 16px">Sesión <b>${ESC(rec.id)}</b> · ${ESC(rec.fecha)} ${ESC(rec.hora)} · ${mins} min · idioma ${ESC(rec.lang)}${rec.geoCountry ? " · IP " + ESC(countryName(rec.geoCountry)) : ""}</p>
+  <p style="color:#555;margin:0 0 16px">Sesión <b>${ESC(rec.id)}</b> · ${ESC(rec.fecha)} ${ESC(rec.hora)} · ${mins} min · idioma ${ESC(rec.lang)}${rec.geoCountry ? " · IP " + ESC(countryName(rec.geoCountry)) : ""}${rec.score ? " · temperatura <b>" + ESC(rec.score) + "/100</b>" : ""}</p>
   ${rec.cita && rec.cita.sent ? `<p style="margin:0 0 14px;color:#E4010A"><b>Reunión enviada:</b> ${ESC(rec.cita.summary)} — ${ESC(rec.cita.fecha)} ${ESC(rec.cita.hora)} (España) · ${ESC(rec.cita.email)}</p>` : ""}
   <h3 style="margin:16px 0 6px">Informe comercial</h3>
   <table style="border-collapse:collapse;width:100%;font-size:14px">${rows || "<tr><td>Sin datos suficientes</td></tr>"}</table>
@@ -784,7 +797,7 @@ function emailHtml(rec) {
 }
 function emailText(rec) {
   const r = rec.report || {};
-  let s = `TEVI AGENT — lead ${rec.status}\nSesión ${rec.id} · ${rec.fecha} ${rec.hora} · idioma ${rec.lang}${rec.geoCountry ? " · IP " + countryName(rec.geoCountry) : ""}\n\nINFORME COMERCIAL:\n`;
+  let s = `TEVI AGENT — lead ${rec.status}\nSesión ${rec.id} · ${rec.fecha} ${rec.hora} · idioma ${rec.lang}${rec.geoCountry ? " · IP " + countryName(rec.geoCountry) : ""}${rec.score ? " · temperatura " + rec.score + "/100" : ""}\n\nINFORME COMERCIAL:\n`;
   for (const k in REPORT_LABELS) if (r[k]) s += `- ${REPORT_LABELS[k]}: ${r[k]}\n`;
   if (r.raw) s += r.raw + "\n";
   s += `\nCONVERSACIÓN COMPLETA:\n` + rec.transcript.map((m) => (m.role === "user" ? "Cliente: " : "Agente: ") + m.content).join("\n");
@@ -977,12 +990,15 @@ async function sendCita(env, rec, cita) {
 async function sendHotAlert(env, rec) {
   if (rec.alerted) return;
   rec.alerted = true;
-  const motivo = rec.cita && rec.cita.sent ? "reunión agendada" : "datos de contacto captados";
+  const motivo = rec.cita && rec.cita.sent ? "reunión agendada"
+    : (rec.datos.email || rec.datos.telefono || rec.datos.nombre) ? "datos de contacto captados"
+    : "temperatura alta (" + (rec.score || 0) + "/100)";
   const lastUser = [...rec.transcript].reverse().find((m) => m.role === "user");
   const quien = [rec.datos.nombre, rec.datos.empresa].filter(Boolean).join(" · ") || "Lead sin nombre todavía";
   const contacto = rec.datos.email || rec.datos.telefono || "sin contacto directo aún";
   const lineas = [
     quien + " — " + contacto,
+    rec.score ? "Temperatura: " + rec.score + "/100" : "",
     [rec.geoCountry ? "País: " + countryName(rec.geoCountry) : "", rec.geoOrg ? "Red: " + rec.geoOrg : ""].filter(Boolean).join(" · "),
     rec.page ? "Página: " + rec.page : "",
     lastUser ? "Último mensaje: «" + lastUser.content.slice(0, 180) + "»" : "",
@@ -1049,7 +1065,7 @@ async function handleAgentLeads(request, env) {
   const rows = [];
   for (const k of list.keys) {
     const r = await env.TEVI_AGENT_KV.get(k.name, "json");
-    if (r) rows.push({ id: r.id, fecha: r.fecha, hora: r.hora, status: r.status, geo: r.geoCountry || "", emailed: !!r.emailed, followedUp: !!r.followedUp, turns: r.turns, datos: r.datos, proximoPaso: r.report && r.report.proximoPaso });
+    if (r) rows.push({ id: r.id, fecha: r.fecha, hora: r.hora, status: r.status, score: r.score || 0, geo: r.geoCountry || "", emailed: !!r.emailed, followedUp: !!r.followedUp, turns: r.turns, datos: r.datos, proximoPaso: r.report && r.report.proximoPaso });
   }
   return json({ total: rows.length, leads: rows }, 200, {});
 }
