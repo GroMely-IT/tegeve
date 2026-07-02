@@ -207,10 +207,11 @@ async function handleTevi(request, env) {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  TEVI AGENT — agente comercial consultivo (Claude Sonnet)
+//  TEVI AGENT — agente comercial consultivo (Gemini Flash + respaldo Claude)
 //  Módulo INDEPENDIENTE: no comparte estado ni rutas con Tevi.
-//   • Modelo de pago: Claude Sonnet (api.anthropic.com), secreto
-//     ANTHROPIC_API_KEY. Si no está, degrada con un mensaje amable.
+//   • Cerebro principal: GEMINI Flash (GEMINI_API_KEY) por velocidad y
+//     coste (decisión del cliente, 2026-07-03); respaldo: Claude Sonnet
+//     (ANTHROPIC_API_KEY). Sin ninguna clave, degrada con mensaje amable.
 //   • Persistencia total en KV (binding TEVI_AGENT_KV): se guarda la
 //     conversación íntegra (cada mensaje, fecha/hora, duración, idioma),
 //     un resumen acumulado, los datos extraídos del lead y el informe.
@@ -378,7 +379,7 @@ CÓMO ERES:
 - Hablas como una persona real, no como una IA. Cuando te presentes, di con naturalidad que eres el Agente de TeGeVe; no te describas como «consultor de TGV» ni recites que eres un sistema.
 - Al hablar de la empresa, refiérete SIEMPRE a ella como «TeGeVe» (TGV es solo su nombre corto interno; no lo uses como nombre principal con la persona).
 - Transmites experiencia, calma y profesionalidad. Eres cercano, empático y sientes curiosidad genuina por el negocio de quien te habla.
-- Respuestas CORTAS y conversacionales: 2 a 4 frases. Nada de bloques largos, listas densas ni discursos de folleto. No uses emojis (el tono de TeGeVe es sobrio).
+- Respuestas CORTAS y conversacionales: 2 a 4 frases. Nada de bloques largos, listas densas ni discursos de folleto. No uses emojis (el tono de TeGeVe es sobrio) ni formato markdown (nada de asteriscos, almohadillas ni listas con guiones): texto plano conversacional.
 - Haces UNA pregunta cada vez, no un interrogatorio. Escuchas más de lo que hablas.
 - Nunca presionas ni vendes de forma agresiva. Aconsejas; no empujas.
 
@@ -438,9 +439,78 @@ MAPA DEL SITIO (rutas públicas + anclas para enlazar a la sección exacta):
 ${SITE_MAP}`;
 }
 
-// Llamada a Claude (Anthropic Messages API). `system` es un array de bloques
-// (el primero lleva cache_control para abaratar los tokens en cada turno).
-// Devuelve el texto, o "" si el modelo declina; lanza si la API falla.
+// ---- CEREBRO del agente: GEMINI Flash (rápido y económico, decisión del
+// cliente) con CLAUDE como respaldo si Google falla o no hay clave. ----
+const GEMINI_CHAT_DEFAULT = "gemini-2.5-flash"; // el flash de menor latencia; override: GEMINI_CHAT_MODEL
+const geminiMsgs = (messages) => messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
+const geminiBody = (system, messages, maxTokens) => JSON.stringify({
+  systemInstruction: { parts: [{ text: system.map((b) => b.text).join("\n\n") }] },
+  contents: geminiMsgs(messages),
+  // Sin «pensamiento» interno: prima la latencia (la conversación debe ser fluida).
+  generationConfig: { maxOutputTokens: maxTokens || 1024, temperature: 0.7, thinkingConfig: { thinkingBudget: 0 } },
+});
+async function callGemini(env, system, messages, maxTokens) {
+  const model = env.GEMINI_CHAT_MODEL || GEMINI_CHAT_DEFAULT;
+  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+    method: "POST",
+    headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
+    body: geminiBody(system, messages, maxTokens),
+  });
+  if (!r.ok) throw new Error("gemini " + r.status + " " + (await r.text()).slice(0, 300));
+  const d = await r.json();
+  return ((((d.candidates || [])[0] || {}).content || {}).parts || []).map((p) => p.text || "").join("").trim();
+}
+async function callGeminiStream(env, system, messages, maxTokens, onDelta) {
+  const model = env.GEMINI_CHAT_MODEL || GEMINI_CHAT_DEFAULT;
+  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":streamGenerateContent?alt=sse", {
+    method: "POST",
+    headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
+    body: geminiBody(system, messages, maxTokens),
+  });
+  if (!r.ok) throw new Error("gemini " + r.status + " " + (await r.text()).slice(0, 300));
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", full = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      try {
+        const ev = JSON.parse(line.slice(5).trim());
+        const t = ((((ev.candidates || [])[0] || {}).content || {}).parts || []).map((p) => p.text || "").join("");
+        if (t) { full += t; try { await onDelta(t); } catch (e) { /* el render nunca corta el stream */ } }
+      } catch (e) { /* keep-alives y eventos no-JSON se ignoran */ }
+    }
+  }
+  return full.trim();
+}
+// Punto único del cerebro: Gemini si hay clave; ante cualquier fallo, Claude.
+async function agentGenerate(env, system, messages, maxTokens) {
+  if (env.GEMINI_API_KEY) {
+    try { const t = await callGemini(env, system, messages, maxTokens); if (t) return t; }
+    catch (e) { console.error("gemini chat", String(e).slice(0, 200)); }
+  }
+  return callAnthropic(env, system, messages, maxTokens);
+}
+async function agentGenerateStream(env, system, messages, maxTokens, onDelta) {
+  if (env.GEMINI_API_KEY) {
+    try {
+      const t = await callGeminiStream(env, system, messages, maxTokens, onDelta);
+      if (t) return t;
+    } catch (e) { console.error("gemini chat stream", String(e).slice(0, 200)); }
+  }
+  return callAnthropicStream(env, system, messages, maxTokens, onDelta);
+}
+
+// Llamada a Claude (Anthropic Messages API), hoy como RESPALDO del cerebro.
+// `system` es un array de bloques (el primero lleva cache_control para abaratar
+// los tokens en cada turno). Devuelve el texto, o "" si el modelo declina;
+// lanza si la API falla.
 async function callAnthropic(env, system, messages, maxTokens) {
   const body = JSON.stringify({ model: AGENT_MODEL, max_tokens: maxTokens || 1024, system, messages });
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -562,7 +632,7 @@ async function summarizeIfNeeded(env, rec) {
   const chunk = rec.transcript.slice(rec.summaryUpTo, cut)
     .map((m) => (m.role === "user" ? "Cliente: " : "Yo: ") + m.content).join("\n");
   try {
-    const sum = await callAnthropic(
+    const sum = await agentGenerate(
       env,
       [{ type: "text", text: "Resume en español, en pocas frases y en tercera persona, los puntos clave de esta parte de una conversación comercial (contexto del cliente, problema, oportunidades, datos y compromisos). Conserva nombres, empresa, sector y cifras." }],
       [{ role: "user", content: (rec.summary ? "Resumen previo:\n" + rec.summary + "\n\n" : "") + "Conversación a integrar:\n" + chunk }],
@@ -618,8 +688,8 @@ async function handleTeviAgent(request, env, ctx) {
       .map((m) => ({ role: m.role, content: m.content.slice(0, AGENT_MAXLEN), ts: now }));
   }
 
-  // Si no hay clave de Claude, degradamos con elegancia (nunca rompe el sitio).
-  if (!env.ANTHROPIC_API_KEY) {
+  // Sin NINGUNA clave de modelo, degradamos con elegancia (nunca rompe el sitio).
+  if (!env.GEMINI_API_KEY && !env.ANTHROPIC_API_KEY) {
     const msg = {
       es: "Ahora mismo estoy poniéndome en marcha. Mientras tanto, cuéntame tu reto a info@tegeve.es y te respondemos enseguida.",
       en: "I'm just getting set up. In the meantime, tell us your challenge at info@tegeve.es and we'll get right back to you.",
@@ -644,7 +714,7 @@ async function handleTeviAgent(request, env, ctx) {
         { type: "text", text: agentSystem(lang), cache_control: { type: "ephemeral" } },
         { type: "text", text: "La persona lleva un rato mirando la página " + (rec.page || "/") + " del sitio y AÚN NO ha abierto el chat. Genera SOLO una apertura proactiva de 1-2 frases: saluda con naturalidad y engancha con algo específico del contenido de ESA página (usa el MAPA DEL SITIO para saber de qué trata), terminando con una pregunta ligera. No digas que la estás observando ni resultes intrusivo. Puedes añadir respuestas rápidas con la línea [[opc]]." },
       ];
-      let opener = await callAnthropic(env, sys, [{ role: "user", content: "(genera la apertura proactiva)" }], 300) || "";
+      let opener = await agentGenerate(env, sys, [{ role: "user", content: "(genera la apertura proactiva)" }], 300) || "";
       let ochips = [];
       const oom = opener.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
       if (oom) { ochips = oom[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5); opener = opener.replace(oom[0], ""); }
@@ -770,7 +840,7 @@ async function handleTeviAgent(request, env, ctx) {
       const emit = (o) => writer.write(enc.encode("data: " + JSON.stringify(o) + "\n\n")).catch(() => {});
       const work = (async () => {
         try {
-          const raw = await callAnthropicStream(env, system, buildWindow(rec), 1024, (t) => emit({ d: t }));
+          const raw = await agentGenerateStream(env, system, buildWindow(rec), 1024, (t) => emit({ d: t }));
           const fin = await doFinish(raw);
           await emit({ done: true, reply: fin.reply, chips: fin.chips, ui: fin.ui, tour: fin.tour, sessionId, geo: rec.geoCountry });
         } catch (err) {
@@ -782,7 +852,7 @@ async function handleTeviAgent(request, env, ctx) {
       return new Response(readable, { status: 200, headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", ...h } });
     }
 
-    const fin = await doFinish(await callAnthropic(env, system, buildWindow(rec), 1024));
+    const fin = await doFinish(await agentGenerate(env, system, buildWindow(rec), 1024));
     return json({ reply: fin.reply, chips: fin.chips, ui: fin.ui, tour: fin.tour, sessionId, geo: rec.geoCountry }, 200, h);
   } catch (err) {
     return json({ error: "Agent unavailable.", detail: String(err).slice(0, 200) }, 502, h);
@@ -798,7 +868,7 @@ async function generateReport(env, rec, now) {
 {"nombre":"","empresa":"","cargo":"","email":"","telefono":"","ciudad":"","pais":"","sector":"","dolorPrincipal":"","objetivo":"","tecnologiasMencionadas":"","erp":"","sistemas":"","servicioRecomendado":"","nivelOportunidad":"alto|medio|bajo","urgencia":"alta|media|baja","probabilidadCierre":"alta|media|baja","intencionDetectada":"","oportunidadesDetectadas":"","resumenEjecutivo":"","accionesRecomendadas":"","fechaPropuestaReunion":"","horarioPropuesto":"","observaciones":"","proximoPaso":""}`;
   let report = null;
   try {
-    const out = await callAnthropic(
+    const out = await agentGenerate(
       env,
       [{ type: "text", text: "Eres un analista comercial de TeGeVe. A partir de la conversación, redacta el informe para Gabriel (Director de TeGeVe). Sé fiel a lo dicho; no inventes datos. " + schema }],
       [{ role: "user", content: (rec.summary ? "Resumen:\n" + rec.summary + "\n\n" : "") + "Conversación completa:\n" + full }],
@@ -922,7 +992,7 @@ async function sendFollowUpEmail(env, rec) {
   const sys = "Escribe el email de seguimiento que el Agente de TeGeVe envía a la persona justo después de su conversación en la web de TeGeVe (consultora tecnológica). IDIOMA: " + idioma + ", en la variante que usó la persona. TONO: sobrio, cercano y profesional; sin emojis; en primera persona del plural («nosotros», TeGeVe). CONTENIDO: 1) agradece brevemente la conversación; 2) resume en 2 o 3 frases lo que nos contó y lo que le recomendamos; 3) si encaja, incluye 1 o 2 enlaces útiles del sitio escribiéndolos como https://tegevem.es + ruta del MAPA DEL SITIO (nunca inventes rutas); 4) cierra con el próximo paso: si ya hay reunión agendada, confírmala con su día y hora; si no, invita a responder a este email o a escribir por WhatsApp: https://wa.me/34682255515. REGLAS: sé fiel a la conversación; no inventes datos, precios ni plazos; no añadas despedida ni firma (se añaden solas); no digas que eres una IA. Devuelve EXCLUSIVAMENTE un objeto JSON válido, sin texto alrededor: {\"asunto\":\"\",\"cuerpo\":\"\"} — el cuerpo en texto plano con saltos de línea entre párrafos.\n\nMAPA DEL SITIO:\n" + SITE_MAP;
   let mail = null;
   try {
-    const out = await callAnthropic(env, [{ type: "text", text: sys }],
+    const out = await agentGenerate(env, [{ type: "text", text: sys }],
       [{ role: "user", content: "Datos de la persona: " + JSON.stringify(rec.datos) + "\n" + citaInfo + "\n\nConversación:\n" + full }], 700);
     const m = out && out.match(/\{[\s\S]*\}/);
     if (m) mail = JSON.parse(m[0]);
