@@ -401,6 +401,10 @@ TERMÓMETRO INTERNO: al final de CADA respuesta añade SIEMPRE, en su propia lí
 [[score]] N
 donde N es un entero de 0 a 100 con la temperatura comercial de la conversación hasta ahora: 0-25 curiosidad sin proyecto; 30-50 interés real pero sin urgencia ni proyecto definido; 55-70 necesidad clara identificada; 75-100 oportunidad caliente (necesidad + urgencia, presupuesto, datos de contacto o petición de reunión). Sube o baja el número según avance la conversación; sé honesto, no optimista. Esta línea es interna: nunca la menciones, nunca la expliques y no cuenta como parte de tu mensaje.
 
+TOUR GUIADO: si la persona pide que le enseñes el sitio o un recorrido general («hazme un tour», «enséñame la web», «¿por dónde empiezo?»), acepta con UNA frase breve y termina el mensaje con una línea propia EXACTAMENTE así:
+[[tour]]
+El sistema iniciará entonces un recorrido guiado paso a paso por las secciones clave; no describas tú las secciones en ese mensaje. Nunca menciones ni expliques este formato.
+
 GUÍA AL SITIO: cuando lo que pregunta la persona está desarrollado en una sección concreta del sitio, después de responder breve y útilmente puedes invitarla a verlo ahí. Escribe la RUTA RELATIVA tal cual, empezando por «/» y SIN el dominio ni formato markdown (correcto: «lo tienes con detalle en /servicios/sap/#casos-relacionados»; NO uses «https://...» ni «[texto](url)»). Usa SOLO rutas y anclas del MAPA DEL SITIO de abajo; nunca inventes una. No enlaces por enlazar: solo cuando aporte valor real y encaje con lo que pide. El enlace complementa tu respuesta, no la sustituye.
 
 AGENDAR REUNIÓN: cuando una reunión con Gabriel Grosso (Director de TeGeVe) aporte valor, propónsela con naturalidad. Para prepararla, pídele su email y acorda con la persona una franja concreta (qué día y a qué hora le viene bien; futuros y laborables, usando la fecha de hoy del contexto). EN CUANTO tengas los tres datos —EMAIL + día + hora—, tu SIGUIENTE mensaje DEBE confirmar y enviar la invitación: confírmale con calidez (dile que incluye el enlace de videollamada) y TERMINA ese mismo mensaje con una última línea EXACTAMENTE así:
@@ -601,7 +605,7 @@ async function handleTeviAgent(request, env, ctx) {
       let ochips = [];
       const oom = opener.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
       if (oom) { ochips = oom[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5); opener = opener.replace(oom[0], ""); }
-      opener = opener.replace(/^[ \t]*\[\[(?:opc|cita|ui|score)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+      opener = opener.replace(/^[ \t]*\[\[(?:opc|cita|ui|score|tour)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
       if (!opener) return json({ reply: "", sessionId }, 200, h);
       rec.transcript.push({ role: "assistant", content: opener, ts: now });
       rec.updatedAt = Date.now();
@@ -682,6 +686,11 @@ async function handleTeviAgent(request, env, ctx) {
           }
         }
       }
+      // Tour guiado: línea «[[tour]]» → el cliente arranca el recorrido por el sitio.
+      let tour = false;
+      const tm = reply.match(/^[ \t]*\[\[tour\]\][ \t]*$/im);
+      if (tm) { tour = true; reply = reply.replace(tm[0], ""); }
+
       // Termómetro comercial: línea «[[score]] N» (interna, la emite en cada turno).
       const scm = reply.match(/^[ \t]*\[\[score\]\][ \t]*(\d{1,3})[ \t]*$/im);
       if (scm) {
@@ -690,7 +699,7 @@ async function handleTeviAgent(request, env, ctx) {
         if (rec.score > (rec.scoreMax || 0)) rec.scoreMax = rec.score;
       }
       // Red de seguridad: si quedara algún marcador suelto, nunca debe verlo la persona.
-      reply = reply.replace(/^[ \t]*\[\[(?:opc|cita|ui|score)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+      reply = reply.replace(/^[ \t]*\[\[(?:opc|cita|ui|score|tour)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
 
       rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
       rec.turns = rec.transcript.filter((m) => m.role === "user").length;
@@ -700,7 +709,7 @@ async function handleTeviAgent(request, env, ctx) {
       // o cuando el termómetro marca oportunidad clara aunque aún no haya datos.
       if (!rec.alerted && (rec.status === "IDENTIFICADO" || (rec.score || 0) >= 75)) await sendHotAlert(env, rec);
       await saveLead(env, sessionId, rec);
-      return { reply, chips, ui };
+      return { reply, chips, ui, tour };
     };
 
     // STREAMING (SSE): el texto va llegando al navegador token a token; al final
@@ -714,7 +723,7 @@ async function handleTeviAgent(request, env, ctx) {
         try {
           const raw = await callAnthropicStream(env, system, buildWindow(rec), 1024, (t) => emit({ d: t }));
           const fin = await doFinish(raw);
-          await emit({ done: true, reply: fin.reply, chips: fin.chips, ui: fin.ui, sessionId, geo: rec.geoCountry });
+          await emit({ done: true, reply: fin.reply, chips: fin.chips, ui: fin.ui, tour: fin.tour, sessionId, geo: rec.geoCountry });
         } catch (err) {
           await emit({ error: "Agent unavailable.", detail: String(err).slice(0, 120) });
         }
@@ -725,7 +734,7 @@ async function handleTeviAgent(request, env, ctx) {
     }
 
     const fin = await doFinish(await callAnthropic(env, system, buildWindow(rec), 1024));
-    return json({ reply: fin.reply, chips: fin.chips, ui: fin.ui, sessionId, geo: rec.geoCountry }, 200, h);
+    return json({ reply: fin.reply, chips: fin.chips, ui: fin.ui, tour: fin.tour, sessionId, geo: rec.geoCountry }, 200, h);
   } catch (err) {
     return json({ error: "Agent unavailable.", detail: String(err).slice(0, 200) }, 502, h);
   }

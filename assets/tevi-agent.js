@@ -216,7 +216,8 @@
     box.querySelector("p").textContent = w.p;
     elBody.appendChild(box);
     state.msgs.push({ role: "assistant", content: w.h + " " + w.p }); save(); // el saludo entra en el historial
-    addChips(w.s); // opciones de inicio: al pulsarlas se envían como primer mensaje
+    // Opciones de inicio: el tour guiado primero y luego los retos típicos.
+    addChips([{ label: tourT().start, fn: startTour }].concat(w.s));
   }
   function replay() {
     elBody.innerHTML = "";
@@ -226,14 +227,17 @@
 
   // Respuestas rápidas (chips), con el MISMO diseño que Tevi (.chips/.chip).
   // Son opcionales: la persona puede pulsar una opción o escribir libremente.
+  // Cada item puede ser un texto (se envía como mensaje) o {label, fn} (acción propia,
+  // p. ej. los controles del tour guiado).
   function clearChips() { var c = elBody.querySelector(".chips"); if (c) c.remove(); }
   function addChips(items) {
     clearChips();
     var c = document.createElement("div"); c.className = "chips";
-    items.forEach(function (txt) {
+    items.forEach(function (it) {
+      var isObj = it && typeof it === "object";
       var b = document.createElement("button");
-      b.type = "button"; b.className = "chip"; b.textContent = txt;
-      b.addEventListener("click", function () { send(txt); });
+      b.type = "button"; b.className = "chip"; b.textContent = isObj ? it.label : it;
+      b.addEventListener("click", function () { if (isObj) it.fn(); else send(it); });
       c.appendChild(b);
     });
     elBody.appendChild(c); elBody.scrollTop = elBody.scrollHeight;
@@ -345,12 +349,13 @@
 
   // Los marcadores internos ([[opc]]/[[cita]]/[[ui]]) nunca deben verse, ni a medio llegar.
   function stripMk(s) { return s.replace(/^[ \t]*\[\[.*$/gm, ""); }
-  // Cierre común de una respuesta del agente: historial, chips, widget, foco de sección y voz.
-  function addBotReply(reply, chips, el, ui) {
+  // Cierre común de una respuesta del agente: historial, chips, widget, tour, foco y voz.
+  function addBotReply(reply, chips, el, ui, tour) {
     if (el) el.innerHTML = rich(reply); else bubble(reply, "bot");
     state.msgs.push({ role: "assistant", content: reply }); save();
     renderUI(ui);
-    if (chips && chips.length) addChips(chips);
+    if (tour) { setTimeout(startTour, 900); }          // el agente aceptó el tour: arranca solo
+    else if (chips && chips.length) addChips(chips);
     autoSpot(reply);
     speak(reply);
     elBody.scrollTop = elBody.scrollHeight;
@@ -375,7 +380,7 @@
           elBody.scrollTop = elBody.scrollHeight;
         } else if (ev.done) {
           finished = true; typing(false);
-          addBotReply(ev.reply || stripMk(acc).trim(), ev.chips || [], el, ev.ui);
+          addBotReply(ev.reply || stripMk(acc).trim(), ev.chips || [], el, ev.ui, ev.tour);
         } else if (ev.error && !el) {
           typing(false); bubble(t().err, "bot");
           finished = true;
@@ -411,7 +416,7 @@
         await readStream(r); // respuesta en vivo, token a token
       } else {
         var d = await r.json(); typing(false);
-        addBotReply((d && d.reply) || t().err, (d && d.chips) || [], null, d && d.ui);
+        addBotReply((d && d.reply) || t().err, (d && d.chips) || [], null, d && d.ui, d && d.tour);
       }
     } catch (e) { typing(false); bubble(t().err, "bot"); }
     busy = false; elSnd.disabled = false; elIn.focus();
@@ -538,6 +543,106 @@
     } catch (e) {}
   }
 
+  // ── TOUR GUIADO: recorrido demo por las secciones clave (multi-página) ──
+  // Guion fijo con anclas REALES del sitio; la conversación viaja entre páginas
+  // con el mecanismo de co-navegación (CARRY) y el índice del paso en TOUR_KEY.
+  var TOUR_KEY = "tgv_agent_tour";
+  var TOUR = [
+    { u: "/#servicios-overview", x: {
+      es: "Empezamos por lo esencial: estas son nuestras áreas de servicio, de SAP y Oracle JD Edwards a IA empresarial, desarrollo a medida y modernización de legacy.",
+      en: "Let's start with the essentials: these are our service areas, from SAP and Oracle JD Edwards to enterprise AI, custom development and legacy modernization.",
+      pt: "Começamos pelo essencial: estas são nossas áreas de serviço, de SAP e Oracle JD Edwards a IA empresarial, desenvolvimento sob medida e modernização de legado.",
+      it: "Partiamo dall'essenziale: queste sono le nostre aree di servizio, da SAP e Oracle JD Edwards all'IA aziendale, sviluppo su misura e modernizzazione legacy.",
+      fr: "Commençons par l'essentiel : voici nos domaines de service, de SAP et Oracle JD Edwards à l'IA d'entreprise, au développement sur mesure et à la modernisation legacy.",
+      de: "Beginnen wir mit dem Wesentlichen: Das sind unsere Servicebereiche, von SAP und Oracle JD Edwards bis zu Unternehmens-KI, Individualentwicklung und Legacy-Modernisierung." } },
+    { u: "/casos/#ia-conciliacion-fci", x: {
+      es: "Un caso real que lo resume bien: automatizamos con IA la conciliación de fondos de inversión en SAP y el proceso pasó de 4 días a horas.",
+      en: "A real case that sums it up: we automated investment-fund reconciliation in SAP with AI, and the process went from 4 days to hours.",
+      pt: "Um caso real que resume bem: automatizamos com IA a conciliação de fundos de investimento no SAP e o processo passou de 4 dias para horas.",
+      it: "Un caso reale che lo riassume bene: abbiamo automatizzato con l'IA la riconciliazione dei fondi in SAP e il processo è passato da 4 giorni a poche ore.",
+      fr: "Un cas réel qui résume bien : nous avons automatisé avec l'IA le rapprochement des fonds dans SAP, et le processus est passé de 4 jours à quelques heures.",
+      de: "Ein realer Fall, der es gut zusammenfasst: Wir haben die Fondsabstimmung in SAP mit KI automatisiert — von 4 Tagen auf wenige Stunden." } },
+    { u: "/servicios/#modelos-de-servicio", x: {
+      es: "Hay varias formas de trabajar con nosotros: proyecto a medida, software factory, staff augmentation o soporte AMS, siempre en modalidad nearshore eficiente.",
+      en: "There are several ways to work with us: custom projects, software factory, staff augmentation or AMS support — always in an efficient nearshore model.",
+      pt: "Há várias formas de trabalhar conosco: projeto sob medida, software factory, staff augmentation ou suporte AMS, sempre em modalidade nearshore eficiente.",
+      it: "Ci sono vari modi di lavorare con noi: progetto su misura, software factory, staff augmentation o supporto AMS, sempre in modalità nearshore efficiente.",
+      fr: "Il existe plusieurs façons de travailler avec nous : projet sur mesure, software factory, staff augmentation ou support AMS, toujours en mode nearshore efficace.",
+      de: "Es gibt mehrere Wege, mit uns zu arbeiten: Individualprojekt, Software Factory, Staff Augmentation oder AMS-Support — immer im effizienten Nearshore-Modell." } },
+    { u: "/nosotros/#nuestra-historia", x: {
+      es: "Detrás hay más de 30 años de trayectoria, presencia en 4 países y nivel 3 de madurez CMMI: equipos senior y estables.",
+      en: "Behind it all: over 30 years of track record, presence in 4 countries and CMMI maturity level 3 — senior, stable teams.",
+      pt: "Por trás disso: mais de 30 anos de trajetória, presença em 4 países e nível 3 de maturidade CMMI — equipes seniores e estáveis.",
+      it: "Dietro c'è una storia di oltre 30 anni, presenza in 4 paesi e livello 3 di maturità CMMI: team senior e stabili.",
+      fr: "Derrière tout cela : plus de 30 ans d'expérience, une présence dans 4 pays et le niveau 3 de maturité CMMI — des équipes seniors et stables.",
+      de: "Dahinter stehen über 30 Jahre Erfahrung, Präsenz in 4 Ländern und CMMI-Reifegrad 3: erfahrene, stabile Teams." } },
+    { u: "/#contacto-titulo", x: {
+      es: "Y este es el último paso del recorrido: desde aquí puedes contarnos tu reto o agendar un diagnóstico con Gabriel, nuestro Director.",
+      en: "And this is the last stop: from here you can tell us your challenge or schedule a diagnosis with Gabriel, our Director.",
+      pt: "E esta é a última parada: daqui você pode nos contar seu desafio ou agendar um diagnóstico com Gabriel, nosso Diretor.",
+      it: "E questa è l'ultima tappa: da qui puoi raccontarci la tua sfida o fissare una diagnosi con Gabriel, il nostro Direttore.",
+      fr: "Et voici la dernière étape : d'ici, vous pouvez nous décrire votre défi ou planifier un diagnostic avec Gabriel, notre Directeur.",
+      de: "Und das ist die letzte Station: Von hier aus können Sie uns Ihre Herausforderung schildern oder eine Diagnose mit Gabriel, unserem Direktor, vereinbaren." } },
+  ];
+  var TOUR_T = {
+    es: { start: "Enséñame el sitio en 1 minuto", next: "Siguiente →", stop: "Terminar el tour",
+      end: "Hasta aquí el recorrido. Si quieres, cuéntame tu reto y vemos cómo ayudarte, o agendamos una reunión con Gabriel.",
+      endChips: ["Te cuento mi reto", "Quiero una reunión con Gabriel"] },
+    en: { start: "Show me the site in 1 minute", next: "Next →", stop: "End the tour",
+      end: "That's the end of the tour. If you like, tell me your challenge and we'll see how to help, or we can schedule a meeting with Gabriel.",
+      endChips: ["Let me tell you my challenge", "I'd like a meeting with Gabriel"] },
+    pt: { start: "Mostre-me o site em 1 minuto", next: "Próximo →", stop: "Encerrar o tour",
+      end: "Fim do tour. Se quiser, conte-me seu desafio e vemos como ajudar, ou agendamos uma reunião com o Gabriel.",
+      endChips: ["Vou contar meu desafio", "Quero uma reunião com o Gabriel"] },
+    it: { start: "Mostrami il sito in 1 minuto", next: "Avanti →", stop: "Termina il tour",
+      end: "Il tour finisce qui. Se vuoi, raccontami la tua sfida e vediamo come aiutarti, oppure fissiamo un incontro con Gabriel.",
+      endChips: ["Ti racconto la mia sfida", "Vorrei un incontro con Gabriel"] },
+    fr: { start: "Montrez-moi le site en 1 minute", next: "Suivant →", stop: "Terminer la visite",
+      end: "C'est la fin de la visite. Si vous voulez, décrivez-moi votre défi et voyons comment vous aider, ou planifions une réunion avec Gabriel.",
+      endChips: ["Je vous décris mon défi", "Je veux une réunion avec Gabriel"] },
+    de: { start: "Zeigen Sie mir die Website in 1 Minute", next: "Weiter →", stop: "Tour beenden",
+      end: "Das war die Tour. Erzählen Sie mir gern Ihre Herausforderung, oder wir vereinbaren ein Treffen mit Gabriel.",
+      endChips: ["Ich schildere meine Herausforderung", "Ich möchte ein Treffen mit Gabriel"] },
+  };
+  function tourT() { return TOUR_T[lang()] || TOUR_T.es; }
+  function tourNarr(s) { return s.x[lang()] || s.x.es; }
+  function tourShow(i) { // narración + foco + controles del paso i (ya en su página)
+    var s = TOUR[i]; if (!s) return tourEnd();
+    var hash = s.u.split("#")[1] || "";
+    bubble(tourNarr(s), "bot");
+    state.msgs.push({ role: "assistant", content: tourNarr(s) }); save();
+    if (hash) setTimeout(function () { spotlight(hash); }, 400);
+    var last = i === TOUR.length - 1;
+    var chips = [{ label: last ? tourT().stop : tourT().next, fn: function () { if (last) tourEnd(); else tourStep(i + 1); } }];
+    if (!last) chips.push({ label: tourT().stop, fn: tourEnd });
+    addChips(chips);
+  }
+  function tourStep(i) {
+    var s = TOUR[i]; if (!s) return tourEnd();
+    var path = s.u.split("#")[0] || "/";
+    if (normPath(path) === normPath(location.pathname)) { tourShow(i); return; }
+    var ok = false;
+    try {
+      sessionStorage.setItem(TOUR_KEY, String(i));
+      sessionStorage.setItem(CARRY, JSON.stringify({ state: state, hash: "" }));
+      ok = true;
+    } catch (e) {}
+    if (ok) location.href = s.u;   // otra página: la conversación y el tour viajan
+    else tourEnd();                // sin sessionStorage no podemos cruzar de página
+  }
+  function tourEnd() {
+    clearChips();
+    bubble(tourT().end, "bot");
+    state.msgs.push({ role: "assistant", content: tourT().end }); save();
+    addChips(tourT().endChips);
+    elBody.scrollTop = elBody.scrollHeight;
+  }
+  function startTour() {
+    clearChips();
+    var w = elBody.querySelector(".ta-welcome"); if (w) w.remove();
+    tourStep(0);
+  }
+
   // ── CO-NAVEGACIÓN: el agente te lleva a la sección exacta (scroll + foco) ──
   var CARRY = "tgv_agent_carry"; // traslada la conversación SOLO en navegaciones guiadas por el agente
   function normPath(p) {
@@ -580,9 +685,13 @@
     try {
       var c = JSON.parse(raw);
       if (c.state && c.state.id) state = c.state;
+      // Si hay un tour en marcha, este es su siguiente paso en la nueva página.
+      var ti = null;
+      try { ti = sessionStorage.getItem(TOUR_KEY); if (ti != null) sessionStorage.removeItem(TOUR_KEY); } catch (e2) {}
       setTimeout(function () {
         open();
-        if (c.hash) setTimeout(function () { spotlight(c.hash); }, 500);
+        if (ti != null) setTimeout(function () { tourShow(+ti); }, 450);
+        else if (c.hash) setTimeout(function () { spotlight(c.hash); }, 500);
       }, 350);
     } catch (e) {}
   })();
