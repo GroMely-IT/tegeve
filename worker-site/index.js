@@ -488,7 +488,7 @@ function newLead(id, lang, now) {
     summary: "", summaryUpTo: 0,       // resumen rodante + índice ya resumido
     datos: { nombre: "", empresa: "", cargo: "", email: "", telefono: "", ciudad: "", pais: "", sector: "" },
     report: null, turns: 0, emailed: false, cita: null,
-    alerted: false, geoOrg: "", page: "",
+    alerted: false, geoOrg: "", page: "", followedUp: false,
   };
 }
 
@@ -820,6 +820,53 @@ async function sendLeadEmail(env, rec) {
   } catch (e) { console.error("lead email error", String(e).slice(0, 200)); /* el email nunca rompe la conversación */ }
 }
 
+// ---- Email de SEGUIMIENTO a la persona (resumen personalizado de su charla) ----
+// Se envía UNA vez por sesión, al cerrar, solo si dejó su email y hubo conversación
+// real. Lo redacta el modelo en el idioma de la persona; la firma la pone la plantilla.
+const LANG_NAMES = { es: "español", en: "inglés", pt: "portugués de Brasil", it: "italiano", fr: "francés", de: "alemán" };
+async function sendFollowUpEmail(env, rec) {
+  if (rec.followedUp) return;
+  const email = (rec.datos.email || "").trim();
+  if (!email || !EMAIL_RE.test(email) || !env.RESEND_API_KEY) return;
+  if (rec.transcript.filter((m) => m.role === "user").length < 2) return;
+  const idioma = LANG_NAMES[rec.lang] || "español";
+  const full = rec.transcript.map((m) => (m.role === "user" ? "Cliente: " : "Agente: ") + m.content).join("\n");
+  const citaInfo = rec.cita && rec.cita.sent
+    ? "Ya hay una reunión agendada y enviada por email: " + rec.cita.fecha + " a las " + rec.cita.hora + " (hora de España), con la invitación y el enlace de videollamada en su bandeja."
+    : "No hay reunión agendada todavía.";
+  const sys = "Escribe el email de seguimiento que el Agente de TeGeVe envía a la persona justo después de su conversación en la web de TeGeVe (consultora tecnológica). IDIOMA: " + idioma + ", en la variante que usó la persona. TONO: sobrio, cercano y profesional; sin emojis; en primera persona del plural («nosotros», TeGeVe). CONTENIDO: 1) agradece brevemente la conversación; 2) resume en 2 o 3 frases lo que nos contó y lo que le recomendamos; 3) si encaja, incluye 1 o 2 enlaces útiles del sitio escribiéndolos como https://tegevem.es + ruta del MAPA DEL SITIO (nunca inventes rutas); 4) cierra con el próximo paso: si ya hay reunión agendada, confírmala con su día y hora; si no, invita a responder a este email o a escribir por WhatsApp: https://wa.me/34682255515. REGLAS: sé fiel a la conversación; no inventes datos, precios ni plazos; no añadas despedida ni firma (se añaden solas); no digas que eres una IA. Devuelve EXCLUSIVAMENTE un objeto JSON válido, sin texto alrededor: {\"asunto\":\"\",\"cuerpo\":\"\"} — el cuerpo en texto plano con saltos de línea entre párrafos.\n\nMAPA DEL SITIO:\n" + SITE_MAP;
+  let mail = null;
+  try {
+    const out = await callAnthropic(env, [{ type: "text", text: sys }],
+      [{ role: "user", content: "Datos de la persona: " + JSON.stringify(rec.datos) + "\n" + citaInfo + "\n\nConversación:\n" + full }], 700);
+    const m = out && out.match(/\{[\s\S]*\}/);
+    if (m) mail = JSON.parse(m[0]);
+  } catch (e) { console.error("follow-up gen", String(e).slice(0, 160)); }
+  if (!mail || !mail.asunto || !mail.cuerpo) return;
+  const cuerpo = String(mail.cuerpo).trim();
+  const bodyHtml = ESC(cuerpo)
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#E4010A">$1</a>')
+    .replace(/\n/g, "<br>");
+  const firma = { es: "Director de TeGeVe", en: "Director, TeGeVe", pt: "Diretor da TeGeVe", it: "Direttore di TeGeVe", fr: "Directeur de TeGeVe", de: "Direktor von TeGeVe" };
+  const html = '<div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:640px;line-height:1.55;font-size:15px">'
+    + "<p>" + bodyHtml + "</p>"
+    + '<p style="margin:22px 0 0">Gabriel Grosso<br><span style="color:#555">' + (firma[rec.lang] || firma.es) + '</span> · <a href="https://tegevem.es" style="color:#E4010A">tegevem.es</a></p></div>';
+  const text = cuerpo + "\n\nGabriel Grosso\n" + (firma[rec.lang] || firma.es) + " · https://tegevem.es";
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: env.RESEND_FROM || "Tevi Agent <onboarding@resend.dev>",
+        to: [email], reply_to: "ggrosso@tegeve.es",
+        subject: String(mail.asunto).slice(0, 150), html, text,
+      }),
+    });
+    if (r.ok) rec.followedUp = true;
+    else console.error("follow-up email failed", r.status, await r.text().catch(() => ""));
+  } catch (e) { console.error("follow-up email", String(e).slice(0, 160)); }
+}
+
 // ---- Invitación de reunión (.ics) enviada a Gabriel y a la persona ----
 // UTF-8 → base64 (btoa solo maneja Latin1; «Reunión» lleva acento).
 function b64utf8(str) {
@@ -985,7 +1032,8 @@ async function sendHotAlert(env, rec) {
 // registro completo en KV. Preparado para CRM/HubSpot/Calendar/WhatsApp (añadir aquí).
 async function dispatchLead(env, rec) {
   await sendLeadEmail(env, rec);
-  await saveLead(env, rec.id, rec); // persiste el flag emailed
+  await sendFollowUpEmail(env, rec); // resumen personalizado a la persona (una vez)
+  await saveLead(env, rec.id, rec);  // persiste los flags emailed/followedUp
 }
 
 // Endpoint de administración: lista los leads guardados (protegido por
@@ -1001,7 +1049,7 @@ async function handleAgentLeads(request, env) {
   const rows = [];
   for (const k of list.keys) {
     const r = await env.TEVI_AGENT_KV.get(k.name, "json");
-    if (r) rows.push({ id: r.id, fecha: r.fecha, hora: r.hora, status: r.status, geo: r.geoCountry || "", emailed: !!r.emailed, turns: r.turns, datos: r.datos, proximoPaso: r.report && r.report.proximoPaso });
+    if (r) rows.push({ id: r.id, fecha: r.fecha, hora: r.hora, status: r.status, geo: r.geoCountry || "", emailed: !!r.emailed, followedUp: !!r.followedUp, turns: r.turns, datos: r.datos, proximoPaso: r.report && r.report.proximoPaso });
   }
   return json({ total: rows.length, leads: rows }, 200, {});
 }
