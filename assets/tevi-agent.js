@@ -160,6 +160,7 @@
   var started = false, busy = false, idleTimer = null;
   var IDLE_MS = 90000; // tras 90s sin actividad (y ≥2 mensajes), cerramos solos y enviamos el email
   var guided = false;  // navegación guiada en curso (tour/enlace del chat): NO es un abandono
+  var tourOffered = false; // el tour se ofrece UNA vez, al principio de la conversación
 
   // WhatsApp directo de Gabriel (mensaje prellenado por idioma).
   // NOTA: cuando Meta active la resolución web de usernames (wa.me/<usuario>,
@@ -218,6 +219,7 @@
     elBody.appendChild(box);
     state.msgs.push({ role: "assistant", content: w.h + " " + w.p }); save(); // el saludo entra en el historial
     // Opciones de inicio: el tour guiado primero y luego los retos típicos.
+    tourOffered = true;
     addChips([{ label: tourT().start, fn: startTour }].concat(w.s));
   }
   function replay() {
@@ -359,7 +361,15 @@
     state.msgs.push({ role: "assistant", content: reply }); save();
     renderUI(ui);
     if (tour) { setTimeout(startTour, 900); }          // el agente aceptó el tour: arranca solo
-    else if (chips && chips.length) addChips(chips);
+    else {
+      var list = (chips && chips.length) ? chips.slice(0) : [];
+      // Al principio de la conversación (primera respuesta), ofrece también el tour.
+      if (!tourOffered && state.msgs.filter(function (m) { return m.role === "user"; }).length <= 1) {
+        tourOffered = true;
+        list.push({ label: tourT().start, fn: startTour });
+      }
+      if (list.length) addChips(list);
+    }
     autoSpot(reply);
     speak(reply);
     elBody.scrollTop = elBody.scrollHeight;
@@ -602,6 +612,13 @@
       it: "Partiamo dall'essenziale: queste sono le nostre aree di servizio, da SAP e Oracle JD Edwards all'IA aziendale, sviluppo su misura e modernizzazione legacy.",
       fr: "Commençons par l'essentiel : voici nos domaines de service, de SAP et Oracle JD Edwards à l'IA d'entreprise, au développement sur mesure et à la modernisation legacy.",
       de: "Beginnen wir mit dem Wesentlichen: Das sind unsere Servicebereiche, von SAP und Oracle JD Edwards bis zu Unternehmens-KI, Individualentwicklung und Legacy-Modernisierung." } },
+    { u: "/#por-industria", x: {
+      es: "No trabajamos igual para todos: hay soluciones por sector — banca y medios de pago, energía, sector público, retail y alimentación.",
+      en: "We don't work the same way for everyone: there are solutions by sector — banking and payments, energy, public sector, retail and food.",
+      pt: "Não trabalhamos igual para todos: há soluções por setor — bancos e meios de pagamento, energia, setor público, varejo e alimentos.",
+      it: "Non lavoriamo allo stesso modo per tutti: ci sono soluzioni per settore — banche e pagamenti, energia, settore pubblico, retail e alimentare.",
+      fr: "Nous ne travaillons pas pareil pour tous : il y a des solutions par secteur — banque et paiements, énergie, secteur public, retail et agroalimentaire.",
+      de: "Wir arbeiten nicht für alle gleich: Es gibt Lösungen je Branche — Banken und Zahlungsverkehr, Energie, öffentlicher Sektor, Handel und Lebensmittel." } },
     { u: "/casos/#ia-conciliacion-fci", x: {
       es: "Un caso real que lo resume bien: automatizamos con IA la conciliación de fondos de inversión en SAP y el proceso pasó de 4 días a horas.",
       en: "A real case that sums it up: we automated investment-fund reconciliation in SAP with AI, and the process went from 4 days to hours.",
@@ -609,6 +626,13 @@
       it: "Un caso reale che lo riassume bene: abbiamo automatizzato con l'IA la riconciliazione dei fondi in SAP e il processo è passato da 4 giorni a poche ore.",
       fr: "Un cas réel qui résume bien : nous avons automatisé avec l'IA le rapprochement des fonds dans SAP, et le processus est passé de 4 jours à quelques heures.",
       de: "Ein realer Fall, der es gut zusammenfasst: Wir haben die Fondsabstimmung in SAP mit KI automatisiert — von 4 Tagen auf wenige Stunden." } },
+    { u: "/casos/#control-permanencia-offline", x: {
+      es: "Otro caso real: una app móvil que funciona sin cobertura, con la que se hicieron 4.000 inspecciones de campo.",
+      en: "Another real case: a mobile app that works with no connectivity, used to complete 4,000 field inspections.",
+      pt: "Outro caso real: um app móvel que funciona sem conexão, com o qual foram feitas 4.000 inspeções de campo.",
+      it: "Un altro caso reale: un'app mobile che funziona senza copertura, con cui sono state fatte 4.000 ispezioni sul campo.",
+      fr: "Un autre cas réel : une application mobile qui fonctionne sans réseau, avec laquelle 4 000 inspections de terrain ont été réalisées.",
+      de: "Noch ein realer Fall: eine mobile App, die ohne Netzabdeckung funktioniert — damit wurden 4.000 Vor-Ort-Inspektionen durchgeführt." } },
     { u: "/servicios/#modelos-de-servicio", x: {
       es: "Hay varias formas de trabajar con nosotros: proyecto a medida, software factory, staff augmentation o soporte AMS, siempre en modalidad nearshore eficiente.",
       en: "There are several ways to work with us: custom projects, software factory, staff augmentation or AMS support — always in an efficient nearshore model.",
@@ -616,6 +640,13 @@
       it: "Ci sono vari modi di lavorare con noi: progetto su misura, software factory, staff augmentation o supporto AMS, sempre in modalità nearshore efficiente.",
       fr: "Il existe plusieurs façons de travailler avec nous : projet sur mesure, software factory, staff augmentation ou support AMS, toujours en mode nearshore efficace.",
       de: "Es gibt mehrere Wege, mit uns zu arbeiten: Individualprojekt, Software Factory, Staff Augmentation oder AMS-Support — immer im effizienten Nearshore-Modell." } },
+    { u: "/servicios/#nearshore", x: {
+      es: "Y siempre en modalidad nearshore: equipos en tu misma franja horaria, con costes eficientes y trato directo.",
+      en: "And always nearshore: teams in your time zone, with efficient costs and direct contact.",
+      pt: "E sempre em modalidade nearshore: equipes no seu fuso horário, com custos eficientes e contato direto.",
+      it: "E sempre in modalità nearshore: team nel tuo stesso fuso orario, con costi efficienti e rapporto diretto.",
+      fr: "Et toujours en nearshore : des équipes sur votre fuseau horaire, avec des coûts maîtrisés et un contact direct.",
+      de: "Und immer nearshore: Teams in Ihrer Zeitzone, mit effizienten Kosten und direktem Draht." } },
     { u: "/nosotros/#nuestra-historia", x: {
       es: "Detrás hay más de 30 años de trayectoria, presencia en 4 países y nivel 3 de madurez CMMI: equipos senior y estables.",
       en: "Behind it all: over 30 years of track record, presence in 4 countries and CMMI maturity level 3 — senior, stable teams.",
@@ -623,6 +654,13 @@
       it: "Dietro c'è una storia di oltre 30 anni, presenza in 4 paesi e livello 3 di maturità CMMI: team senior e stabili.",
       fr: "Derrière tout cela : plus de 30 ans d'expérience, une présence dans 4 pays et le niveau 3 de maturité CMMI — des équipes seniors et stables.",
       de: "Dahinter stehen über 30 Jahre Erfahrung, Präsenz in 4 Ländern und CMMI-Reifegrad 3: erfahrene, stabile Teams." } },
+    { u: "/nosotros/#testimonios-clientes", x: {
+      es: "Y no lo decimos solo nosotros: aquí tienes lo que cuentan quienes ya trabajan con TeGeVe.",
+      en: "And it's not just us saying it: here's what the people already working with TeGeVe have to say.",
+      pt: "E não somos só nós que dizemos: aqui está o que contam os que já trabalham com a TeGeVe.",
+      it: "E non lo diciamo solo noi: ecco cosa raccontano quelli che già lavorano con TeGeVe.",
+      fr: "Et ce n'est pas que nous qui le disons : voici ce qu'en disent ceux qui travaillent déjà avec TeGeVe.",
+      de: "Und das sagen nicht nur wir: Hier lesen Sie, was die berichten, die schon mit TeGeVe arbeiten." } },
     { u: "/#contacto-titulo", x: {
       es: "Y este es el último paso del recorrido: desde aquí puedes contarnos tu reto o agendar un diagnóstico con Gabriel, nuestro Director.",
       en: "And this is the last stop: from here you can tell us your challenge or schedule a diagnosis with Gabriel, our Director.",
@@ -769,7 +807,9 @@
         if (d && d.reply) {
           bubble(d.reply, "bot");
           state.msgs.push({ role: "assistant", content: d.reply }); save();
-          addChips((d.chips && d.chips.length) ? d.chips : wel().s);
+          // El saludo proactivo ofrece el tour como primera opción.
+          tourOffered = true;
+          addChips([{ label: tourT().start, fn: startTour }].concat((d.chips && d.chips.length) ? d.chips : wel().s));
           speak(d.reply);
         } else { renderWelcome(); }
       })
