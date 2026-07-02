@@ -1151,9 +1151,61 @@ async function handleAgentLeads(request, env) {
   return json({ total: list.keys.length, mostrados: rows.length, leads: rows }, 200, {});
 }
 
-// Voz premium (ElevenLabs) para la lectura en voz alta del panel. Si no está el
-// secreto ELEVENLABS_API_KEY responde 204 y el cliente usa la voz del navegador.
-// Modelo flash (multilingüe, baja latencia); voz configurable con ELEVENLABS_VOICE_ID.
+// ---- TTS con la voz nativa de GEMINI (la de AI Studio; ~4-8x más barata) ----
+// Devuelve un WAV (Uint8Array) o null si falla; el llamador cae a ElevenLabs.
+// Voz por idioma con GEMINI_TTS_VOICES (JSON {"es":"Kore",...}), voz global con
+// GEMINI_TTS_VOICE y modelo con GEMINI_TTS_MODEL (por si Google lo renombra).
+async function ttsGemini(env, text, lg) {
+  let voices = {};
+  try { voices = JSON.parse(env.GEMINI_TTS_VOICES || "{}") || {}; } catch (e) {}
+  const voice = voices[lg] || env.GEMINI_TTS_VOICE || "Kore";
+  const model = env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
+  try {
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+      method: "POST",
+      headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text }] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+        },
+      }),
+    });
+    if (!r.ok) {
+      console.error("gemini tts", r.status, (await r.text().catch(() => "")).slice(0, 200));
+      return null;
+    }
+    const d = await r.json();
+    const parts = (((d.candidates || [])[0] || {}).content || {}).parts || [];
+    const part = parts.find((p) => p.inlineData && p.inlineData.data);
+    if (!part) return null;
+    const mm = /rate=(\d+)/.exec(part.inlineData.mimeType || "");
+    const bin = atob(part.inlineData.data);
+    const pcm = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) pcm[i] = bin.charCodeAt(i);
+    return wavFromPcm(pcm, mm ? +mm[1] : 24000);
+  } catch (e) { console.error("gemini tts", String(e).slice(0, 160)); return null; }
+}
+// Gemini devuelve PCM crudo (16-bit mono): se le antepone la cabecera WAV para
+// que el navegador lo reproduzca tal cual.
+function wavFromPcm(pcm, rate) {
+  const head = new ArrayBuffer(44);
+  const v = new DataView(head);
+  const tag = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  tag(0, "RIFF"); v.setUint32(4, 36 + pcm.length, true); tag(8, "WAVE");
+  tag(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  tag(36, "data"); v.setUint32(40, pcm.length, true);
+  const out = new Uint8Array(44 + pcm.length);
+  out.set(new Uint8Array(head), 0); out.set(pcm, 44);
+  return out;
+}
+
+// Voz premium para la lectura en voz alta del panel: GEMINI si hay clave
+// (GEMINI_API_KEY; es la voz de AI Studio y la más barata), si no ElevenLabs
+// (ELEVENLABS_API_KEY); sin claves responde 204 y el cliente usa la voz del
+// navegador.
 async function handleAgentTts(request, env) {
   const origin = request.headers.get("Origin") || "";
   const h = corsHeaders(origin);
@@ -1162,7 +1214,7 @@ async function handleAgentTts(request, env) {
   // Origen del navegador: si viene con Origin y no es de los nuestros, fuera
   // (contra scripts sin navegador no basta; por eso además va atado a sesión).
   if (origin && !isAllowedOrigin(origin)) return new Response("Forbidden", { status: 403, headers: h });
-  if (!env.ELEVENLABS_API_KEY) return new Response(null, { status: 204, headers: h });
+  if (!env.GEMINI_API_KEY && !env.ELEVENLABS_API_KEY) return new Response(null, { status: 204, headers: h });
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON." }, 400, h); }
   const text = String(body.text || "").trim().slice(0, 500); // tope de coste por lectura
@@ -1179,30 +1231,30 @@ async function handleAgentTts(request, env) {
   if ((rec.ttsChars || 0) + text.length > 8000) return new Response(null, { status: 204, headers: h });
   rec.ttsChars = (rec.ttsChars || 0) + text.length;
   await saveLead(env, sessionId, rec);
-  // Voz según el idioma: mapa opcional en el secreto ELEVENLABS_VOICES
-  // (JSON {"es":"voiceId","en":"voiceId",...}). Un idioma sin entrada cae a
-  // ELEVENLABS_VOICE_ID y, en último término, a la voz prehecha multilingüe
-  // (Rachel). El modelo flash es multilingüe: una sola voz habla los 6 idiomas;
-  // language_code fija la pronunciación del idioma en curso.
   const lg = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
-  let voices = {};
-  try { voices = JSON.parse(env.ELEVENLABS_VOICES || "{}") || {}; } catch (e) {}
-  const voice = voices[lg] || env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
-  try {
-    const r = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + encodeURIComponent(voice) + "?output_format=mp3_44100_64", {
-      method: "POST",
-      headers: { "xi-api-key": env.ELEVENLABS_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ text, model_id: "eleven_flash_v2_5", language_code: lg }),
-    });
-    if (!r.ok) {
-      console.error("elevenlabs tts", r.status, (await r.text().catch(() => "")).slice(0, 200));
-      return new Response(null, { status: 204, headers: h }); // el cliente cae a la voz del navegador
-    }
-    return new Response(r.body, { status: 200, headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store", ...h } });
-  } catch (e) {
-    console.error("elevenlabs tts", String(e).slice(0, 160));
-    return new Response(null, { status: 204, headers: h });
+  // 1.º GEMINI (la voz de AI Studio, la preferida y la más barata), si hay clave.
+  if (env.GEMINI_API_KEY) {
+    const wav = await ttsGemini(env, text, lg);
+    if (wav) return new Response(wav, { status: 200, headers: { "Content-Type": "audio/wav", "Cache-Control": "no-store", ...h } });
   }
+  // 2.º ELEVENLABS como respaldo. Voz por idioma con ELEVENLABS_VOICES
+  // (JSON {"es":"voiceId",...}) → ELEVENLABS_VOICE_ID → Rachel (multilingüe);
+  // language_code fija la pronunciación del idioma en curso.
+  if (env.ELEVENLABS_API_KEY) {
+    let voices = {};
+    try { voices = JSON.parse(env.ELEVENLABS_VOICES || "{}") || {}; } catch (e) {}
+    const voice = voices[lg] || env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
+    try {
+      const r = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + encodeURIComponent(voice) + "?output_format=mp3_44100_64", {
+        method: "POST",
+        headers: { "xi-api-key": env.ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ text, model_id: "eleven_flash_v2_5", language_code: lg }),
+      });
+      if (r.ok) return new Response(r.body, { status: 200, headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store", ...h } });
+      console.error("elevenlabs tts", r.status, (await r.text().catch(() => "")).slice(0, 200));
+    } catch (e) { console.error("elevenlabs tts", String(e).slice(0, 160)); }
+  }
+  return new Response(null, { status: 204, headers: h }); // el cliente cae a la voz del navegador
 }
 
 // Dashboard de leads EN VIVO (HTML servido por el worker, mismo secreto que /leads).
