@@ -1179,12 +1179,20 @@ async function handleAgentTts(request, env) {
   if ((rec.ttsChars || 0) + text.length > 8000) return new Response(null, { status: 204, headers: h });
   rec.ttsChars = (rec.ttsChars || 0) + text.length;
   await saveLead(env, sessionId, rec);
-  const voice = env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // voz prehecha (Rachel), multilingüe con flash
+  // Voz según el idioma: mapa opcional en el secreto ELEVENLABS_VOICES
+  // (JSON {"es":"voiceId","en":"voiceId",...}). Un idioma sin entrada cae a
+  // ELEVENLABS_VOICE_ID y, en último término, a la voz prehecha multilingüe
+  // (Rachel). El modelo flash es multilingüe: una sola voz habla los 6 idiomas;
+  // language_code fija la pronunciación del idioma en curso.
+  const lg = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
+  let voices = {};
+  try { voices = JSON.parse(env.ELEVENLABS_VOICES || "{}") || {}; } catch (e) {}
+  const voice = voices[lg] || env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
   try {
-    const r = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + voice + "?output_format=mp3_44100_64", {
+    const r = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + encodeURIComponent(voice) + "?output_format=mp3_44100_64", {
       method: "POST",
       headers: { "xi-api-key": env.ELEVENLABS_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ text, model_id: "eleven_flash_v2_5" }),
+      body: JSON.stringify({ text, model_id: "eleven_flash_v2_5", language_code: lg }),
     });
     if (!r.ok) {
       console.error("elevenlabs tts", r.status, (await r.text().catch(() => "")).slice(0, 200));
