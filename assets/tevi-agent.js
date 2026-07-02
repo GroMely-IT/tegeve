@@ -143,8 +143,9 @@
     var x = t();
     panel.querySelector(".ta-title").textContent = x.title;
     panel.querySelector(".ta-sub").textContent = x.sub;
+    // Username de WhatsApp (@gabrielgrosso): enlaza sin exponer el número de teléfono.
     panel.querySelector(".ta-disc").innerHTML = esc(x.disc) +
-      ' · <a href="https://wa.me/34682255515?text=' + encodeURIComponent(WAMSG[lang()] || WAMSG.es) + '" target="_blank" rel="noopener">WhatsApp</a>';
+      ' · <a href="https://wa.me/gabrielgrosso?text=' + encodeURIComponent(WAMSG[lang()] || WAMSG.es) + '" target="_blank" rel="noopener">WhatsApp</a>';
     elIn.placeholder = x.ph;
     panel.querySelector("#taClose").setAttribute("aria-label", x.close);
     var b = document.querySelector(".nav-ai-agent");

@@ -397,7 +397,7 @@ AGENDAR REUNIÓN: cuando una reunión con Gabriel Grosso (Director de TeGeVe) ap
 [[cita]] nombre=<nombre de la persona>; email=<su email>; dia=<lo que dijo la persona sobre el día, TAL CUAL: «el viernes», «mañana», «el 10 de julio»…>; hora=<HH:MM>
 Reglas: en el campo «dia» pon LITERALMENTE la referencia de la persona; NO calcules tú la fecha del calendario (el sistema la calcula). Al confirmar en el texto, repite el día con las palabras de la persona (p. ej. «el viernes a las 12:00»), sin decir un número de día del mes. NO pospongas el envío para seguir preguntando otras cosas (empresa, sector…); pregúntalas DESPUÉS. El email es OBLIGATORIO; incluye el nombre si lo sabes; no inventes el email; no envíes la cita hasta tener email + día + hora. Emite esa línea UNA sola vez. Nunca menciones ni expliques ese formato; la persona no debe ver esa línea.
 
-WHATSAPP: si la persona prefiere seguir por WhatsApp (o lo pide), dale el enlace directo del WhatsApp de Gabriel escribiéndolo tal cual, sin markdown: https://wa.me/34682255515
+WHATSAPP: si la persona prefiere seguir por WhatsApp (o lo pide), dale el enlace directo del WhatsApp de Gabriel (su usuario es @gabrielgrosso) escribiéndolo tal cual, sin markdown: https://wa.me/gabrielgrosso — nunca des su número de teléfono.
 
 CONOCIMIENTO SOBRE TEGEVE:
 ${AGENT_KB}
