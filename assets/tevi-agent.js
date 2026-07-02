@@ -158,7 +158,8 @@
   var elIn = panel.querySelector("#taInput");
   var elSnd = panel.querySelector("#taSend");
   var started = false, busy = false, idleTimer = null;
-  var IDLE_MS = 90000; // tras 90s sin escribir (y ≥2 mensajes), cerramos solos y enviamos el email
+  var IDLE_MS = 90000; // tras 90s sin actividad (y ≥2 mensajes), cerramos solos y enviamos el email
+  var guided = false;  // navegación guiada en curso (tour/enlace del chat): NO es un abandono
 
   // WhatsApp directo de Gabriel (mensaje prellenado por idioma).
   // NOTA: cuando Meta active la resolución web de usernames (wa.me/<usuario>,
@@ -282,7 +283,9 @@
     var wrap = document.createElement("div"); wrap.className = "ta-cards";
     var n = 0;
     keys.forEach(function (k) {
-      var c = cat[k]; if (!c || n >= 3) return; n++;
+      // hasOwnProperty: una clave tipo «constructor» no debe pintar basura del prototipo
+      var c = Object.prototype.hasOwnProperty.call(cat, k) ? cat[k] : null;
+      if (!c || n >= 3) return; n++;
       var a = document.createElement("a");
       a.className = "ta-card"; a.href = c.u;
       a.innerHTML = "<b></b><span></span><i></i>";
@@ -347,8 +350,9 @@
     if (el) { elBody.appendChild(el); elBody.scrollTop = elBody.scrollHeight; }
   }
 
-  // Los marcadores internos ([[opc]]/[[cita]]/[[ui]]) nunca deben verse, ni a medio llegar.
-  function stripMk(s) { return s.replace(/^[ \t]*\[\[.*$/gm, ""); }
+  // Los marcadores internos ([[opc]]/[[cita]]/[[ui]]/[[score]]…) nunca deben verse,
+  // ni a medio llegar, estén donde estén (se corta desde «[[» al final de la línea).
+  function stripMk(s) { return s.replace(/[ \t]*\[\[.*$/gm, ""); }
   // Cierre común de una respuesta del agente: historial, chips, widget, tour, foco y voz.
   function addBotReply(reply, chips, el, ui, tour) {
     if (el) el.innerHTML = rich(reply); else bubble(reply, "bot");
@@ -437,6 +441,11 @@
   // Cierre automático por inactividad: si la persona deja de escribir, se envía
   // el informe + email sin necesidad de que cierre el panel ni salga de la página.
   function scheduleIdleEnd() { if (idleTimer) clearTimeout(idleTimer); idleTimer = setTimeout(endSession, IDLE_MS); }
+  // Interactuar con el panel (chips, tarjetas, deslizadores de la calculadora…)
+  // también es actividad: reinicia el temporizador si estaba en marcha.
+  function bumpIdle() { if (idleTimer) scheduleIdleEnd(); }
+  elBody.addEventListener("click", bumpIdle);
+  elBody.addEventListener("input", bumpIdle);
 
   // ── Exclusión mutua con Tevi (solo uno abierto) ──
   var teviPanel = document.getElementById("aiPanel");
@@ -483,10 +492,17 @@
   elSnd.addEventListener("click", send);
   elIn.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); send(); } });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && panel.classList.contains("open")) close(); });
-  window.addEventListener("pagehide", endSession);
-  // Respaldo fiable en móvil/bfcache (pagehide no siempre se entrega): cierra la
-  // sesión y dispara informe+email al ocultarse la pestaña. endSession es idempotente.
-  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") endSession(); });
+  // Al salir de verdad de la página se cierra la sesión; las navegaciones GUIADAS
+  // (tour, enlaces del chat) no cuentan: la conversación continúa en la otra página.
+  window.addEventListener("pagehide", function () { if (!guided) endSession(); });
+  // Ocultar la pestaña ya no cierra al instante (mirar el calendario en otra pestaña
+  // es normal en plena conversación): solo si sigue oculta 2,5 minutos.
+  var hiddenTimer = null;
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") {
+      if (!guided && !hiddenTimer) hiddenTimer = setTimeout(endSession, 150000);
+    } else if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null; }
+  });
   window.addEventListener("langchange", applyText);   // cambio de idioma del sitio
   window.addEventListener("languagechange", applyText);
 
@@ -549,25 +565,29 @@
   // Lectura en voz alta: voz premium (ElevenLabs vía /tts del worker) si el
   // servidor la tiene configurada; si no o si falla, la voz del navegador.
   // No leemos URLs ni rutas (suenan fatal).
+  var speakGen = 0; // token de generación: una lectura nueva invalida las pendientes
   function speak(text) {
     if (!ttsOn) return;
     var clean = String(text).replace(/https?:\/\/\S+/g, "").replace(/\/[a-z0-9\/_#-]{4,}/g, "").trim();
     if (!clean) return;
     if (!ttsPremium) { speakLocal(clean); return; }
     ttsStop();
+    var gen = ++speakGen;
+    var ok = function () { return ttsOn && gen === speakGen; }; // ni apagado ni superado por otra lectura
     fetch(EP + "/tts", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: clean.slice(0, 480), lang: lang() }),
+      body: JSON.stringify({ text: clean.slice(0, 480), lang: lang(), sessionId: state.id }),
     })
       .then(function (r) {
-        if (r.status === 204 || !r.ok) { ttsPremium = false; speakLocal(clean); return; }
+        if (r.status === 204) { ttsPremium = false; if (ok()) speakLocal(clean); return; } // sin voz premium en el servidor
+        if (!r.ok) { if (ok()) speakLocal(clean); return; } // fallo puntual: no degrada para siempre
         return r.blob().then(function (b) {
-          if (!ttsOn) return;
+          if (!ok()) return;
           curAudio = new Audio(URL.createObjectURL(b));
-          curAudio.play().catch(function () { speakLocal(clean); });
+          curAudio.play().catch(function () { if (ok()) speakLocal(clean); });
         });
       })
-      .catch(function () { ttsPremium = false; speakLocal(clean); });
+      .catch(function () { if (ok()) speakLocal(clean); });
   }
 
   // ── TOUR GUIADO: recorrido demo por las secciones clave (multi-página) ──
@@ -654,8 +674,11 @@
       sessionStorage.setItem(CARRY, JSON.stringify({ state: state, hash: "" }));
       ok = true;
     } catch (e) {}
-    if (ok) location.href = s.u;   // otra página: la conversación y el tour viajan
-    else tourEnd();                // sin sessionStorage no podemos cruzar de página
+    if (ok) {
+      guided = true;               // navegación guiada: no cierra la sesión
+      setTimeout(function () { guided = false; }, 4000); // por si la navegación no llega a ocurrir
+      location.href = s.u;         // otra página: la conversación y el tour viajan
+    } else tourEnd();              // sin sessionStorage no podemos cruzar de página
   }
   function tourEnd() {
     clearChips();
@@ -697,6 +720,8 @@
       if (hash) spotlight(hash);                       // misma página: te llevo hasta la sección
     } else {
       try { sessionStorage.setItem(CARRY, JSON.stringify({ state: state, hash: hash })); } catch (err) {}
+      guided = true;                                   // navegación guiada: no cierra la sesión
+      setTimeout(function () { guided = false; }, 4000);
       location.href = href;                            // otra página: la conversación viaja contigo
     }
   });

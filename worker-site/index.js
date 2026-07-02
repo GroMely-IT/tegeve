@@ -484,6 +484,25 @@ async function loadLead(env, id) {
 async function saveLead(env, id, rec) {
   if (!env.TEVI_AGENT_KV) return;
   try {
+    // Fusión defensiva: KV no tiene transacciones y un turno en vuelo (waitUntil)
+    // puede solaparse con un «end». Antes de escribir se relee el registro y se
+    // conservan los flags ya activados, la cita/informe y el transcript más largo,
+    // para que el escritor más lento no deshaga lo del otro.
+    try {
+      const cur = await env.TEVI_AGENT_KV.get(leadKey(id), "json");
+      if (cur) {
+        rec.emailed = rec.emailed || cur.emailed;
+        rec.followedUp = rec.followedUp || cur.followedUp;
+        rec.followedUpCita = rec.followedUpCita || cur.followedUpCita;
+        rec.alerted = rec.alerted || cur.alerted;
+        rec.alertedContact = rec.alertedContact || cur.alertedContact;
+        if (!rec.cita && cur.cita) rec.cita = cur.cita;
+        if (!rec.report && cur.report) rec.report = cur.report;
+        if ((cur.transcript || []).length > (rec.transcript || []).length) rec.transcript = cur.transcript;
+        if ((cur.scoreMax || 0) > (rec.scoreMax || 0)) rec.scoreMax = cur.scoreMax;
+        if ((cur.emailedTurns || 0) > (rec.emailedTurns || 0)) rec.emailedTurns = cur.emailedTurns;
+      }
+    } catch (e) { /* si falla la relectura, se escribe igualmente */ }
     // Metadatos: el listado de KV los devuelve sin gastar un «get» por clave
     // (el panel ordena por recencia con ellos y solo lee los más recientes).
     await env.TEVI_AGENT_KV.put(leadKey(id), JSON.stringify(rec), { metadata: { u: rec.updatedAt || 0 } });
@@ -499,9 +518,11 @@ function newLead(id, lang, now) {
     transcript: [],                    // TODO lo dicho: {role, content, ts}
     summary: "", summaryUpTo: 0,       // resumen rodante + índice ya resumido
     datos: { nombre: "", empresa: "", cargo: "", email: "", telefono: "", ciudad: "", pais: "", sector: "" },
-    report: null, turns: 0, emailed: false, cita: null,
-    alerted: false, geoOrg: "", page: "", followedUp: false,
+    report: null, turns: 0, emailed: false, emailedTurns: 0, cita: null,
+    alerted: false, alertedContact: false, geoOrg: "", page: "",
+    followedUp: false, followedUpCita: false,
     score: 0, scoreMax: 0,               // termómetro comercial 0-100 (lo emite el modelo)
+    ttsDay: "", ttsChars: 0,             // presupuesto diario de voz premium por sesión
   };
 }
 
@@ -609,7 +630,7 @@ async function handleTeviAgent(request, env, ctx) {
       let ochips = [];
       const oom = opener.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
       if (oom) { ochips = oom[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5); opener = opener.replace(oom[0], ""); }
-      opener = opener.replace(/^[ \t]*\[\[(?:opc|cita|ui|score|tour)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+      opener = opener.replace(/[ \t]*\[\[(?:opc|cita|ui|score|tour)\]\][^\n]*/g, "").replace(/\n{3,}/g, "\n\n").trim();
       if (!opener) return json({ reply: "", sessionId }, 200, h);
       rec.transcript.push({ role: "assistant", content: opener, ts: now });
       rec.updatedAt = Date.now();
@@ -695,15 +716,17 @@ async function handleTeviAgent(request, env, ctx) {
       const tm = reply.match(/^[ \t]*\[\[tour\]\][ \t]*$/im);
       if (tm) { tour = true; reply = reply.replace(tm[0], ""); }
 
-      // Termómetro comercial: línea «[[score]] N» (interna, la emite en cada turno).
-      const scm = reply.match(/^[ \t]*\[\[score\]\][ \t]*(\d{1,3})[ \t]*$/im);
+      // Termómetro comercial: «[[score]] N» (interno, lo emite en cada turno).
+      // Sin ancla de línea: si el modelo lo pega tras la última frase, también cuenta.
+      const scm = reply.match(/\[\[score\]\][ \t]*(\d{1,3})/i);
       if (scm) {
         reply = reply.replace(scm[0], "");
         rec.score = Math.max(0, Math.min(100, parseInt(scm[1], 10)));
         if (rec.score > (rec.scoreMax || 0)) rec.scoreMax = rec.score;
       }
-      // Red de seguridad: si quedara algún marcador suelto, nunca debe verlo la persona.
-      reply = reply.replace(/^[ \t]*\[\[(?:opc|cita|ui|score|tour)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+      // Red de seguridad: ningún marcador debe llegar a la persona, esté donde esté
+      // (se elimina desde el marcador hasta el fin de esa línea).
+      reply = reply.replace(/[ \t]*\[\[(?:opc|cita|ui|score|tour)\]\][^\n]*/g, "").replace(/\n{3,}/g, "\n\n").trim();
 
       rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
       rec.turns = rec.transcript.filter((m) => m.role === "user").length;
@@ -711,7 +734,11 @@ async function handleTeviAgent(request, env, ctx) {
       rec.durationMs = rec.updatedAt - rec.createdAt;
       // Alerta de lead caliente: al identificarse (email/teléfono), agendar reunión
       // o cuando el termómetro marca oportunidad clara aunque aún no haya datos.
-      if (!rec.alerted && (rec.status === "IDENTIFICADO" || (rec.score || 0) >= 75)) await sendHotAlert(env, rec);
+      // Si la primera alerta fue solo por temperatura (sin contacto), se permite UNA
+      // segunda cuando lleguen los datos de contacto (si no, se perderían).
+      const hasContact = !!(rec.datos.email || rec.datos.telefono);
+      if ((rec.status === "IDENTIFICADO" || (rec.score || 0) >= 75) &&
+          (!rec.alerted || (hasContact && !rec.alertedContact))) await sendHotAlert(env, rec);
       await saveLead(env, sessionId, rec);
       return { reply, chips, ui, tour };
     };
@@ -764,15 +791,17 @@ async function generateReport(env, rec, now) {
     else report = { raw: out || "" };
   } catch (e) { report = { error: String(e).slice(0, 200) }; }
 
-  // Mezcla los datos ya captados heurísticamente (no se pierden).
+  // Mezcla en ambos sentidos: lo captado heurísticamente completa el informe y
+  // lo extraído por el informe (p. ej. el nombre) alimenta el registro del lead.
+  const _has = (v) => v && v !== "sin dato";
   if (report && typeof report === "object") {
     for (const k of ["nombre", "empresa", "cargo", "email", "telefono", "ciudad", "pais", "sector"]) {
-      if (rec.datos[k] && (!report[k] || report[k] === "sin dato")) report[k] = rec.datos[k];
+      if (rec.datos[k] && !_has(report[k])) report[k] = rec.datos[k];
+      else if (_has(report[k]) && !rec.datos[k]) rec.datos[k] = report[k];
     }
   }
   rec.report = report;
   // «sin dato» (el relleno del esquema) no identifica a nadie.
-  const _has = (v) => v && v !== "sin dato";
   rec.status = (report && (_has(report.email) || _has(report.telefono) || _has(report.nombre))) ? "IDENTIFICADO" : rec.status;
   rec.updatedAt = now; rec.durationMs = now - rec.createdAt;
   await saveLead(env, rec.id, rec);
@@ -782,7 +811,7 @@ async function generateReport(env, rec, now) {
 
 // ---- Envío del lead por email (la conversación completa + el informe) ----
 const LEAD_TO_DEFAULT = "ggrosso@tegeve.es";
-const ESC = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const ESC = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const REPORT_LABELS = {
   nombre: "Nombre", empresa: "Empresa", cargo: "Cargo", email: "Email", telefono: "Teléfono",
   ciudad: "Ciudad", pais: "País", sector: "Sector", dolorPrincipal: "Dolor principal",
@@ -802,7 +831,7 @@ function emailHtml(rec) {
   const conv = rec.transcript.map((m) => `<p style="margin:4px 0"><b style="color:${m.role === "user" ? "#111" : "#E4010A"}">${m.role === "user" ? "Cliente" : "Agente"}:</b> ${ESC(m.content)}</p>`).join("");
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:680px">
   <h2 style="color:#E4010A;margin:0 0 4px">Tevi Agent — lead ${ESC(rec.status)}</h2>
-  <p style="color:#555;margin:0 0 16px">Sesión <b>${ESC(rec.id)}</b> · ${ESC(rec.fecha)} ${ESC(rec.hora)} · ${mins} min · idioma ${ESC(rec.lang)}${rec.geoCountry ? " · IP " + ESC(countryName(rec.geoCountry)) : ""}${rec.score ? " · temperatura <b>" + ESC(rec.score) + "/100</b>" : ""}</p>
+  <p style="color:#555;margin:0 0 16px">Sesión <b>${ESC(rec.id)}</b> · ${ESC(rec.fecha)} ${ESC(rec.hora)} · ${mins} min · idioma ${ESC(rec.lang)}${rec.geoCountry ? " · IP " + ESC(countryName(rec.geoCountry)) : ""}${rec.score || rec.scoreMax ? " · temperatura <b>" + ESC(rec.score || 0) + "/100</b>" + ((rec.scoreMax || 0) > (rec.score || 0) ? " (máx " + ESC(rec.scoreMax) + ")" : "") : ""}</p>
   ${rec.cita && rec.cita.sent ? `<p style="margin:0 0 14px;color:#E4010A"><b>Reunión enviada:</b> ${ESC(rec.cita.summary)} — ${ESC(rec.cita.fecha)} ${ESC(rec.cita.hora)} (España) · ${ESC(rec.cita.email)}</p>` : ""}
   <h3 style="margin:16px 0 6px">Informe comercial</h3>
   <table style="border-collapse:collapse;width:100%;font-size:14px">${rows || "<tr><td>Sin datos suficientes</td></tr>"}</table>
@@ -812,7 +841,7 @@ function emailHtml(rec) {
 }
 function emailText(rec) {
   const r = rec.report || {};
-  let s = `TEVI AGENT — lead ${rec.status}\nSesión ${rec.id} · ${rec.fecha} ${rec.hora} · idioma ${rec.lang}${rec.geoCountry ? " · IP " + countryName(rec.geoCountry) : ""}${rec.score ? " · temperatura " + rec.score + "/100" : ""}\n\nINFORME COMERCIAL:\n`;
+  let s = `TEVI AGENT — lead ${rec.status}\nSesión ${rec.id} · ${rec.fecha} ${rec.hora} · idioma ${rec.lang}${rec.geoCountry ? " · IP " + countryName(rec.geoCountry) : ""}${rec.score || rec.scoreMax ? " · temperatura " + (rec.score || 0) + "/100" + ((rec.scoreMax || 0) > (rec.score || 0) ? " (máx " + rec.scoreMax + ")" : "") : ""}\n\nINFORME COMERCIAL:\n`;
   for (const k in REPORT_LABELS) if (r[k]) s += `- ${REPORT_LABELS[k]}: ${r[k]}\n`;
   if (r.raw) s += r.raw + "\n";
   s += `\nCONVERSACIÓN COMPLETA:\n` + rec.transcript.map((m) => (m.role === "user" ? "Cliente: " : "Agente: ") + m.content).join("\n");
@@ -821,10 +850,13 @@ function emailText(rec) {
 // Manda el email. Usa Resend si hay RESEND_API_KEY; si no, FormSubmit (sin clave,
 // requiere una activación única del correo). El fallo de email nunca rompe nada.
 async function sendLeadEmail(env, rec) {
-  if (rec.emailed) return;
+  // Si tras el primer envío hubo turnos nuevos (la persona siguió conversando),
+  // se reenvía la versión ampliada; si no, una sola vez por sesión.
+  if (rec.emailed && rec.turns <= (rec.emailedTurns || 0)) return;
+  const actualizado = !!rec.emailed;
   const to = env.LEAD_EMAIL || LEAD_TO_DEFAULT;
   const empresa = (rec.report && rec.report.empresa) || rec.datos.empresa || "lead";
-  const subject = `Tevi Agent · ${rec.status} · ${empresa} · ${rec.fecha}`;
+  const subject = `Tevi Agent · ${rec.status} · ${empresa} · ${rec.fecha}` + (actualizado ? " · actualizado" : "");
   try {
     if (env.RESEND_API_KEY) {
       const r = await fetch("https://api.resend.com/emails", {
@@ -832,7 +864,7 @@ async function sendLeadEmail(env, rec) {
         headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ from: env.RESEND_FROM || "Tevi Agent <onboarding@resend.dev>", to: [to], subject, html: emailHtml(rec), text: emailText(rec) }),
       });
-      if (r.ok) rec.emailed = true;
+      if (r.ok) { rec.emailed = true; rec.emailedTurns = rec.turns; }
       else console.error("lead email (resend) failed", r.status, await r.text().catch(() => "")); // visible en `wrangler tail`
     } else {
       const r = await fetch("https://formsubmit.co/ajax/" + encodeURIComponent(to), {
@@ -842,7 +874,7 @@ async function sendLeadEmail(env, rec) {
       });
       // FormSubmit responde 200 aunque el buzón no esté activado: hay que mirar el flag success.
       const j = await r.json().catch(() => ({}));
-      if (r.ok && (j.success === true || j.success === "true")) rec.emailed = true;
+      if (r.ok && (j.success === true || j.success === "true")) { rec.emailed = true; rec.emailedTurns = rec.turns; }
       else console.error("lead email (formsubmit) not delivered", r.status, JSON.stringify(j).slice(0, 200));
     }
   } catch (e) { console.error("lead email error", String(e).slice(0, 200)); /* el email nunca rompe la conversación */ }
@@ -853,9 +885,16 @@ async function sendLeadEmail(env, rec) {
 // real. Lo redacta el modelo en el idioma de la persona; la firma la pone la plantilla.
 const LANG_NAMES = { es: "español", en: "inglés", pt: "portugués de Brasil", it: "italiano", fr: "francés", de: "alemán" };
 async function sendFollowUpEmail(env, rec) {
-  if (rec.followedUp) return;
+  // Una vez por sesión, con UNA excepción: si tras el envío se agenda una reunión,
+  // se manda un segundo email de confirmación (si no, el único que tendría la
+  // persona diría «sin reunión» para siempre).
+  const citaSent = !!(rec.cita && rec.cita.sent);
+  if (rec.followedUp && (rec.followedUpCita || !citaSent)) return;
   const email = (rec.datos.email || "").trim();
   if (!email || !EMAIL_RE.test(email) || !env.RESEND_API_KEY) return;
+  // Nunca a buzones propios de TeGeVe (el agente los menciona en conversación y
+  // la captura heurística podría confundirlos con el email de la persona).
+  if (/@(tegeve\.es|tegevem\.es|tgv\.com\.ar|tgv-group\.com|tgvamericas\.net)$/i.test(email)) return;
   if (rec.transcript.filter((m) => m.role === "user").length < 2) return;
   const idioma = LANG_NAMES[rec.lang] || "español";
   const full = rec.transcript.map((m) => (m.role === "user" ? "Cliente: " : "Agente: ") + m.content).join("\n");
@@ -872,8 +911,10 @@ async function sendFollowUpEmail(env, rec) {
   } catch (e) { console.error("follow-up gen", String(e).slice(0, 160)); }
   if (!mail || !mail.asunto || !mail.cuerpo) return;
   const cuerpo = String(mail.cuerpo).trim();
+  // Solo se hacen clicables los enlaces de dominios propios (tegevem.es/tegeve.es/wa.me):
+  // cualquier otra URL que cuele el modelo (o induzca la persona) queda como texto plano.
   const bodyHtml = ESC(cuerpo)
-    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#E4010A">$1</a>')
+    .replace(/(https?:\/\/(?:www\.)?(?:tegevem\.es|tegeve\.es|wa\.me)(?:\/[^\s<]*)?)/g, '<a href="$1" style="color:#E4010A">$1</a>')
     .replace(/\n/g, "<br>");
   const firma = { es: "Director de TeGeVe", en: "Director, TeGeVe", pt: "Diretor da TeGeVe", it: "Direttore di TeGeVe", fr: "Directeur de TeGeVe", de: "Direktor von TeGeVe" };
   const html = '<div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:640px;line-height:1.55;font-size:15px">'
@@ -890,7 +931,7 @@ async function sendFollowUpEmail(env, rec) {
         subject: String(mail.asunto).slice(0, 150), html, text,
       }),
     });
-    if (r.ok) rec.followedUp = true;
+    if (r.ok) { rec.followedUp = true; rec.followedUpCita = citaSent; }
     else console.error("follow-up email failed", r.status, await r.text().catch(() => ""));
   } catch (e) { console.error("follow-up email", String(e).slice(0, 160)); }
 }
@@ -1003,8 +1044,10 @@ async function sendCita(env, rec, cita) {
 // Email inmediato a Gabriel vía Resend y, si está configurado el secreto
 // TEAMS_WEBHOOK_URL (Workflows de Teams), tarjeta en el canal. Una vez por sesión.
 async function sendHotAlert(env, rec) {
-  if (rec.alerted) return;
+  const hasContact = !!(rec.datos.email || rec.datos.telefono);
+  if (rec.alerted && (rec.alertedContact || !hasContact)) return;
   rec.alerted = true;
+  rec.alertedContact = hasContact;
   const motivo = rec.cita && rec.cita.sent ? "reunión agendada"
     : (rec.datos.email || rec.datos.telefono || rec.datos.nombre) ? "datos de contacto captados"
     : "temperatura alta (" + (rec.score || 0) + "/100)";
@@ -1076,13 +1119,18 @@ async function handleAgentLeads(request, env) {
   if (!env.TEVI_AGENT_KV) return json({ error: "KV no configurado." }, 200, {});
   const id = url.searchParams.get("id");
   if (id) return json((await loadLead(env, id)) || { error: "no encontrado" }, 200, {});
+  // Mismo tope que el panel: máx. 40 lecturas (límite de subpeticiones del plan
+  // gratuito), eligiendo las sesiones más recientes por los metadatos del listado.
   const list = await env.TEVI_AGENT_KV.list({ prefix: "lead:" });
+  const keys = list.keys
+    .sort((a, b) => (((b.metadata || {}).u) || 0) - (((a.metadata || {}).u) || 0))
+    .slice(0, 40);
   const rows = [];
-  for (const k of list.keys) {
-    const r = await env.TEVI_AGENT_KV.get(k.name, "json");
-    if (r) rows.push({ id: r.id, fecha: r.fecha, hora: r.hora, status: r.status, score: r.score || 0, geo: r.geoCountry || "", emailed: !!r.emailed, followedUp: !!r.followedUp, turns: r.turns, datos: r.datos, proximoPaso: r.report && r.report.proximoPaso });
+  for (const k of keys) {
+    const r = await env.TEVI_AGENT_KV.get(k.name, "json").catch(() => null);
+    if (r) rows.push({ id: r.id, fecha: r.fecha, hora: r.hora, status: r.status, score: r.score || 0, scoreMax: r.scoreMax || 0, geo: r.geoCountry || "", emailed: !!r.emailed, followedUp: !!r.followedUp, turns: r.turns, datos: r.datos, proximoPaso: r.report && r.report.proximoPaso });
   }
-  return json({ total: rows.length, leads: rows }, 200, {});
+  return json({ total: list.keys.length, mostrados: rows.length, leads: rows }, 200, {});
 }
 
 // Voz premium (ElevenLabs) para la lectura en voz alta del panel. Si no está el
@@ -1093,11 +1141,26 @@ async function handleAgentTts(request, env) {
   const h = corsHeaders(origin);
   if (request.method === "OPTIONS") return new Response(null, { headers: h });
   if (request.method !== "POST") return json({ error: "Use POST." }, 405, h);
+  // Origen del navegador: si viene con Origin y no es de los nuestros, fuera
+  // (contra scripts sin navegador no basta; por eso además va atado a sesión).
+  if (origin && !isAllowedOrigin(origin)) return new Response("Forbidden", { status: 403, headers: h });
   if (!env.ELEVENLABS_API_KEY) return new Response(null, { status: 204, headers: h });
   let body;
   try { body = await request.json(); } catch { return json({ error: "Invalid JSON." }, 400, h); }
   const text = String(body.text || "").trim().slice(0, 500); // tope de coste por lectura
   if (!text) return new Response(null, { status: 204, headers: h });
+  // Atado a una conversación real: exige un sessionId con sesión existente en KV
+  // y aplica un presupuesto diario de caracteres por sesión (contra el abuso de
+  // coste: sin esto sería un text-to-speech gratuito con nuestra cuota).
+  const sessionId = String(body.sessionId || "").trim().slice(0, 80);
+  if (!sessionId) return new Response(null, { status: 204, headers: h });
+  const rec = await loadLead(env, sessionId);
+  if (!rec || !(rec.transcript || []).length) return new Response(null, { status: 204, headers: h });
+  const day = new Date().toISOString().slice(0, 10);
+  if (rec.ttsDay !== day) { rec.ttsDay = day; rec.ttsChars = 0; }
+  if ((rec.ttsChars || 0) + text.length > 8000) return new Response(null, { status: 204, headers: h });
+  rec.ttsChars = (rec.ttsChars || 0) + text.length;
+  await saveLead(env, sessionId, rec);
   const voice = env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // voz prehecha (Rachel), multilingüe con flash
   try {
     const r = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + voice + "?output_format=mp3_44100_64", {
@@ -1170,7 +1233,7 @@ async function handleAgentPanel(request, env) {
       + "</div>";
   }).join("");
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><meta http-equiv="refresh" content="30"><title>Tevi Agent — Leads</title>
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta http-equiv="refresh" content="30"><title>Tevi Agent — Leads</title>
 <style>
 body{margin:0;background:#f4f1ea;color:#111114;font:15px/1.5 -apple-system,"Segoe UI",Arial,sans-serif;padding:28px 16px 60px}
 .wrap{max-width:880px;margin:0 auto}
