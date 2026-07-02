@@ -562,20 +562,22 @@ async function handleTeviAgent(request, env) {
     let reply = await callAnthropic(env, system, buildWindow(rec), 1024) ||
       (lang === "es" ? "Perdona, ¿me lo cuentas con otras palabras?" : "Sorry, could you put that another way?");
 
-    // Respuestas rápidas (chips): el modelo las pone en una última línea «[[opc]] a | b | c».
+    // Respuestas rápidas (chips): línea «[[opc]] a | b | c» — puede aparecer en
+    // cualquier posición del mensaje (el modelo no siempre la deja al final).
     let chips = [];
-    const om = reply.match(/\n*\[\[opc\]\]\s*([^\n]+?)\s*$/i);
+    const om = reply.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
     if (om) {
       chips = om[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5);
-      reply = reply.slice(0, om.index).trim();
+      reply = reply.replace(om[0], "");
     }
 
-    // Cita/reunión: el modelo la pone en una última línea «[[cita]] nombre=..; email=..; fecha=..; hora=..».
-    const cm = reply.match(/\n*\[\[cita\]\]\s*([^\n]+?)\s*$/i);
+    // Cita/reunión: línea «[[cita]] nombre=..; email=..; dia=..; hora=..» — ídem,
+    // se procesa y se elimina esté donde esté.
+    const cm = reply.match(/^[ \t]*\[\[cita\]\][ \t]*(.+?)[ \t]*$/im);
     if (cm) {
       const f = {};
       cm[1].split(";").forEach((p) => { const i = p.indexOf("="); if (i > 0) f[p.slice(0, i).trim().toLowerCase()] = p.slice(i + 1).trim(); });
-      reply = reply.slice(0, cm.index).trim();
+      reply = reply.replace(cm[0], "");
       if (f.email) {
         rec.datos.email = rec.datos.email || f.email;
         if (f.nombre) rec.datos.nombre = rec.datos.nombre || f.nombre;
@@ -583,6 +585,8 @@ async function handleTeviAgent(request, env) {
       }
       await sendCita(env, rec, { nombre: f.nombre, email: f.email, dia: f.dia, fecha: f.fecha, hora: f.hora });
     }
+    // Red de seguridad: si quedara algún marcador suelto, nunca debe verlo la persona.
+    reply = reply.replace(/^[ \t]*\[\[(?:opc|cita)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
 
     rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
     rec.turns = rec.transcript.filter((m) => m.role === "user").length;
