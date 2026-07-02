@@ -30,9 +30,27 @@
     + "#taPanel .ta-mic{flex:0 0 auto;width:42px;border:1px solid var(--line,#dcd8cf);background:#fff;color:#5f5b53;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:0}"
     + "#taPanel .ta-mic.on{background:var(--red,#E4010A);border-color:var(--red,#E4010A);color:#fff;animation:taPulse 1.1s infinite}"
     + "@keyframes taPulse{0%,100%{opacity:1}50%{opacity:.6}}"
-    // Lectura en voz alta (altavoz) en la cabecera.
-    + "#taPanel .ta-tts{margin-left:auto;background:none;border:0;color:#fff;opacity:.55;cursor:pointer;padding:4px 6px;display:flex;align-items:center}"
-    + "#taPanel .ta-tts.on{opacity:1;color:#86efac}"
+    // Ventana flotante: la cabecera arrastra el panel (doble clic = volver a su sitio).
+    + "#taPanel .ai-head{cursor:grab;user-select:none;-webkit-user-select:none}"
+    + "#taPanel.ta-dragging .ai-head{cursor:grabbing}"
+    // Modo voz: avatar conversacional que cubre el cuerpo del panel.
+    + "#taPanel .ta-voice{position:absolute;left:0;right:0;bottom:0;background:var(--paper,#FBFAF7);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:7;text-align:center;padding:24px;animation:taWel .3s ease}"
+    + "#taPanel .ta-v-av{width:96px;height:96px;border-radius:50%;background:var(--red,#E4010A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .16s ease-out}"
+    + "#taPanel .ta-v-av:active{transform:scale(.95)}"
+    + "#taPanel .ta-v-av svg{width:42px;height:42px}"
+    + "#taPanel .ta-v-av::before,#taPanel .ta-v-av::after{content:'';position:absolute;inset:-9px;border-radius:50%;border:2px solid var(--red,#E4010A);opacity:0;pointer-events:none}"
+    + "#taPanel .ta-voice.listen .ta-v-av::before{animation:taRing 1.6s ease-out infinite}"
+    + "#taPanel .ta-voice.speak .ta-v-av::before{animation:taRing 1.1s ease-out infinite}"
+    + "#taPanel .ta-voice.speak .ta-v-av::after{animation:taRing 1.1s ease-out .55s infinite}"
+    + "#taPanel .ta-voice.think .ta-v-av{animation:taThink 1.2s ease-in-out infinite}"
+    + "@keyframes taRing{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.5);opacity:0}}"
+    + "@keyframes taThink{50%{opacity:.55}}"
+    + "#taPanel .ta-v-status{font-weight:600;font-size:.95rem;color:var(--ink,#111114)}"
+    + "#taPanel .ta-v-tx{font-size:.88rem;color:#5f5b53;min-height:2.6em;max-width:92%;line-height:1.4}"
+    + "#taPanel .ta-v-hint{font-size:.74rem;color:#8a857b}"
+    + "#taPanel .ta-v-exit{border:1px solid var(--line,#dcd8cf);background:#fff;color:#5f5b53;padding:7px 14px;cursor:pointer;font-size:.8rem}"
+    + "#taPanel .ta-v-exit:hover{border-color:var(--red,#E4010A);color:var(--red,#E4010A)}"
+    + "@media(prefers-reduced-motion:reduce){#taPanel .ta-voice.listen .ta-v-av::before,#taPanel .ta-voice.speak .ta-v-av::before,#taPanel .ta-voice.speak .ta-v-av::after,#taPanel .ta-voice.think .ta-v-av{animation:none;opacity:1}}"
     // Enlace de WhatsApp en la línea de aviso.
     + "#taPanel .ai-disc a{color:inherit;text-decoration:underline;font-weight:600}"
     // Entrada «genio de la lámpara»: el panel surge desde su esquina (transform-origin
@@ -141,11 +159,9 @@
   panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true");
   panel.setAttribute("aria-label", "Tevi Agent");
   var MIC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>';
-  var SPK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   panel.innerHTML =
     '<div class="ai-head"><div class="av">' + AV + '</div>'
     + '<div><h4 class="ta-title"></h4><div class="st ta-sub"></div></div>'
-    + '<button class="ta-tts" id="taTts" type="button" aria-label="Leer las respuestas en voz alta">' + SPK + '</button>'
     + '<button class="ai-close" id="taClose" type="button" aria-label="Cerrar">&times;</button></div>'
     + '<div class="ai-body" id="taBody"></div>'
     + '<div class="ai-disc ta-disc"></div>'
@@ -476,6 +492,7 @@
     setTimeout(function () { elIn.focus(); }, 250);
   }
   function close() {
+    stopVoice(); // si estaba en modo voz, se apagan micro y locución
     panel.classList.remove("open");
     var fab = document.getElementById("aiFab"); if (fab && !teviOpen()) fab.classList.remove("is-hidden");
     endSession();
@@ -496,6 +513,39 @@
     if (ref.classList.contains("nav-ai")) ref.parentNode.insertBefore(b, ref.nextSibling);
     else ref.parentNode.insertBefore(b, ref);
   }
+
+  // ── VENTANA FLOTANTE: la cabecera arrastra el panel como una ventana de Mac
+  //    (para apartarlo si tapa algo del sitio); doble clic = volver a su esquina.
+  //    Solo escritorio; siempre queda un borde visible para poder recuperarla. ──
+  (function () {
+    var head = panel.querySelector(".ai-head");
+    if (!head || !("PointerEvent" in window)) return;
+    var drag = null;
+    head.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0) return;
+      if (e.target.closest && e.target.closest("button")) return; // los botones no arrastran
+      if (window.innerWidth < 720) return;                         // en móvil no aplica
+      var r = panel.getBoundingClientRect();
+      drag = { id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top };
+      panel.style.left = r.left + "px"; panel.style.top = r.top + "px";
+      panel.style.right = "auto"; panel.style.bottom = "auto";
+      panel.classList.add("ta-dragging");
+      try { head.setPointerCapture(e.pointerId); } catch (err) {}
+      e.preventDefault();
+    });
+    head.addEventListener("pointermove", function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var x = Math.max(60 - panel.offsetWidth, Math.min(e.clientX - drag.dx, window.innerWidth - 60));
+      var y = Math.max(0, Math.min(e.clientY - drag.dy, window.innerHeight - 48));
+      panel.style.left = x + "px"; panel.style.top = y + "px";
+    });
+    function endDrag(e) { if (drag && e.pointerId === drag.id) { drag = null; panel.classList.remove("ta-dragging"); } }
+    head.addEventListener("pointerup", endDrag);
+    head.addEventListener("pointercancel", endDrag);
+    head.addEventListener("dblclick", function () { // doble clic: a su esquina de siempre
+      panel.style.left = panel.style.top = panel.style.right = panel.style.bottom = "";
+    });
+  })();
 
   // ── Eventos ──
   panel.querySelector("#taClose").addEventListener("click", close);
@@ -542,75 +592,143 @@
     });
   }
 
-  // ── VOZ: dictado con el micrófono (SpeechRecognition) y lectura en voz alta ──
+  // ── MODO VOZ: pulsar el micrófono abre una conversación continua con avatar
+  //    (escucha → piensa → habla → vuelve a escuchar). Tocar el avatar interrumpe
+  //    al agente o pausa/reanuda la escucha; «Volver al chat» sale del modo voz. ──
   var VLANG = { es: "es-ES", en: "en-US", pt: "pt-BR", it: "it-IT", fr: "fr-FR", de: "de-DE" };
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var micBtn = panel.querySelector("#taMic"), srec = null, micOn = false;
+  var micBtn = panel.querySelector("#taMic");
   if (!SR && micBtn) micBtn.style.display = "none"; // sin soporte (Firefox): se oculta
-  function micStop() { micOn = false; if (micBtn) micBtn.classList.remove("on"); try { if (srec) srec.stop(); } catch (e) {} srec = null; }
-  if (SR && micBtn) micBtn.addEventListener("click", function () {
-    if (micOn) { micStop(); return; }
-    srec = new SR();
-    srec.lang = VLANG[lang()] || "es-ES";
-    srec.interimResults = true;
-    micOn = true; micBtn.classList.add("on");
+  var VT = {
+    es: { listen: "Te escucho…", think: "Pensando…", speak: "Hablando", pause: "En pausa", hint: "Toca el avatar para interrumpir, pausar o reanudar", exit: "Volver al chat", denied: "No tengo permiso para usar el micrófono. Actívalo en el navegador y vuelve a intentarlo." },
+    en: { listen: "I'm listening…", think: "Thinking…", speak: "Speaking", pause: "Paused", hint: "Tap the avatar to interrupt, pause or resume", exit: "Back to chat", denied: "I don't have microphone permission. Enable it in your browser and try again." },
+    pt: { listen: "Estou ouvindo…", think: "Pensando…", speak: "Falando", pause: "Em pausa", hint: "Toque no avatar para interromper, pausar ou retomar", exit: "Voltar ao chat", denied: "Não tenho permissão para usar o microfone. Ative no navegador e tente de novo." },
+    it: { listen: "Ti ascolto…", think: "Sto pensando…", speak: "Parlo", pause: "In pausa", hint: "Tocca l'avatar per interrompere, mettere in pausa o riprendere", exit: "Torna alla chat", denied: "Non ho il permesso di usare il microfono. Attivalo nel browser e riprova." },
+    fr: { listen: "Je vous écoute…", think: "Je réfléchis…", speak: "Je parle", pause: "En pause", hint: "Touchez l'avatar pour interrompre, mettre en pause ou reprendre", exit: "Retour au chat", denied: "Je n'ai pas la permission d'utiliser le micro. Activez-la dans le navigateur et réessayez." },
+    de: { listen: "Ich höre zu…", think: "Ich denke nach…", speak: "Ich spreche", pause: "Pausiert", hint: "Tippen Sie auf den Avatar zum Unterbrechen, Pausieren oder Fortsetzen", exit: "Zurück zum Chat", denied: "Ich habe keine Mikrofon-Berechtigung. Bitte im Browser aktivieren und erneut versuchen." },
+  };
+  function vt() { return VT[lang()] || VT.es; }
+  var voiceOn = false, vBox = null, vrec = null, vPaused = false;
+  function vSet(state, status, tx) {
+    if (!vBox) return;
+    vBox.classList.remove("listen", "think", "speak");
+    if (state) vBox.classList.add(state);
+    if (status != null) vBox.querySelector(".ta-v-status").textContent = status;
+    if (tx != null) vBox.querySelector(".ta-v-tx").textContent = tx;
+  }
+  function vrecStop() { try { if (vrec) { vrec.onend = null; vrec.stop(); } } catch (e) {} vrec = null; }
+  function vListen() {
+    if (!voiceOn || vPaused || vrec) return;
+    if (idleTimer) scheduleIdleEnd();            // conversar por voz también es actividad
+    vSet("listen", vt().listen, "");
+    var rec2 = new SR();
+    vrec = rec2;
+    rec2.lang = VLANG[lang()] || "es-ES";
+    rec2.interimResults = true;
     var finalTxt = "";
-    srec.onresult = function (e) {
+    rec2.onresult = function (e) {
       var s = "";
       for (var i = 0; i < e.results.length; i++) s += e.results[i][0].transcript;
-      elIn.value = s; // transcripción en vivo en el input
+      vSet("listen", vt().listen, s);
       if (e.results[e.results.length - 1].isFinal) finalTxt = s;
     };
-    srec.onend = function () { micStop(); var q = (finalTxt || elIn.value).trim(); elIn.value = ""; if (q) send(q); };
-    srec.onerror = function () { micStop(); };
-    try { srec.start(); } catch (e) { micStop(); }
-  });
-  var ttsOn = false, ttsBtn = panel.querySelector("#taTts");
+    rec2.onend = function () {
+      if (vrec === rec2) vrec = null;
+      if (!voiceOn || vPaused) return;
+      var q = finalTxt.trim();
+      if (q) { vSet("think", vt().think, "«" + q + "»"); send(q); }
+      else vListen();                            // silencio: seguimos escuchando
+    };
+    rec2.onerror = function (e) {
+      if (e && (e.error === "not-allowed" || e.error === "service-not-allowed")) {
+        vPaused = true;
+        vSet("", vt().denied, "");
+      }
+    };
+    try { rec2.start(); } catch (e) { /* arranque doble: lo reintenta el bucle */ }
+  }
+  function vTap() { // tocar el avatar: interrumpe al agente, o pausa/reanuda la escucha
+    if (!voiceOn) return;
+    if (curAudio || ("speechSynthesis" in window && speechSynthesis.speaking)) {
+      speakGen++; ttsStop(); vPaused = false; vListen(); return;
+    }
+    if (vrec) { vPaused = true; vrecStop(); vSet("", vt().pause, ""); }
+    else { vPaused = false; vListen(); }
+  }
+  function stopVoice() {
+    if (!voiceOn) return;
+    voiceOn = false; vPaused = false;
+    speakGen++; ttsStop(); vrecStop();
+    if (vBox) { vBox.remove(); vBox = null; }
+    if (micBtn) micBtn.classList.remove("on");
+  }
+  function startVoice() {
+    if (!SR || voiceOn) return;
+    voiceOn = true; vPaused = false;
+    if (!started) { started = true; replay(); }
+    var head = panel.querySelector(".ai-head");
+    vBox = document.createElement("div");
+    vBox.className = "ta-voice";
+    vBox.style.top = ((head && head.offsetHeight) || 56) + "px";
+    vBox.innerHTML = '<div class="ta-v-av">' + AV + '</div><div class="ta-v-status"></div><div class="ta-v-tx"></div><div class="ta-v-hint"></div><button type="button" class="ta-v-exit"></button>';
+    vBox.querySelector(".ta-v-hint").textContent = vt().hint;
+    vBox.querySelector(".ta-v-exit").textContent = vt().exit;
+    vBox.querySelector(".ta-v-av").addEventListener("click", vTap);
+    vBox.querySelector(".ta-v-exit").addEventListener("click", stopVoice);
+    panel.appendChild(vBox);
+    if (micBtn) micBtn.classList.add("on");
+    vListen();
+  }
+  if (SR && micBtn) micBtn.addEventListener("click", function () { if (voiceOn) stopVoice(); else startVoice(); });
+
+  // ── VOZ DEL AGENTE (solo en modo voz): premium (ElevenLabs vía /tts) si el
+  //    servidor la tiene; si no o si falla, la del navegador. Nunca lee URLs. ──
   var ttsPremium = true, curAudio = null; // premium hasta que el servidor diga que no (204)
-  if (!("speechSynthesis" in window) && ttsBtn) ttsBtn.style.display = "none";
   function ttsStop() {
     try { speechSynthesis.cancel(); } catch (e) {}
     if (curAudio) { try { curAudio.pause(); } catch (e) {} curAudio = null; }
   }
-  if (ttsBtn) ttsBtn.addEventListener("click", function () {
-    ttsOn = !ttsOn; ttsBtn.classList.toggle("on", ttsOn);
-    if (!ttsOn) ttsStop();
-  });
-  function speakLocal(clean) {
-    if (!("speechSynthesis" in window)) return;
+  var speakGen = 0; // token de generación: una lectura nueva invalida las pendientes
+  function speakEnd(gen) {
+    if (gen !== speakGen) return;
+    curAudio = null;
+    if (voiceOn) { vPaused = false; vListen(); }   // fin de la locución: vuelve a escuchar
+  }
+  function speakLocal(clean, gen) {
+    if (!("speechSynthesis" in window)) { speakEnd(gen); return; }
     try {
       speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(clean);
       u.lang = VLANG[lang()] || "es-ES";
+      u.onend = u.onerror = function () { speakEnd(gen); };
       speechSynthesis.speak(u);
-    } catch (e) {}
+    } catch (e) { speakEnd(gen); }
   }
-  // Lectura en voz alta: voz premium (ElevenLabs vía /tts del worker) si el
-  // servidor la tiene configurada; si no o si falla, la voz del navegador.
-  // No leemos URLs ni rutas (suenan fatal).
-  var speakGen = 0; // token de generación: una lectura nueva invalida las pendientes
   function speak(text) {
-    if (!ttsOn) return;
+    if (!voiceOn) return;
     var clean = String(text).replace(/https?:\/\/\S+/g, "").replace(/\/[a-z0-9\/_#-]{4,}/g, "").trim();
-    if (!clean) return;
-    if (!ttsPremium) { speakLocal(clean); return; }
-    ttsStop();
     var gen = ++speakGen;
-    var ok = function () { return ttsOn && gen === speakGen; }; // ni apagado ni superado por otra lectura
+    if (!clean) { speakEnd(gen); return; }
+    vSet("speak", vt().speak, clean.slice(0, 150) + (clean.length > 150 ? "…" : ""));
+    if (!ttsPremium) { speakLocal(clean, gen); return; }
+    ttsStop();
     fetch(EP + "/tts", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: clean.slice(0, 480), lang: lang(), sessionId: state.id }),
     })
       .then(function (r) {
-        if (r.status === 204) { ttsPremium = false; if (ok()) speakLocal(clean); return; } // sin voz premium en el servidor
-        if (!r.ok) { if (ok()) speakLocal(clean); return; } // fallo puntual: no degrada para siempre
+        if (gen !== speakGen) return;
+        if (r.status === 204) { ttsPremium = false; speakLocal(clean, gen); return; } // sin voz premium en el servidor
+        if (!r.ok) { speakLocal(clean, gen); return; } // fallo puntual: no degrada para siempre
         return r.blob().then(function (b) {
-          if (!ok()) return;
+          if (gen !== speakGen) return;
           curAudio = new Audio(URL.createObjectURL(b));
-          curAudio.play().catch(function () { if (ok()) speakLocal(clean); });
+          curAudio.onended = function () { speakEnd(gen); };
+          curAudio.onerror = function () { speakLocal(clean, gen); };
+          curAudio.play().catch(function () { speakLocal(clean, gen); });
         });
       })
-      .catch(function () { if (ok()) speakLocal(clean); });
+      .catch(function () { if (gen === speakGen) speakLocal(clean, gen); });
   }
 
   // ── TOUR GUIADO: recorrido demo por las secciones clave (multi-página) ──
