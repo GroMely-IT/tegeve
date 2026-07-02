@@ -714,32 +714,31 @@ aiInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = aiI
   var saved=null; try{ saved=localStorage.getItem('tgvLang'); }catch(e){}
   var autoFlag=null; try{ autoFlag=localStorage.getItem('tgvLangAuto'); }catch(e){}
   var qp=null; try{ qp=new URLSearchParams(location.search).get('lang'); }catch(e){}
+  // ?lang=auto → olvida cualquier elección previa y vuelve a detectar por IP
+  // (útil para demos con VPN y para resetear el idioma).
+  if(qp==='auto'){
+    saved=null; autoFlag=null; qp=null;
+    try{ localStorage.removeItem('tgvLang'); localStorage.removeItem('tgvLangAuto'); sessionStorage.removeItem('tgvGeoLang'); }catch(e){}
+  }
   var init = (LANGS6.indexOf(qp)>=0) ? qp : (saved||'es');
   applyLang(init);
   if(LANGS6.indexOf(qp)>=0){ try{ localStorage.setItem('tgvLangAuto','0'); }catch(e){} } // ?lang= cuenta como elección explícita
   window.tgvSetLang = applyLang;
-  /* Idioma por país (IP, vía Cloudflare): SOLO en la primera visita (o si el
-     idioma vigente lo puso esta misma detección) se ajusta al idioma del país;
-     países sin idioma propio en el sitio → inglés (lo decide /api/geo).
-     La elección manual del selector (tgvLangAuto='0') gana siempre. */
+  /* Idioma por país (IP, vía Cloudflare): mientras NO haya una elección manual
+     (tgvLangAuto '0'), en cada carga se consulta /api/geo y se ajusta el idioma
+     al del país; países sin idioma propio en el sitio → inglés. SIN caché: si
+     la persona cambia de red/VPN, la siguiente carga ya re-detecta. La elección
+     manual del selector gana siempre. */
   if(LANGS6.indexOf(qp)<0 && (!saved || autoFlag==='1')){
-    var applyGeo=function(lg){
-      if(LANGS6.indexOf(lg)<0) lg='en';
-      try{ localStorage.setItem('tgvLangAuto','1'); }catch(e){}
-      if(lg!==window.__lang) applyLang(lg);
-    };
-    var cached=null; try{ cached=sessionStorage.getItem('tgvGeoLang'); }catch(e){}
-    if(cached){ applyGeo(cached); }
-    else{
-      var GEO_EP=(/github\.io$/.test(location.hostname)?'https://tegeve.gabrielgrosso.workers.dev':'')+'/api/geo';
-      try{
-        fetch(GEO_EP).then(function(r){ return r.json(); }).then(function(d){
-          var lg=(d&&d.lang)||'en';
-          try{ sessionStorage.setItem('tgvGeoLang', lg); }catch(e){}
-          applyGeo(lg);
-        }).catch(function(){});
-      }catch(e){}
-    }
+    var GEO_EP=(/github\.io$/.test(location.hostname)?'https://tegeve.gabrielgrosso.workers.dev':'')+'/api/geo';
+    try{
+      fetch(GEO_EP).then(function(r){ return r.json(); }).then(function(d){
+        var lg=(d&&d.lang)||'en';
+        if(LANGS6.indexOf(lg)<0) lg='en';
+        try{ localStorage.setItem('tgvLangAuto','1'); }catch(e){}
+        if(lg!==window.__lang) applyLang(lg);
+      }).catch(function(){});
+    }catch(e){}
   }
 })();
 
