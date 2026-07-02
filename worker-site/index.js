@@ -483,7 +483,11 @@ async function loadLead(env, id) {
 }
 async function saveLead(env, id, rec) {
   if (!env.TEVI_AGENT_KV) return;
-  try { await env.TEVI_AGENT_KV.put(leadKey(id), JSON.stringify(rec)); } catch { /* no romper la conversación */ }
+  try {
+    // Metadatos: el listado de KV los devuelve sin gastar un «get» por clave
+    // (el panel ordena por recencia con ellos y solo lee los más recientes).
+    await env.TEVI_AGENT_KV.put(leadKey(id), JSON.stringify(rec), { metadata: { u: rec.updatedAt || 0 } });
+  } catch { /* no romper la conversación */ }
 }
 function newLead(id, lang, now) {
   return {
@@ -1119,8 +1123,13 @@ async function handleAgentPanel(request, env) {
   const key = url.searchParams.get("key") || "";
   if (!env.AGENT_ADMIN_KEY || key !== env.AGENT_ADMIN_KEY) return new Response("Not found", { status: 404 });
   if (!env.TEVI_AGENT_KV) return new Response("KV no configurado", { status: 200 });
+  // Se leen como mucho las ~40 sesiones más recientes (límite de subpeticiones
+  // del plan gratuito); la recencia sale de los metadatos del listado, gratis.
   const list = await env.TEVI_AGENT_KV.list({ prefix: "lead:" });
-  const recs = (await Promise.all(list.keys.slice(0, 300).map((k) => env.TEVI_AGENT_KV.get(k.name, "json").catch(() => null)))).filter(Boolean);
+  const keys = list.keys
+    .sort((a, b) => (((b.metadata || {}).u) || 0) - (((a.metadata || {}).u) || 0))
+    .slice(0, 40);
+  const recs = (await Promise.all(keys.map((k) => env.TEVI_AGENT_KV.get(k.name, "json").catch(() => null)))).filter(Boolean);
   recs.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   const now = Date.now();
   const fmt = (ts) => { try { return new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(ts)); } catch (e) { return ""; } };
