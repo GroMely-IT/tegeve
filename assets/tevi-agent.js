@@ -22,7 +22,19 @@
     + ".ta-welcome h3{margin:0 0 6px;font:600 1.14rem/1.3 inherit;color:var(--ink,#111114)}"
     + ".ta-welcome p{margin:0;font-size:.92rem;color:#5f5b53;line-height:1.5}"
     + ".ta-welcome + .chips{justify-content:center;margin-top:16px}"
-    + "@media(prefers-reduced-motion:reduce){.ta-welcome{animation:none}}";
+    + "@media(prefers-reduced-motion:reduce){.ta-welcome{animation:none}}"
+    // Spotlight de co-navegación: el agente lleva a una sección y la enfoca.
+    + ".tgv-spot{position:relative!important;z-index:6!important;outline:3px solid var(--red,#E4010A);outline-offset:8px;"
+    + "box-shadow:0 0 0 100vmax rgba(17,17,20,.38);border-radius:2px;transition:box-shadow .35s ease}"
+    // Micrófono (dictado por voz) en el pie del chat.
+    + "#taPanel .ta-mic{flex:0 0 auto;width:42px;border:1px solid var(--line,#dcd8cf);background:#fff;color:#5f5b53;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:0}"
+    + "#taPanel .ta-mic.on{background:var(--red,#E4010A);border-color:var(--red,#E4010A);color:#fff;animation:taPulse 1.1s infinite}"
+    + "@keyframes taPulse{0%,100%{opacity:1}50%{opacity:.6}}"
+    // Lectura en voz alta (altavoz) en la cabecera.
+    + "#taPanel .ta-tts{margin-left:auto;background:none;border:0;color:#fff;opacity:.55;cursor:pointer;padding:4px 6px;display:flex;align-items:center}"
+    + "#taPanel .ta-tts.on{opacity:1;color:#86efac}"
+    // Enlace de WhatsApp en la línea de aviso.
+    + "#taPanel .ai-disc a{color:inherit;text-decoration:underline;font-weight:600}";
   var stEl = document.createElement("style"); stEl.textContent = STYLE; document.head.appendChild(stEl);
 
   var NO_WORKER = /github\.io$/.test(location.hostname);
@@ -105,13 +117,17 @@
   panel.className = "ai-panel"; panel.id = "taPanel";
   panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true");
   panel.setAttribute("aria-label", "Tevi Agent");
+  var MIC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>';
+  var SPK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   panel.innerHTML =
     '<div class="ai-head"><div class="av">' + AV + '</div>'
     + '<div><h4 class="ta-title"></h4><div class="st ta-sub"></div></div>'
+    + '<button class="ta-tts" id="taTts" type="button" aria-label="Leer las respuestas en voz alta">' + SPK + '</button>'
     + '<button class="ai-close" id="taClose" type="button" aria-label="Cerrar">&times;</button></div>'
     + '<div class="ai-body" id="taBody"></div>'
     + '<div class="ai-disc ta-disc"></div>'
-    + '<div class="ai-foot"><input class="" id="taInput" type="text" autocomplete="off" aria-label="Tu mensaje">'
+    + '<div class="ai-foot"><button class="ta-mic" id="taMic" type="button" aria-label="Hablar por voz">' + MIC + '</button>'
+    + '<input class="" id="taInput" type="text" autocomplete="off" aria-label="Tu mensaje">'
     + '<button class="ai-send" id="taSend" type="button" aria-label="Enviar">' + SEND + '</button></div>';
   document.body.appendChild(panel);
 
@@ -121,11 +137,14 @@
   var started = false, busy = false, idleTimer = null;
   var IDLE_MS = 90000; // tras 90s sin escribir (y ≥2 mensajes), cerramos solos y enviamos el email
 
+  // WhatsApp directo de Gabriel (mensaje prellenado por idioma).
+  var WAMSG = { es: "Hola Gabriel, vengo de la web de TeGeVe.", en: "Hi Gabriel, I'm coming from the TeGeVe website.", pt: "Olá Gabriel, venho do site da TeGeVe.", it: "Ciao Gabriel, arrivo dal sito TeGeVe.", fr: "Bonjour Gabriel, je viens du site TeGeVe.", de: "Hallo Gabriel, ich komme von der TeGeVe-Website." };
   function applyText() {
     var x = t();
     panel.querySelector(".ta-title").textContent = x.title;
     panel.querySelector(".ta-sub").textContent = x.sub;
-    panel.querySelector(".ta-disc").textContent = x.disc;
+    panel.querySelector(".ta-disc").innerHTML = esc(x.disc) +
+      ' · <a href="https://wa.me/34682255515?text=' + encodeURIComponent(WAMSG[lang()] || WAMSG.es) + '" target="_blank" rel="noopener">WhatsApp</a>';
     elIn.placeholder = x.ph;
     panel.querySelector("#taClose").setAttribute("aria-label", x.close);
     var b = document.querySelector(".nav-ai-agent");
@@ -143,8 +162,8 @@
     });
     // URLs absolutas sueltas.
     h = h.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
-    // Rutas RELATIVAS del propio sitio (/servicios/sap/#casos-relacionados, /casos/) → mismo origen.
-    h = h.replace(/(^|[\s(])(\/[a-z0-9][a-z0-9\/_-]*(?:#[a-z0-9-]+)?)/g, '$1<a href="$2">$2</a>');
+    // Rutas RELATIVAS del propio sitio (/servicios/sap/#casos, /casos/, /#por-que-elegirnos) → mismo origen.
+    h = h.replace(/(^|[\s(])(\/[a-z0-9][a-z0-9\/_-]*(?:#[a-z0-9-]+)?|\/#[a-z0-9-]+)/g, '$1<a href="$2">$2</a>');
     // Emails.
     h = h.replace(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g, '<a href="mailto:$1">$1</a>');
     return h.replace(/\n/g, "<br>");
@@ -193,6 +212,52 @@
     elBody.appendChild(c); elBody.scrollTop = elBody.scrollHeight;
   }
 
+  // Los marcadores internos ([[opc]]/[[cita]]) nunca deben verse, ni a medio llegar.
+  function stripMk(s) { return s.replace(/^[ \t]*\[\[.*$/gm, ""); }
+  // Cierre común de una respuesta del agente: historial, chips, foco de sección y voz.
+  function addBotReply(reply, chips, el) {
+    if (el) el.innerHTML = rich(reply); else bubble(reply, "bot");
+    state.msgs.push({ role: "assistant", content: reply }); save();
+    if (chips && chips.length) addChips(chips);
+    autoSpot(reply);
+    speak(reply);
+    elBody.scrollTop = elBody.scrollHeight;
+  }
+  // Lee la respuesta en STREAMING (SSE): pinta el texto según llega, token a token.
+  async function readStream(r) {
+    var reader = r.body.getReader(), dec = new TextDecoder();
+    var buf = "", acc = "", el = null, finished = false;
+    for (;;) {
+      var st = await reader.read();
+      if (st.done) break;
+      buf += dec.decode(st.value, { stream: true });
+      var nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        var line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (line.indexOf("data:") !== 0) continue;
+        var ev; try { ev = JSON.parse(line.slice(5)); } catch (e) { continue; }
+        if (ev.d) {
+          acc += ev.d;
+          if (!el) { typing(false); el = bubble("", "bot"); }
+          el.innerHTML = rich(stripMk(acc).trim());
+          elBody.scrollTop = elBody.scrollHeight;
+        } else if (ev.done) {
+          finished = true; typing(false);
+          addBotReply(ev.reply || stripMk(acc).trim(), ev.chips || [], el);
+        } else if (ev.error && !el) {
+          typing(false); bubble(t().err, "bot");
+          finished = true;
+        }
+      }
+    }
+    if (!finished) { // stream cortado: conserva lo recibido o avisa
+      typing(false);
+      var rest = stripMk(acc).trim();
+      if (rest && el) { state.msgs.push({ role: "assistant", content: rest }); save(); }
+      else if (!el) bubble(t().err, "bot");
+    }
+  }
+
   // `forced` (string) = texto de un chip pulsado; si no, se toma del input.
   async function send(forced) {
     var msg = (typeof forced === "string" ? forced : elIn.value).trim();
@@ -208,13 +273,14 @@
     try {
       var r = await fetch(EP, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: state.id, message: msg, lang: lang(), history: hist }),
+        body: JSON.stringify({ sessionId: state.id, message: msg, lang: lang(), history: hist, page: location.pathname, stream: true }),
       });
-      var d = await r.json(); typing(false);
-      var reply = (d && d.reply) || t().err;
-      bubble(reply, "bot");
-      state.msgs.push({ role: "assistant", content: reply }); save();
-      if (d && d.chips && d.chips.length) addChips(d.chips); // opciones para elegir con un clic
+      if ((r.headers.get("content-type") || "").indexOf("text/event-stream") >= 0 && r.body) {
+        await readStream(r); // respuesta en vivo, token a token
+      } else {
+        var d = await r.json(); typing(false);
+        addBotReply((d && d.reply) || t().err, (d && d.chips) || []);
+      }
     } catch (e) { typing(false); bubble(t().err, "bot"); }
     busy = false; elSnd.disabled = false; elIn.focus();
     scheduleIdleEnd(); // arranca el temporizador de inactividad tras cada intercambio
@@ -298,6 +364,134 @@
         if (q) setTimeout(function () { send(q); }, 350);
       });
     });
+  }
+
+  // ── VOZ: dictado con el micrófono (SpeechRecognition) y lectura en voz alta ──
+  var VLANG = { es: "es-ES", en: "en-US", pt: "pt-BR", it: "it-IT", fr: "fr-FR", de: "de-DE" };
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var micBtn = panel.querySelector("#taMic"), srec = null, micOn = false;
+  if (!SR && micBtn) micBtn.style.display = "none"; // sin soporte (Firefox): se oculta
+  function micStop() { micOn = false; if (micBtn) micBtn.classList.remove("on"); try { if (srec) srec.stop(); } catch (e) {} srec = null; }
+  if (SR && micBtn) micBtn.addEventListener("click", function () {
+    if (micOn) { micStop(); return; }
+    srec = new SR();
+    srec.lang = VLANG[lang()] || "es-ES";
+    srec.interimResults = true;
+    micOn = true; micBtn.classList.add("on");
+    var finalTxt = "";
+    srec.onresult = function (e) {
+      var s = "";
+      for (var i = 0; i < e.results.length; i++) s += e.results[i][0].transcript;
+      elIn.value = s; // transcripción en vivo en el input
+      if (e.results[e.results.length - 1].isFinal) finalTxt = s;
+    };
+    srec.onend = function () { micStop(); var q = (finalTxt || elIn.value).trim(); elIn.value = ""; if (q) send(q); };
+    srec.onerror = function () { micStop(); };
+    try { srec.start(); } catch (e) { micStop(); }
+  });
+  var ttsOn = false, ttsBtn = panel.querySelector("#taTts");
+  if (!("speechSynthesis" in window) && ttsBtn) ttsBtn.style.display = "none";
+  if (ttsBtn) ttsBtn.addEventListener("click", function () {
+    ttsOn = !ttsOn; ttsBtn.classList.toggle("on", ttsOn);
+    if (!ttsOn) { try { speechSynthesis.cancel(); } catch (e) {} }
+  });
+  function speak(text) {
+    if (!ttsOn || !("speechSynthesis" in window)) return;
+    try {
+      speechSynthesis.cancel();
+      // No leemos URLs ni rutas en voz alta (suenan fatal).
+      var u = new SpeechSynthesisUtterance(String(text).replace(/https?:\/\/\S+/g, "").replace(/\/[a-z0-9\/_#-]{4,}/g, ""));
+      u.lang = VLANG[lang()] || "es-ES";
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  // ── CO-NAVEGACIÓN: el agente te lleva a la sección exacta (scroll + foco) ──
+  var CARRY = "tgv_agent_carry"; // traslada la conversación SOLO en navegaciones guiadas por el agente
+  function normPath(p) {
+    p = (p || "/").split("#")[0].split("?")[0];
+    if (p.charAt(p.length - 1) !== "/") p += "/";
+    return p.replace(/index\.html\/$/, "");
+  }
+  function spotlight(id) {
+    var el = id && document.getElementById(id);
+    if (!el) return false;
+    document.querySelectorAll(".tgv-spot").forEach(function (x) { x.classList.remove("tgv-spot"); });
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("tgv-spot");
+    setTimeout(function () { el.classList.remove("tgv-spot"); }, 3500);
+    return true;
+  }
+  elBody.addEventListener("click", function (e) {
+    var a = e.target && e.target.closest ? e.target.closest("a") : null;
+    if (!a || !elBody.contains(a)) return;
+    var href = a.getAttribute("href") || "";
+    if (href.charAt(0) !== "/") return;               // solo rutas internas del sitio
+    var path = href.split("#")[0], hash = href.split("#")[1] || "";
+    e.preventDefault();
+    if (normPath(path) === normPath(location.pathname)) {
+      if (hash) spotlight(hash);                       // misma página: te llevo hasta la sección
+    } else {
+      try { sessionStorage.setItem(CARRY, JSON.stringify({ state: state, hash: hash })); } catch (err) {}
+      location.href = href;                            // otra página: la conversación viaja contigo
+    }
+  });
+  // Si el agente cita una sección de ESTA página, la enfoca él solo mientras habla.
+  function autoSpot(reply) {
+    var m = (reply || "").match(/(^|[\s(])(\/[a-z0-9][a-z0-9\/_-]*|\/)#([a-z0-9-]+)/i);
+    if (m && normPath(m[2]) === normPath(location.pathname)) setTimeout(function () { spotlight(m[3]); }, 600);
+  }
+  (function resumeCarry() { // reanudación tras una navegación guiada por el agente
+    var raw = null;
+    try { raw = sessionStorage.getItem(CARRY); if (raw) sessionStorage.removeItem(CARRY); } catch (e) {}
+    if (!raw) return;
+    try {
+      var c = JSON.parse(raw);
+      if (c.state && c.state.id) state = c.state;
+      setTimeout(function () {
+        open();
+        if (c.hash) setTimeout(function () { spotlight(c.hash); }, 500);
+      }, 350);
+    } catch (e) {}
+  })();
+
+  // ── APERTURA PROACTIVA: Tevi Agent saluda solo, según la página (1 vez/sesión) ──
+  var PRO_KEY = "tgv_agent_pro";
+  var proDone = false; try { proDone = !!sessionStorage.getItem(PRO_KEY); } catch (e) {}
+  function proactive() {
+    if (proDone || busy || started || state.msgs.length) return;
+    if (panel.classList.contains("open") || teviOpen()) return;
+    proDone = true; try { sessionStorage.setItem(PRO_KEY, "1"); } catch (e) {}
+    started = true;            // sin pantalla de bienvenida: el saludo ES la apertura
+    open();
+    elBody.innerHTML = "";
+    typing(true);
+    fetch(EP, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: state.id, action: "opener", lang: lang(), page: location.pathname + location.hash }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        typing(false);
+        if (d && d.reply) {
+          bubble(d.reply, "bot");
+          state.msgs.push({ role: "assistant", content: d.reply }); save();
+          addChips((d.chips && d.chips.length) ? d.chips : wel().s);
+          speak(d.reply);
+        } else { renderWelcome(); }
+      })
+      .catch(function () { typing(false); renderWelcome(); });
+  }
+  if (!proDone) {
+    setTimeout(proactive, 20000);                                     // 20 s en la página
+    var proScroll = function () {
+      var doc = document.documentElement;
+      if (doc.scrollHeight > 0 && (window.scrollY + window.innerHeight) / doc.scrollHeight > 0.6) {
+        window.removeEventListener("scroll", proScroll); proactive();
+      }
+    };
+    window.addEventListener("scroll", proScroll, { passive: true });  // 60 % de scroll
+    document.addEventListener("mouseleave", function (e) { if (e.clientY <= 0) proactive(); }); // intención de salida
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { injectButton(); wireOpeners(); });

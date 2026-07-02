@@ -360,7 +360,7 @@ CÓMO ERES:
 - Hablas como una persona real, no como una IA. Cuando te presentes, di con naturalidad que eres el Agente de TeGeVe; no te describas como «consultor de TGV» ni recites que eres un sistema.
 - Al hablar de la empresa, refiérete SIEMPRE a ella como «TeGeVe» (TGV es solo su nombre corto interno; no lo uses como nombre principal con la persona).
 - Transmites experiencia, calma y profesionalidad. Eres cercano, empático y sientes curiosidad genuina por el negocio de quien te habla.
-- Respuestas CORTAS y conversacionales: 2 a 4 frases. Nada de bloques largos, listas densas ni discursos de folleto.
+- Respuestas CORTAS y conversacionales: 2 a 4 frases. Nada de bloques largos, listas densas ni discursos de folleto. No uses emojis (el tono de TeGeVe es sobrio).
 - Haces UNA pregunta cada vez, no un interrogatorio. Escuchas más de lo que hablas.
 - Nunca presionas ni vendes de forma agresiva. Aconsejas; no empujas.
 
@@ -397,6 +397,8 @@ AGENDAR REUNIÓN: cuando una reunión con Gabriel Grosso (Director de TeGeVe) ap
 [[cita]] nombre=<nombre de la persona>; email=<su email>; dia=<lo que dijo la persona sobre el día, TAL CUAL: «el viernes», «mañana», «el 10 de julio»…>; hora=<HH:MM>
 Reglas: en el campo «dia» pon LITERALMENTE la referencia de la persona; NO calcules tú la fecha del calendario (el sistema la calcula). Al confirmar en el texto, repite el día con las palabras de la persona (p. ej. «el viernes a las 12:00»), sin decir un número de día del mes. NO pospongas el envío para seguir preguntando otras cosas (empresa, sector…); pregúntalas DESPUÉS. El email es OBLIGATORIO; incluye el nombre si lo sabes; no inventes el email; no envíes la cita hasta tener email + día + hora. Emite esa línea UNA sola vez. Nunca menciones ni expliques ese formato; la persona no debe ver esa línea.
 
+WHATSAPP: si la persona prefiere seguir por WhatsApp (o lo pide), dale el enlace directo del WhatsApp de Gabriel escribiéndolo tal cual, sin markdown: https://wa.me/34682255515
+
 CONOCIMIENTO SOBRE TEGEVE:
 ${AGENT_KB}
 
@@ -426,6 +428,39 @@ async function callAnthropic(env, system, messages, maxTokens) {
   }
 }
 
+// Igual que callAnthropic pero en STREAMING: entrega el texto por onDelta según
+// llega (SSE de la API de Anthropic) y devuelve el texto completo al terminar.
+async function callAnthropicStream(env, system, messages, maxTokens, onDelta) {
+  const r = await fetch(AGENT_API, {
+    method: "POST",
+    headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({ model: AGENT_MODEL, max_tokens: maxTokens || 1024, system, messages, stream: true }),
+  });
+  if (!r.ok) throw new Error("anthropic " + r.status + " " + (await r.text()).slice(0, 300));
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", full = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      try {
+        const ev = JSON.parse(line.slice(5).trim());
+        if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta" && ev.delta.text) {
+          full += ev.delta.text;
+          try { await onDelta(ev.delta.text); } catch (e) { /* el render nunca corta el stream */ }
+        }
+      } catch (e) { /* keep-alives y eventos no-JSON se ignoran */ }
+    }
+  }
+  return full.trim();
+}
+
 // ---- Persistencia en KV (degrada a memoria nula si no hay binding) ----
 const leadKey = (id) => "lead:" + id;
 async function loadLead(env, id) {
@@ -447,6 +482,7 @@ function newLead(id, lang, now) {
     summary: "", summaryUpTo: 0,       // resumen rodante + índice ya resumido
     datos: { nombre: "", empresa: "", cargo: "", email: "", telefono: "", ciudad: "", pais: "", sector: "" },
     report: null, turns: 0, emailed: false, cita: null,
+    alerted: false, geoOrg: "", page: "",
   };
 }
 
@@ -483,11 +519,13 @@ async function summarizeIfNeeded(env, rec) {
 function buildWindow(rec) {
   let win = rec.transcript.slice(rec.summaryUpTo).slice(-AGENT_WINDOW * 2)
     .map((m) => ({ role: m.role, content: m.content }));
-  while (win.length && win[0].role !== "user") win.shift();
+  // La API exige empezar por un turno de usuario; si el primero es del agente
+  // (p. ej. una apertura proactiva), se antepone un turno neutro en vez de perderlo.
+  if (win.length && win[0].role !== "user") win.unshift({ role: "user", content: "(La persona está navegando por el sitio.)" });
   return win;
 }
 
-async function handleTeviAgent(request, env) {
+async function handleTeviAgent(request, env, ctx) {
   const origin = request.headers.get("Origin") || "";
   const h = corsHeaders(origin);
   if (request.method === "OPTIONS") return new Response(null, { headers: h });
@@ -498,7 +536,7 @@ async function handleTeviAgent(request, env) {
 
   const sessionId = String(body.sessionId || "").trim().slice(0, 80) || "anon-" + Date.now();
   const lang = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
-  const action = body.action === "end" ? "end" : "chat";
+  const action = body.action === "end" ? "end" : body.action === "opener" ? "opener" : "chat";
   const now = Date.now();
   // País del visitante por Cloudflare (XX = desconocido, T1 = Tor).
   const geoCountry = ((request.cf && request.cf.country) || request.headers.get("CF-IPCountry") || "").toUpperCase();
@@ -508,6 +546,14 @@ async function handleTeviAgent(request, env) {
   let rec = (await loadLead(env, sessionId)) || newLead(sessionId, lang, now);
   rec.lang = lang;
   if (geoCountry && geoCountry !== "XX" && geoCountry !== "T1") rec.geoCountry = geoCountry;
+  // Organización de la IP (red corporativa): la da Cloudflare gratis en cada
+  // petición; se descartan ISPs residenciales y nubes (mayormente bots/VPN).
+  const asOrg = String((request.cf && request.cf.asOrganization) || "").trim();
+  const ISP_RE = /telef[oó]nica|movistar|vodafone|orange|masm[oó]vil|digi|jazztel|euskaltel|yoigo|lowi|pepephone|adamo|avatel|finetwork|claro|telecom|telmex|tigo|entel|personal|comcast|verizon|at&t|t-mobile|telekom|bouygues|sfr|iliad|free|proximus|swisscom|telia|kpn|bt group|sky|virgin|liberty|charter|cox|spectrum|residential|wireless|mobile|broadband|communications|cable|cloudflare|google|amazon|aws|microsoft|azure|apple|icloud|akamai|fastly|ovh|hetzner|digitalocean|linode|vultr|oracle|m247|datacamp|vpn|hosting|server|proxy/i;
+  if (asOrg && !ISP_RE.test(asOrg)) rec.geoOrg = asOrg;
+  // Página del sitio en la que está la persona (la envía el cliente).
+  const pageNow = String(body.page || "").slice(0, 300);
+  if (pageNow) rec.page = pageNow;
   if (!rec.transcript.length && Array.isArray(body.history)) {
     rec.transcript = body.history
       .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
@@ -533,6 +579,25 @@ async function handleTeviAgent(request, env) {
       return json({ ok: true, sessionId, report }, 200, h);
     }
 
+    // Apertura proactiva: saludo breve y específico de la página actual (el
+    // cliente la dispara una sola vez por sesión, tras un rato de navegación).
+    if (action === "opener") {
+      const sys = [
+        { type: "text", text: agentSystem(lang), cache_control: { type: "ephemeral" } },
+        { type: "text", text: "La persona lleva un rato mirando la página " + (rec.page || "/") + " del sitio y AÚN NO ha abierto el chat. Genera SOLO una apertura proactiva de 1-2 frases: saluda con naturalidad y engancha con algo específico del contenido de ESA página (usa el MAPA DEL SITIO para saber de qué trata), terminando con una pregunta ligera. No digas que la estás observando ni resultes intrusivo. Puedes añadir respuestas rápidas con la línea [[opc]]." },
+      ];
+      let opener = await callAnthropic(env, sys, [{ role: "user", content: "(genera la apertura proactiva)" }], 300) || "";
+      let ochips = [];
+      const oom = opener.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
+      if (oom) { ochips = oom[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5); opener = opener.replace(oom[0], ""); }
+      opener = opener.replace(/^[ \t]*\[\[(?:opc|cita)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+      if (!opener) return json({ reply: "", sessionId }, 200, h);
+      rec.transcript.push({ role: "assistant", content: opener, ts: now });
+      rec.updatedAt = Date.now();
+      await saveLead(env, sessionId, rec);
+      return json({ reply: opener, chips: ochips, sessionId, geo: rec.geoCountry }, 200, h);
+    }
+
     const message = String(body.message || "").trim().slice(0, AGENT_MAXLEN);
     if (!message) return json({ error: "Empty message." }, 400, h);
 
@@ -552,49 +617,79 @@ async function handleTeviAgent(request, env) {
     } catch (e) {
       dateHint = "Hoy es " + new Date().toISOString().slice(0, 10) + " (úsalo para proponer días concretos y futuros).\n\n";
     }
-    const ctx = dateHint + geoHint + (rec.summary ? "Resumen de la conversación hasta ahora:\n" + rec.summary + "\n\n" : "") +
+    const pageHint = rec.page ? "La persona está ahora mismo en la página " + rec.page + " del sitio.\n\n" : "";
+    const orgHint = rec.geoOrg
+      ? "La conexión llega desde la red de «" + rec.geoOrg + "». Si claramente es una empresa (no un proveedor de internet), tenlo en cuenta con tacto y sin darlo por seguro: orienta ejemplos a su posible sector si encaja; no digas «veo que os conectáis desde…» salvo que la persona ya haya nombrado su empresa.\n\n"
+      : "";
+    const ctx = dateHint + pageHint + orgHint + geoHint + (rec.summary ? "Resumen de la conversación hasta ahora:\n" + rec.summary + "\n\n" : "") +
       "Datos del cliente conocidos: " + JSON.stringify(rec.datos) + ". No vuelvas a pedir los que ya tienes.";
     const system = [
       { type: "text", text: agentSystem(lang), cache_control: { type: "ephemeral" } },
       { type: "text", text: ctx },
     ];
 
-    let reply = await callAnthropic(env, system, buildWindow(rec), 1024) ||
-      (lang === "es" ? "Perdona, ¿me lo cuentas con otras palabras?" : "Sorry, could you put that another way?");
+    // Postprocesado común (con y sin streaming): marcadores, cita, persistencia y alerta.
+    const doFinish = async (rawReply) => {
+      let reply = (rawReply || "").trim() ||
+        (lang === "es" ? "Perdona, ¿me lo cuentas con otras palabras?" : "Sorry, could you put that another way?");
 
-    // Respuestas rápidas (chips): línea «[[opc]] a | b | c» — puede aparecer en
-    // cualquier posición del mensaje (el modelo no siempre la deja al final).
-    let chips = [];
-    const om = reply.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
-    if (om) {
-      chips = om[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5);
-      reply = reply.replace(om[0], "");
-    }
-
-    // Cita/reunión: línea «[[cita]] nombre=..; email=..; dia=..; hora=..» — ídem,
-    // se procesa y se elimina esté donde esté.
-    const cm = reply.match(/^[ \t]*\[\[cita\]\][ \t]*(.+?)[ \t]*$/im);
-    if (cm) {
-      const f = {};
-      cm[1].split(";").forEach((p) => { const i = p.indexOf("="); if (i > 0) f[p.slice(0, i).trim().toLowerCase()] = p.slice(i + 1).trim(); });
-      reply = reply.replace(cm[0], "");
-      if (f.email) {
-        rec.datos.email = rec.datos.email || f.email;
-        if (f.nombre) rec.datos.nombre = rec.datos.nombre || f.nombre;
-        rec.status = "IDENTIFICADO";
+      // Respuestas rápidas (chips): línea «[[opc]] a | b | c», esté donde esté.
+      let chips = [];
+      const om = reply.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
+      if (om) {
+        chips = om[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5);
+        reply = reply.replace(om[0], "");
       }
-      await sendCita(env, rec, { nombre: f.nombre, email: f.email, dia: f.dia, fecha: f.fecha, hora: f.hora });
+
+      // Cita/reunión: línea «[[cita]] nombre=..; email=..; dia=..; hora=..», ídem.
+      const cm = reply.match(/^[ \t]*\[\[cita\]\][ \t]*(.+?)[ \t]*$/im);
+      if (cm) {
+        const f = {};
+        cm[1].split(";").forEach((p) => { const i = p.indexOf("="); if (i > 0) f[p.slice(0, i).trim().toLowerCase()] = p.slice(i + 1).trim(); });
+        reply = reply.replace(cm[0], "");
+        if (f.email) {
+          rec.datos.email = rec.datos.email || f.email;
+          if (f.nombre) rec.datos.nombre = rec.datos.nombre || f.nombre;
+          rec.status = "IDENTIFICADO";
+        }
+        await sendCita(env, rec, { nombre: f.nombre, email: f.email, dia: f.dia, fecha: f.fecha, hora: f.hora });
+      }
+      // Red de seguridad: si quedara algún marcador suelto, nunca debe verlo la persona.
+      reply = reply.replace(/^[ \t]*\[\[(?:opc|cita)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
+
+      rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
+      rec.turns = rec.transcript.filter((m) => m.role === "user").length;
+      rec.updatedAt = Date.now();
+      rec.durationMs = rec.updatedAt - rec.createdAt;
+      // Alerta de lead caliente al identificarse (email/teléfono) o agendar reunión.
+      if (rec.status === "IDENTIFICADO" && !rec.alerted) await sendHotAlert(env, rec);
+      await saveLead(env, sessionId, rec);
+      return { reply, chips };
+    };
+
+    // STREAMING (SSE): el texto va llegando al navegador token a token; al final
+    // se envía un evento `done` con la respuesta limpia y las respuestas rápidas.
+    if (body.stream === true) {
+      const { readable, writable } = new TransformStream();
+      const writer = writable.getWriter();
+      const enc = new TextEncoder();
+      const emit = (o) => writer.write(enc.encode("data: " + JSON.stringify(o) + "\n\n")).catch(() => {});
+      const work = (async () => {
+        try {
+          const raw = await callAnthropicStream(env, system, buildWindow(rec), 1024, (t) => emit({ d: t }));
+          const fin = await doFinish(raw);
+          await emit({ done: true, reply: fin.reply, chips: fin.chips, sessionId, geo: rec.geoCountry });
+        } catch (err) {
+          await emit({ error: "Agent unavailable.", detail: String(err).slice(0, 120) });
+        }
+        try { await writer.close(); } catch (e) { /* ya cerrado */ }
+      })();
+      if (ctx && ctx.waitUntil) ctx.waitUntil(work);
+      return new Response(readable, { status: 200, headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", ...h } });
     }
-    // Red de seguridad: si quedara algún marcador suelto, nunca debe verlo la persona.
-    reply = reply.replace(/^[ \t]*\[\[(?:opc|cita)\]\][^\n]*$/gim, "").replace(/\n{3,}/g, "\n\n").trim();
 
-    rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
-    rec.turns = rec.transcript.filter((m) => m.role === "user").length;
-    rec.updatedAt = Date.now();
-    rec.durationMs = rec.updatedAt - rec.createdAt;
-    await saveLead(env, sessionId, rec);
-
-    return json({ reply, chips, sessionId, geo: rec.geoCountry }, 200, h);
+    const fin = await doFinish(await callAnthropic(env, system, buildWindow(rec), 1024));
+    return json({ reply: fin.reply, chips: fin.chips, sessionId, geo: rec.geoCountry }, 200, h);
   } catch (err) {
     return json({ error: "Agent unavailable.", detail: String(err).slice(0, 200) }, 502, h);
   }
@@ -806,6 +901,63 @@ async function sendCita(env, rec, cita) {
   await saveLead(env, rec.id, rec);
 }
 
+// ---- Alerta de LEAD CALIENTE en tiempo real (mientras la persona sigue en la web) ----
+// Email inmediato a Gabriel vía Resend y, si está configurado el secreto
+// TEAMS_WEBHOOK_URL (Workflows de Teams), tarjeta en el canal. Una vez por sesión.
+async function sendHotAlert(env, rec) {
+  if (rec.alerted) return;
+  rec.alerted = true;
+  const motivo = rec.cita && rec.cita.sent ? "reunión agendada" : "datos de contacto captados";
+  const lastUser = [...rec.transcript].reverse().find((m) => m.role === "user");
+  const quien = [rec.datos.nombre, rec.datos.empresa].filter(Boolean).join(" · ") || "Lead sin nombre todavía";
+  const contacto = rec.datos.email || rec.datos.telefono || "sin contacto directo aún";
+  const lineas = [
+    quien + " — " + contacto,
+    [rec.geoCountry ? "País: " + countryName(rec.geoCountry) : "", rec.geoOrg ? "Red: " + rec.geoOrg : ""].filter(Boolean).join(" · "),
+    rec.page ? "Página: " + rec.page : "",
+    lastUser ? "Último mensaje: «" + lastUser.content.slice(0, 180) + "»" : "",
+    "Sesión " + rec.id + " · La persona sigue en la web AHORA.",
+  ].filter(Boolean);
+  const subject = "LEAD CALIENTE en tegevem.es — " + motivo;
+  if (env.TEAMS_WEBHOOK_URL) {
+    try {
+      await fetch(env.TEAMS_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "message",
+          attachments: [{
+            contentType: "application/vnd.microsoft.card.adaptive",
+            content: {
+              $schema: "http://adaptivecards.io/schemas/adaptive-card.json", type: "AdaptiveCard", version: "1.4",
+              body: [
+                { type: "TextBlock", size: "Large", weight: "Bolder", color: "Attention", text: subject, wrap: true },
+                ...lineas.map((l) => ({ type: "TextBlock", text: l, wrap: true })),
+              ],
+            },
+          }],
+        }),
+      });
+    } catch (e) { console.error("teams alert", String(e).slice(0, 120)); }
+  }
+  if (env.RESEND_API_KEY) {
+    try {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: env.RESEND_FROM || "Tevi Agent <onboarding@resend.dev>",
+          to: [env.LEAD_EMAIL || LEAD_TO_DEFAULT], subject,
+          html: '<div style="font-family:Arial,Helvetica,sans-serif;color:#111"><h2 style="color:#E4010A;margin:0 0 10px">' + ESC(subject) + "</h2>" +
+            lineas.map((l) => '<p style="margin:4px 0">' + ESC(l) + "</p>").join("") + "</div>",
+          text: subject + "\n" + lineas.join("\n"),
+        }),
+      });
+      if (!r.ok) console.error("hot alert email failed", r.status, await r.text().catch(() => ""));
+    } catch (e) { console.error("hot alert email", String(e).slice(0, 120)); }
+  }
+}
+
 // Punto único de integraciones. Hoy: envía el lead por email a Gabriel y deja el
 // registro completo en KV. Preparado para CRM/HubSpot/Calendar/WhatsApp (añadir aquí).
 async function dispatchLead(env, rec) {
@@ -832,7 +984,7 @@ async function handleAgentLeads(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     // API de Tevi (asistente informativo, modelos gratis) — sin tocar.
     if (url.pathname === "/api/tevi" || url.pathname === "/api/tevi/") {
@@ -840,7 +992,7 @@ export default {
     }
     // API de Tevi Agent (agente comercial consultivo, Claude Sonnet).
     if (url.pathname === "/api/tevi-agent" || url.pathname === "/api/tevi-agent/") {
-      return handleTeviAgent(request, env);
+      return handleTeviAgent(request, env, ctx);
     }
     if (url.pathname === "/api/tevi-agent/leads") {
       return handleAgentLeads(request, env);
