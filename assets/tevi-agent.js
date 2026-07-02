@@ -34,7 +34,14 @@
     + "#taPanel .ta-tts{margin-left:auto;background:none;border:0;color:#fff;opacity:.55;cursor:pointer;padding:4px 6px;display:flex;align-items:center}"
     + "#taPanel .ta-tts.on{opacity:1;color:#86efac}"
     // Enlace de WhatsApp en la línea de aviso.
-    + "#taPanel .ai-disc a{color:inherit;text-decoration:underline;font-weight:600}";
+    + "#taPanel .ai-disc a{color:inherit;text-decoration:underline;font-weight:600}"
+    // Entrada «genio de la lámpara»: el panel surge desde su esquina (transform-origin
+    // bottom-right, heredado de .ai-panel) aplastado y se despliega con un rebote
+    // sutil (curva con sobreimpulso). La salida usa la transición rápida existente.
+    + "#taPanel.open{animation:taGenie .5s cubic-bezier(.26,1.32,.4,1) both}"
+    + "@keyframes taGenie{0%{opacity:0;transform:translateY(46px) scale(.55,.28)}60%{opacity:1}100%{opacity:1;transform:none}}"
+    + "@media(prefers-reduced-motion:reduce){#taPanel.open{animation:taFadeIn .2s ease both}}"
+    + "@keyframes taFadeIn{from{opacity:0}to{opacity:1}}";
   var stEl = document.createElement("style"); stEl.textContent = STYLE; document.head.appendChild(stEl);
 
   var NO_WORKER = /github\.io$/.test(location.hostname);
