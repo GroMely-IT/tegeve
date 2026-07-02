@@ -393,9 +393,9 @@ Reglas: de 2 a 5 opciones, cada una de 1 a 4 palabras, separadas por « | ». No
 
 GUÍA AL SITIO: cuando lo que pregunta la persona está desarrollado en una sección concreta del sitio, después de responder breve y útilmente puedes invitarla a verlo ahí. Escribe la RUTA RELATIVA tal cual, empezando por «/» y SIN el dominio ni formato markdown (correcto: «lo tienes con detalle en /servicios/sap/#casos-relacionados»; NO uses «https://...» ni «[texto](url)»). Usa SOLO rutas y anclas del MAPA DEL SITIO de abajo; nunca inventes una. No enlaces por enlazar: solo cuando aporte valor real y encaje con lo que pide. El enlace complementa tu respuesta, no la sustituye.
 
-AGENDAR REUNIÓN: cuando la conversación llegue a un punto en que una reunión con Gabriel Grosso (Director de TeGeVe) aporte valor, propónsela con naturalidad y, para dejársela lista, pídele su email (explícale que es para enviarle la invitación ya preparada). Cuando te dé el email —y a ser posible acordad un día y una hora concretos (futuros y laborables, usando la fecha de hoy del contexto)— confírmale con calidez que le envías la invitación y TERMINA el mensaje con una última línea EXACTAMENTE así:
-[[cita]] nombre=<nombre de la persona>; email=<su email>; fecha=<AAAA-MM-DD>; hora=<HH:MM>
-Reglas: el email es OBLIGATORIO en esa línea; incluye el nombre si lo sabes; si no habéis fijado día/hora, propón tú una fecha y hora concretas. Emite esa línea UNA sola vez, cuando ya tengas el email. Nunca menciones ni expliques ese formato; la persona no debe ver esa línea.
+AGENDAR REUNIÓN: cuando una reunión con Gabriel Grosso (Director de TeGeVe) aporte valor, propónsela con naturalidad. Para prepararla, pídele su email y acorda con la persona una franja concreta (qué día y a qué hora le viene bien; futuros y laborables, usando la fecha de hoy del contexto). EN CUANTO tengas los tres datos —EMAIL + día + hora—, tu SIGUIENTE mensaje DEBE confirmar y enviar la invitación: confírmale con calidez (dile que incluye el enlace de videollamada) y TERMINA ese mismo mensaje con una última línea EXACTAMENTE así:
+[[cita]] nombre=<nombre de la persona>; email=<su email>; dia=<lo que dijo la persona sobre el día, TAL CUAL: «el viernes», «mañana», «el 10 de julio»…>; hora=<HH:MM>
+Reglas: en el campo «dia» pon LITERALMENTE la referencia de la persona; NO calcules tú la fecha del calendario (el sistema la calcula). Al confirmar en el texto, repite el día con las palabras de la persona (p. ej. «el viernes a las 12:00»), sin decir un número de día del mes. NO pospongas el envío para seguir preguntando otras cosas (empresa, sector…); pregúntalas DESPUÉS. El email es OBLIGATORIO; incluye el nombre si lo sabes; no inventes el email; no envíes la cita hasta tener email + día + hora. Emite esa línea UNA sola vez. Nunca menciones ni expliques ese formato; la persona no debe ver esa línea.
 
 CONOCIMIENTO SOBRE TEGEVE:
 ${AGENT_KB}
@@ -544,7 +544,14 @@ async function handleTeviAgent(request, env) {
     const geoHint = rec.geoCountry
       ? "La persona parece conectarse desde " + countryName(rec.geoCountry) + " (" + rec.geoCountry + "). Adapta la variante del idioma a ese país de forma natural, salvo que la persona escriba o pida otra cosa.\n\n"
       : "";
-    const dateHint = "Hoy es " + new Date().toISOString().slice(0, 10) + " (úsalo para proponer días concretos y futuros).\n\n";
+    let dateHint;
+    try {
+      const _iso = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+      const _dow = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", weekday: "long" }).format(new Date());
+      dateHint = "Hoy es " + _dow + " " + _iso + " (hora de España). Usa el día de la semana y esta fecha para convertir referencias como «el viernes» o «mañana» a una fecha AAAA-MM-DD concreta y futura, y para que el día que menciones coincida con la fecha.\n\n";
+    } catch (e) {
+      dateHint = "Hoy es " + new Date().toISOString().slice(0, 10) + " (úsalo para proponer días concretos y futuros).\n\n";
+    }
     const ctx = dateHint + geoHint + (rec.summary ? "Resumen de la conversación hasta ahora:\n" + rec.summary + "\n\n" : "") +
       "Datos del cliente conocidos: " + JSON.stringify(rec.datos) + ". No vuelvas a pedir los que ya tienes.";
     const system = [
@@ -574,7 +581,7 @@ async function handleTeviAgent(request, env) {
         if (f.nombre) rec.datos.nombre = rec.datos.nombre || f.nombre;
         rec.status = "IDENTIFICADO";
       }
-      await sendCita(env, rec, { nombre: f.nombre, email: f.email, fecha: f.fecha, hora: f.hora });
+      await sendCita(env, rec, { nombre: f.nombre, email: f.email, dia: f.dia, fecha: f.fecha, hora: f.hora });
     }
 
     rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
@@ -707,11 +714,11 @@ const VTZ_MADRID = [
 const pad2 = (n) => (n < 10 ? "0" + n : "" + n);
 function icsLocal(d) { return d.getUTCFullYear() + pad2(d.getUTCMonth() + 1) + pad2(d.getUTCDate()) + "T" + pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + "00"; }
 function icsEsc(s) { return String(s).replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n"); }
-function buildIcs(summary, nombre, email, fecha, hora, sessionId) {
+function buildIcs(summary, nombre, email, fecha, hora, sessionId, meetUrl) {
   const [Y, M, D] = fecha.split("-").map(Number);
   const [h, mi] = hora.split(":").map(Number);
   const start = new Date(Date.UTC(Y, M - 1, D, h, mi));      // aritmética en UTC, se emite como hora local Madrid
-  const end = new Date(start.getTime() + 30 * 60000);
+  const end = new Date(start.getTime() + 45 * 60000);        // reunión de 45 min
   return [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TeGeVe//Tevi Agent//ES", "CALSCALE:GREGORIAN", "METHOD:REQUEST",
     VTZ_MADRID,
@@ -721,6 +728,9 @@ function buildIcs(summary, nombre, email, fecha, hora, sessionId) {
     "DTSTART;TZID=Europe/Madrid:" + icsLocal(start),
     "DTEND;TZID=Europe/Madrid:" + icsLocal(end),
     "SUMMARY:" + icsEsc(summary),
+    "LOCATION:" + icsEsc(meetUrl),
+    "DESCRIPTION:" + icsEsc("Videollamada: " + meetUrl),
+    "URL:" + meetUrl,
     "ORGANIZER;CN=Gabriel Grosso:mailto:ggrosso@tegeve.es",
     "ATTENDEE;CN=" + icsEsc(nombre || "Invitado") + ";ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:" + email,
     "ATTENDEE;CN=Gabriel Grosso;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:ggrosso@tegeve.es",
@@ -728,23 +738,50 @@ function buildIcs(summary, nombre, email, fecha, hora, sessionId) {
     "END:VEVENT", "END:VCALENDAR",
   ].join("\r\n");
 }
+// Resolución FIABLE de la fecha (el modelo pasa lo que dijo la persona; el día
+// exacto lo calcula el worker, que sí sabe la fecha de hoy en España).
+function madridTodayParts() {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" }).formatToParts(new Date());
+  const g = (t) => (p.find((x) => x.type === t) || {}).value;
+  const DOW = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return { y: +g("year"), m: +g("month"), d: +g("day"), dow: DOW[g("weekday")] };
+}
+function addDaysISO(y, m, d, n) { const dt = new Date(Date.UTC(y, m - 1, d)); dt.setUTCDate(dt.getUTCDate() + n); return dt.toISOString().slice(0, 10); }
+const _WEEKDAYS = { domingo: 0, lunes: 1, martes: 2, "miércoles": 3, miercoles: 3, jueves: 4, viernes: 5, "sábado": 6, sabado: 6 };
+const _MONTHS = { enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7, agosto: 8, septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12 };
+function _isoFuture(y, mo, d, t) {
+  const cand = Date.UTC(y, mo - 1, d), today = Date.UTC(t.y, t.m - 1, t.d);
+  return new Date(cand < today ? Date.UTC(y + 1, mo - 1, d) : cand).toISOString().slice(0, 10);
+}
+function resolveDate(raw) {
+  let t; try { t = madridTodayParts(); } catch (e) { const n = new Date(); t = { y: n.getUTCFullYear(), m: n.getUTCMonth() + 1, d: n.getUTCDate(), dow: n.getUTCDay() }; }
+  const s = String(raw || "").toLowerCase().trim();
+  let m = s.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return _isoFuture(+m[1], +m[2], +m[3], t);
+  m = s.match(/\b(\d{1,2})\s+de\s+([a-záéíóú]+)/); if (m && _MONTHS[m[2]]) return _isoFuture(t.y, _MONTHS[m[2]], +m[1], t);
+  m = s.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/); if (m) { let y = m[3] ? +m[3] : t.y; if (String(m[3] || "").length === 2) y = 2000 + +m[3]; return _isoFuture(y, +m[2], +m[1], t); }
+  if (/pasado\s*mañana/.test(s)) return addDaysISO(t.y, t.m, t.d, 2);
+  if (/\bmañana\b/.test(s)) return addDaysISO(t.y, t.m, t.d, 1);
+  if (/\bhoy\b/.test(s)) return addDaysISO(t.y, t.m, t.d, 0);
+  for (const k in _WEEKDAYS) { if (s.includes(k)) { let n = (_WEEKDAYS[k] - t.dow + 7) % 7; if (n === 0) n = 7; return addDaysISO(t.y, t.m, t.d, n); } }
+  return addDaysISO(t.y, t.m, t.d, 2); // por defecto, hoy + 2 días
+}
+
 // Manda la invitación (a Gabriel y a la persona). Una sola vez por sesión.
 async function sendCita(env, rec, cita) {
   if (rec.cita && rec.cita.sent) return;
   const email = String(cita.email || "").trim();
   if (!EMAIL_RE.test(email)) return;
   const nombre = String(cita.nombre || rec.datos.nombre || "").trim();
-  // Valida fecha/hora; si faltan o son pasadas, propone hoy+2 días a las 10:00 (Madrid).
-  let fecha = cita.fecha, hora = cita.hora;
-  const okDate = /^\d{4}-\d{2}-\d{2}$/.test(fecha || "");
-  const t = okDate ? Date.parse(fecha + "T00:00:00Z") : NaN;
-  if (!okDate || isNaN(t) || t < Date.now() - 86400000) fecha = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  const fecha = resolveDate(cita.dia || cita.fecha);   // el worker calcula el día exacto (el modelo no es fiable con fechas)
+  let hora = cita.hora;
   if (!/^\d{1,2}:\d{2}$/.test(hora || "")) hora = "10:00";
   const summary = "Reunión con " + (nombre ? nombre + " y TeGeVe" : "TeGeVe");
-  const ics = buildIcs(summary, nombre, email, fecha, hora, rec.id);
+  // Enlace de videollamada: sala fija de Gabriel (MEETING_URL) o una sala Jitsi única por reunión.
+  const meetUrl = env.MEETING_URL || ("https://meet.jit.si/TeGeVe-" + String(rec.id).replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) + "-" + Date.now().toString(36));
+  const ics = buildIcs(summary, nombre, email, fecha, hora, rec.id, meetUrl);
   const to = env.LEAD_EMAIL || LEAD_TO_DEFAULT;
-  const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#111"><p>Invitación de reunión:</p><h2 style="color:#E4010A;margin:4px 0">${ESC(summary)}</h2><p>${ESC(fecha)} · ${ESC(hora)} (hora de España). Adjuntamos la cita (<b>reunion.ics</b>) para añadirla al calendario.</p></div>`;
-  const text = summary + "\n" + fecha + " " + hora + " (hora de España). Cita adjunta: reunion.ics";
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#111"><p>Invitación de reunión:</p><h2 style="color:#E4010A;margin:4px 0">${ESC(summary)}</h2><p>${ESC(fecha)} · ${ESC(hora)} (hora de España) · 45 min.</p><p>Videollamada: <a href="${ESC(meetUrl)}">${ESC(meetUrl)}</a></p><p>Adjuntamos la cita (<b>reunion.ics</b>) para añadirla al calendario.</p></div>`;
+  const text = summary + "\n" + fecha + " " + hora + " (hora de España) · 45 min\nVideollamada: " + meetUrl + "\nCita adjunta: reunion.ics";
   try {
     if (env.RESEND_API_KEY) {
       const r = await fetch("https://api.resend.com/emails", {
@@ -756,7 +793,7 @@ async function sendCita(env, rec, cita) {
           attachments: [{ filename: "reunion.ics", content: b64utf8(ics), content_type: "text/calendar; method=REQUEST; charset=utf-8" }],
         }),
       });
-      if (r.ok) rec.cita = { sent: true, nombre, email, fecha, hora, summary };
+      if (r.ok) rec.cita = { sent: true, nombre, email, fecha, hora, summary, meetUrl };
       else console.error("cita (resend) failed", r.status, await r.text().catch(() => ""));
     } else {
       console.error("cita: sin RESEND_API_KEY, no se envía la invitación");
