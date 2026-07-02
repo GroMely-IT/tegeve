@@ -758,7 +758,9 @@ async function generateReport(env, rec, now) {
     }
   }
   rec.report = report;
-  rec.status = (report && (report.email || report.telefono || report.nombre)) ? "IDENTIFICADO" : rec.status;
+  // «sin dato» (el relleno del esquema) no identifica a nadie.
+  const _has = (v) => v && v !== "sin dato";
+  rec.status = (report && (_has(report.email) || _has(report.telefono) || _has(report.nombre))) ? "IDENTIFICADO" : rec.status;
   rec.updatedAt = now; rec.durationMs = now - rec.createdAt;
   await saveLead(env, rec.id, rec);
   await dispatchLead(env, rec); // hook de integraciones (CRM/email/calendar...) — no-op por ahora
@@ -1070,6 +1072,105 @@ async function handleAgentLeads(request, env) {
   return json({ total: rows.length, leads: rows }, 200, {});
 }
 
+// Dashboard de leads EN VIVO (HTML servido por el worker, mismo secreto que /leads).
+// GET /api/tevi-agent/panel?key=AGENT_ADMIN_KEY — se refresca solo cada 30 s.
+async function handleAgentPanel(request, env) {
+  const url = new URL(request.url);
+  const key = url.searchParams.get("key") || "";
+  if (!env.AGENT_ADMIN_KEY || key !== env.AGENT_ADMIN_KEY) return new Response("Not found", { status: 404 });
+  if (!env.TEVI_AGENT_KV) return new Response("KV no configurado", { status: 200 });
+  const list = await env.TEVI_AGENT_KV.list({ prefix: "lead:" });
+  const recs = (await Promise.all(list.keys.slice(0, 300).map((k) => env.TEVI_AGENT_KV.get(k.name, "json").catch(() => null)))).filter(Boolean);
+  recs.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const now = Date.now();
+  const fmt = (ts) => { try { return new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(ts)); } catch (e) { return ""; } };
+  const isLive = (r) => now - (r.updatedAt || 0) < 3 * 60000;
+  const nLive = recs.filter(isLive).length;
+  const nIdent = recs.filter((r) => r.status === "IDENTIFICADO").length;
+  const nCitas = recs.filter((r) => r.cita && r.cita.sent).length;
+  const nHot = recs.filter((r) => (r.scoreMax || r.score || 0) >= 75).length;
+  const cards = recs.map((r) => {
+    const quien = [r.datos && r.datos.nombre, r.datos && r.datos.empresa].filter(Boolean).join(" · ") || "Anónimo";
+    const sc = r.score || 0;
+    const lastUser = [...(r.transcript || [])].reverse().find((m) => m.role === "user");
+    const rep = r.report || {};
+    const badges = [
+      r.cita && r.cita.sent ? '<span class="b b-red">Reunión ' + ESC(r.cita.fecha) + " " + ESC(r.cita.hora) + "</span>" : "",
+      r.emailed ? '<span class="b">Informe enviado</span>' : "",
+      r.followedUp ? '<span class="b">Seguimiento al lead</span>' : "",
+      r.alerted ? '<span class="b">Alerta disparada</span>' : "",
+    ].filter(Boolean).join("");
+    const conv = (r.transcript || []).map((m) =>
+      '<p class="' + (m.role === "user" ? "cu" : "ca") + '"><b>' + (m.role === "user" ? "Cliente" : "Agente") + ":</b> " + ESC(m.content) + "</p>").join("");
+    return '<div class="card">'
+      + '<div class="row1">' + (isLive(r) ? '<span class="live" title="En la web ahora"></span>' : "")
+      + "<b>" + ESC(quien) + "</b>"
+      + '<span class="st ' + (r.status === "IDENTIFICADO" ? "st-id" : "") + '">' + ESC(r.status) + "</span>"
+      + '<span class="score"><span class="bar"><i style="width:' + sc + '%"></i></span>' + sc + "</span>"
+      + '<span class="when">' + fmt(r.updatedAt || r.createdAt) + "</span></div>"
+      + '<div class="meta">' + [
+          r.datos && r.datos.email, r.datos && r.datos.telefono,
+          r.geoCountry ? countryName(r.geoCountry) : "", r.geoOrg,
+          r.page ? "en " + r.page : "", (r.turns || 0) + " turnos", Math.round((r.durationMs || 0) / 60000) + " min", "idioma " + (r.lang || "es"),
+        ].filter(Boolean).map(ESC).join(" · ") + "</div>"
+      + (badges ? '<div class="badges">' + badges + "</div>" : "")
+      + (rep.dolorPrincipal && rep.dolorPrincipal !== "sin dato" ? '<div class="dolor"><b>Dolor:</b> ' + ESC(rep.dolorPrincipal) + "</div>" : "")
+      + (rep.proximoPaso && rep.proximoPaso !== "sin dato" ? '<div class="dolor"><b>Próximo paso:</b> ' + ESC(rep.proximoPaso) + "</div>" : "")
+      + (lastUser ? '<div class="last">«' + ESC(lastUser.content.slice(0, 200)) + "»</div>" : "")
+      + (conv ? "<details><summary>Conversación completa</summary>" + conv + "</details>" : "")
+      + "</div>";
+  }).join("");
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta http-equiv="refresh" content="30"><title>Tevi Agent — Leads</title>
+<style>
+body{margin:0;background:#f4f1ea;color:#111114;font:15px/1.5 -apple-system,"Segoe UI",Arial,sans-serif;padding:28px 16px 60px}
+.wrap{max-width:880px;margin:0 auto}
+h1{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:1.7rem;margin:0 0 2px}
+h1 b{color:#E4010A;font-weight:400}
+.sub{color:#6b665c;font-size:.85rem;margin:0 0 22px}
+.tot{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 26px}
+.tot div{background:#fff;border:1px solid #dcd8cf;padding:10px 16px;min-width:96px}
+.tot b{display:block;font-size:1.5rem;font-family:Georgia,serif;font-weight:400}
+.tot span{font-size:.75rem;color:#6b665c;text-transform:uppercase;letter-spacing:.04em}
+.tot .hotN b{color:#E4010A}
+.card{background:#fff;border:1px solid #dcd8cf;padding:14px 16px;margin:0 0 12px}
+.row1{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.row1>b{font-size:1.02rem}
+.live{width:9px;height:9px;border-radius:50%;background:#16a34a;flex:0 0 auto;animation:pu 1.4s infinite}
+@keyframes pu{50%{opacity:.35}}
+.st{font-size:.68rem;letter-spacing:.05em;border:1px solid #dcd8cf;color:#6b665c;padding:1px 7px}
+.st-id{border-color:#E4010A;color:#E4010A}
+.score{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:.8rem;color:#6b665c}
+.bar{display:inline-block;width:90px;height:6px;background:#e8e4da}
+.bar i{display:block;height:6px;background:#E4010A}
+.when{font-size:.78rem;color:#6b665c}
+.meta{color:#6b665c;font-size:.8rem;margin:6px 0 0}
+.badges{margin:8px 0 0}
+.b{display:inline-block;font-size:.72rem;border:1px solid #dcd8cf;color:#6b665c;padding:1px 8px;margin:0 6px 4px 0}
+.b-red{border-color:#E4010A;color:#E4010A;font-weight:600}
+.dolor{font-size:.86rem;margin:7px 0 0}
+.last{font-size:.86rem;color:#3f3b33;font-style:italic;margin:8px 0 0}
+details{margin:10px 0 0;font-size:.85rem}
+summary{cursor:pointer;color:#E4010A}
+details p{margin:6px 0;padding-left:10px;border-left:2px solid #eee}
+details .cu{border-left-color:#111114}
+details .ca{border-left-color:#E4010A}
+.empty{color:#6b665c;font-style:italic}
+</style></head><body><div class="wrap">
+<h1>Tevi Agent — <b>leads en vivo</b></h1>
+<p class="sub">Actualizado ${fmt(now)} (hora de España) · se refresca solo cada 30 s · ${recs.length} sesiones</p>
+<div class="tot">
+<div><b>${nLive}</b><span>en la web ahora</span></div>
+<div class="hotN"><b>${nHot}</b><span>calientes (≥75)</span></div>
+<div><b>${nIdent}</b><span>identificados</span></div>
+<div><b>${nCitas}</b><span>reuniones</span></div>
+<div><b>${recs.length}</b><span>total</span></div>
+</div>
+${cards || '<p class="empty">Aún no hay conversaciones guardadas.</p>'}
+</div></body></html>`;
+  return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -1083,6 +1184,9 @@ export default {
     }
     if (url.pathname === "/api/tevi-agent/leads") {
       return handleAgentLeads(request, env);
+    }
+    if (url.pathname === "/api/tevi-agent/panel" || url.pathname === "/api/tevi-agent/panel/") {
+      return handleAgentPanel(request, env);
     }
     // Todo lo demás: el sitio estático (lo sirve el binding ASSETS).
     return env.ASSETS.fetch(request);
