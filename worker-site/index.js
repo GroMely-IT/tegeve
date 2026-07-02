@@ -151,6 +151,24 @@ const json = (data, status, headers) =>
     headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
   });
 
+// País del visitante → idioma del sitio (para el ajuste automático de idioma
+// del cliente). Países sin idioma propio en el sitio → inglés.
+// GET /api/geo → { country, lang }
+const GEO_LANG = {
+  es: ["ES", "AR", "UY", "MX", "CO", "CL", "PE", "VE", "EC", "BO", "PY", "CR", "PA", "DO", "GT", "HN", "SV", "NI", "PR", "CU", "GQ"],
+  pt: ["BR", "PT", "AO", "MZ", "CV", "GW", "ST", "TL"],
+  it: ["IT", "SM", "VA"],
+  fr: ["FR", "MC", "BE", "LU", "SN", "CI", "CM", "BF", "BJ", "TG", "NE", "ML", "GA", "CG", "CD", "MG", "HT"],
+  de: ["DE", "AT", "LI", "CH"],
+};
+const GEO_LANG_BY_COUNTRY = {};
+for (const l in GEO_LANG) for (const c of GEO_LANG[l]) GEO_LANG_BY_COUNTRY[c] = l;
+function handleGeo(request) {
+  const origin = request.headers.get("Origin") || "";
+  const country = ((request.cf && request.cf.country) || request.headers.get("CF-IPCountry") || "").toUpperCase();
+  return json({ country, lang: GEO_LANG_BY_COUNTRY[country] || "en" }, 200, { "Cache-Control": "no-store", ...corsHeaders(origin) });
+}
+
 async function handleTevi(request, env) {
   const origin = request.headers.get("Origin") || "";
   const h = corsHeaders(origin);
@@ -1286,6 +1304,10 @@ ${cards || '<p class="empty">Aún no hay conversaciones guardadas.</p>'}
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // País del visitante → idioma del sitio (ajuste automático de idioma).
+    if (url.pathname === "/api/geo") {
+      return handleGeo(request);
+    }
     // API de Tevi (asistente informativo, modelos gratis) — sin tocar.
     if (url.pathname === "/api/tevi" || url.pathname === "/api/tevi/") {
       return handleTevi(request, env);
