@@ -676,7 +676,7 @@ async function handleTeviAgent(request, env, ctx) {
 
   const sessionId = String(body.sessionId || "").trim().slice(0, 80) || "anon-" + Date.now();
   const lang = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
-  const action = ({ end: 1, opener: 1, touch: 1 })[body.action] ? body.action : "chat";
+  const action = ({ end: 1, opener: 1, touch: 1, log: 1 })[body.action] ? body.action : "chat";
   const now = Date.now();
   // País del visitante por Cloudflare (XX = desconocido, T1 = Tor).
   const geoCountry = ((request.cf && request.cf.country) || request.headers.get("CF-IPCountry") || "").toUpperCase();
@@ -717,6 +717,22 @@ async function handleTeviAgent(request, env, ctx) {
     if (action === "end") {
       const report = await generateReport(env, rec, now);
       return json({ ok: true, sessionId, report }, 200, h);
+    }
+
+    // Registro de un turno de la conversación LIVE (voz en tiempo real): las
+    // transcripciones entran al mismo expediente (informe, alertas, seguimiento).
+    if (action === "log") {
+      const u = String(body.user || "").trim().slice(0, AGENT_MAXLEN);
+      const a = String(body.agent || "").trim().slice(0, AGENT_MAXLEN);
+      if (u) { rec.transcript.push({ role: "user", content: u, ts: now }); captureContact(rec, u); }
+      if (a) rec.transcript.push({ role: "assistant", content: a, ts: Date.now() });
+      rec.turns = rec.transcript.filter((m) => m.role === "user").length;
+      rec.updatedAt = Date.now();
+      rec.durationMs = rec.updatedAt - rec.createdAt;
+      const hasC = !!(rec.datos.email || rec.datos.telefono);
+      if (rec.status === "IDENTIFICADO" && (!rec.alerted || (hasC && !rec.alertedContact))) await sendHotAlert(env, rec);
+      await saveLead(env, sessionId, rec);
+      return json({ ok: true, sessionId }, 200, h);
     }
 
     // Registro ligero de sesión (SIN llamar al modelo): lo usa la presentación
@@ -1310,6 +1326,74 @@ function wavFromPcm(pcm, rate) {
   return out;
 }
 
+// ---- LIVE: conversación de voz en tiempo real (Gemini Live API) ----
+// El navegador NO ve nunca la clave de Google: este endpoint crea un TOKEN
+// EFÍMERO (30 min, un solo uso, atado al modelo Live) y el cliente abre el
+// WebSocket con él. POST /api/tevi-agent/live-token {sessionId, lang}.
+const GEMINI_LIVE_DEFAULT = "gemini-2.5-flash-native-audio-preview-12-2025"; // audio nativo (misma voz Kore); override: GEMINI_LIVE_MODEL
+function liveSystem(lang, rec) {
+  const idioma = LANG_NAMES[lang] || "español";
+  const geo = rec && rec.geoCountry
+    ? "La persona se conecta desde " + countryName(rec.geoCountry) + ": adapta la variante del idioma a ese país con naturalidad, salvo que la persona hable o pida otra.\n"
+    : "";
+  return "Eres el «Agente de TeGeVe», el agente comercial POR VOZ de TeGeVe (consultora tecnológica, también conocida como TGV). Hablas SIEMPRE en " + idioma + ", como una persona real al teléfono: frases CORTAS (1 a 3), cálidas y profesionales; sin listas, sin formato, sin emojis; nunca suenas a robot ni a folleto. Escuchas más de lo que hablas y haces UNA pregunta cada vez.\n"
+    + geo
+    + "OBJETIVO: eres un comercial de élite, no un contestador. Entiende el negocio de la persona, detecta su dolor, aporta valor concreto y AVANZA SIEMPRE hacia una reunión de 30 minutos con Gabriel Grosso (Director de TeGeVe). Propón la reunión en cuanto haya interés real, sin esperar a que la pidan; si dicen que no, sigue aportando y reintenta más adelante con otro ángulo, sin ser cansino. Termina cada intervención con una pregunta o un siguiente paso.\n"
+    + "REUNIONES: cuando acordéis una reunión, pide y CONFIRMA en voz alta el email, el día y la hora de la persona, repítelos para verificar, y di que le llegará la invitación por correo (el equipo la envía después). No inventes datos, cifras ni clientes; usa solo el CONOCIMIENTO. No menciones competidores.\n\nCONOCIMIENTO SOBRE TEGEVE:\n" + AGENT_KB;
+}
+async function handleLiveToken(request, env) {
+  const origin = request.headers.get("Origin") || "";
+  const h = corsHeaders(origin);
+  if (request.method === "OPTIONS") return new Response(null, { headers: h });
+  if (request.method !== "POST") return json({ error: "Use POST." }, 405, h);
+  if (origin && !isAllowedOrigin(origin)) return new Response("Forbidden", { status: 403, headers: h });
+  if (!env.GEMINI_API_KEY) return json({ ok: false }, 200, h);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "Invalid JSON." }, 400, h); }
+  const sessionId = String(body.sessionId || "").trim().slice(0, 80);
+  if (!sessionId) return json({ ok: false }, 200, h);
+  const lang = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
+  // Registra la sesión (el informe/las alertas siguen funcionando en modo Live).
+  const now = Date.now();
+  let rec = (await loadLead(env, sessionId)) || newLead(sessionId, lang, now);
+  const geoCountry = ((request.cf && request.cf.country) || "").toUpperCase();
+  if (geoCountry && geoCountry !== "XX" && geoCountry !== "T1") rec.geoCountry = geoCountry;
+  rec.updatedAt = now;
+  await saveLead(env, sessionId, rec);
+  const model = env.GEMINI_LIVE_MODEL || GEMINI_LIVE_DEFAULT;
+  // Token de un solo uso y caducidad corta. Se intenta primero ATADO al modelo
+  // Live (bidiGenerateContentSetup); si esa versión del API no lo acepta, se
+  // emite sin atadura (sigue siendo un solo uso y solo lo entrega este endpoint).
+  const base = {
+    uses: 1,
+    expireTime: new Date(now + 30 * 60000).toISOString(),
+    newSessionExpireTime: new Date(now + 2 * 60000).toISOString(),
+  };
+  const mk = (b) => fetch("https://generativelanguage.googleapis.com/v1alpha/auth_tokens", {
+    method: "POST",
+    headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify(b),
+  });
+  try {
+    let r = await mk(Object.assign({ bidiGenerateContentSetup: { model: "models/" + model } }, base));
+    if (!r.ok) {
+      console.error("live token intento1", r.status, (await r.text().catch(() => "")).slice(0, 400));
+      r = await mk(base);
+    }
+    if (!r.ok) {
+      console.error("live token intento2", r.status, (await r.text().catch(() => "")).slice(0, 400));
+      return json({ ok: false }, 200, h);
+    }
+    const d = await r.json();
+    const token = d.name || (d.token && (d.token.name || d.token)) || "";
+    if (!token) { console.error("live token sin name", JSON.stringify(d).slice(0, 200)); return json({ ok: false }, 200, h); }
+    return json({ ok: true, token, model, voice: geminiVoiceFor(env, lang), sys: liveSystem(lang, rec) }, 200, h);
+  } catch (e) {
+    console.error("live token", String(e).slice(0, 200));
+    return json({ ok: false }, 200, h);
+  }
+}
+
 // Clave de caché para un audio (frase+voz+idioma+modelo → URL sintética).
 // El Cache API de Workers guarda el WAV en el edge: la misma frase (narraciones
 // de la presentación, textos repetidos) se cobra UNA vez a Google y después
@@ -1529,6 +1613,9 @@ export default {
     }
     if (url.pathname === "/api/tevi-agent/tts") {
       return handleAgentTts(request, env, ctx);
+    }
+    if (url.pathname === "/api/tevi-agent/live-token") {
+      return handleLiveToken(request, env);
     }
     // Todo lo demás: el sitio estático (lo sirve el binding ASSETS).
     return env.ASSETS.fetch(request);

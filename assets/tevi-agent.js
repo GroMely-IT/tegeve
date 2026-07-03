@@ -40,7 +40,7 @@
     + "#taMini .ta-mini-av{width:34px;height:34px;border-radius:50%;background:var(--red,#E4010A);display:flex;align-items:center;justify-content:center;flex:0 0 auto;position:relative;color:#fff}"
     + "#taMini .ta-mini-av svg{width:17px;height:17px}"
     + "#taMini .ta-mini-av::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--red,#E4010A);opacity:0;animation:taRing 1.4s ease-out infinite}"
-    + "#taMini .ta-mini-tx{flex:1;font-size:.8rem;line-height:1.35;color:#e8e5de;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-align:left}"
+    + "#taMini .ta-mini-tx{flex:1;font-size:.86rem;line-height:1.45;color:#f2f0ea;text-align:left;max-height:34vh;overflow-y:auto;padding:2px 0}"
     + "#taMini .ta-mini-next,#taMini .ta-mini-up{flex:0 0 auto;background:rgba(255,255,255,.14);border:0;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.05rem;line-height:1;display:flex;align-items:center;justify-content:center}"
     + "#taMini .ta-mini-next{background:var(--red,#E4010A);display:none}"
     + "#taMini.tour .ta-mini-next{display:flex}"
@@ -218,7 +218,11 @@
     + '<button type="button" class="ta-mini-next" aria-label="Siguiente">&rsaquo;</button>'
     + '<button type="button" class="ta-mini-up" aria-label="Restaurar el chat">&#9650;</button>';
   document.body.appendChild(miniBar);
-  function miniText(t2) { miniBar.querySelector(".ta-mini-tx").textContent = String(t2 || "").slice(0, 220); }
+  function miniText(t2) { // el texto completo, siempre legible (la barra crece hacia arriba)
+    var el2 = miniBar.querySelector(".ta-mini-tx");
+    el2.textContent = String(t2 || "").slice(0, 800);
+    el2.scrollTop = 0;
+  }
   function minimize(txt) {
     if (voiceOn) return;                               // el modo voz tiene su propia pantalla
     if (!panel.classList.contains("open") || minOn) { if (txt != null) miniText(txt); return; }
@@ -684,7 +688,10 @@
   var VLANG = { es: "es-ES", en: "en-US", pt: "pt-BR", it: "it-IT", fr: "fr-FR", de: "de-DE" };
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var micBtn = panel.querySelector("#taMic");
-  if (!SR && micBtn) micBtn.style.display = "none"; // sin soporte (Firefox): se oculta
+  // El modo LIVE (WebSocket + micrófono) no necesita SpeechRecognition: el micro
+  // se oculta solo si no hay NINGUNA vía de voz posible.
+  var canLive = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.WebSocket && window.AudioContext);
+  if (!SR && !canLive && micBtn) micBtn.style.display = "none";
   var VT = {
     es: { listen: "Te escucho…", think: "Pensando…", speak: "Hablando", pause: "En pausa", hint: "Toca el avatar para interrumpir, pausar o reanudar", exit: "Volver al chat", denied: "No tengo permiso para usar el micrófono. Actívalo en el navegador y vuelve a intentarlo." },
     en: { listen: "I'm listening…", think: "Thinking…", speak: "Speaking", pause: "Paused", hint: "Tap the avatar to interrupt, pause or resume", exit: "Back to chat", denied: "I don't have microphone permission. Enable it in your browser and try again." },
@@ -733,8 +740,153 @@
     };
     try { rec2.start(); } catch (e) { /* arranque doble: lo reintenta el bucle */ }
   }
+  // ── LIVE: conversación de voz en TIEMPO REAL (Gemini Live API por WebSocket).
+  //    El worker entrega un token efímero (la clave nunca llega al navegador);
+  //    micrófono → PCM 16 kHz → Gemini (audio nativo, misma voz) → 24 kHz al
+  //    altavoz, con interrupción natural (barge-in) y transcripciones que entran
+  //    al expediente del lead (informe, alertas y seguimiento intactos). ──
+  // OJO: con token efímero el método es BidiGenerateContentConstrained (no el normal).
+  var LIVE_WS = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained";
+  var live = null;
+  function liveB64FromF32(f, inRate) { // Float32 (inRate) → PCM16 16kHz → base64
+    var step = inRate / 16000, n = Math.floor(f.length / step);
+    var out = new Uint8Array(n * 2);
+    for (var i = 0; i < n; i++) {
+      var v = f[Math.floor(i * step)];
+      v = Math.max(-1, Math.min(1, v));
+      var s2 = v < 0 ? v * 32768 : v * 32767;
+      var u = s2 & 0xFFFF;
+      out[2 * i] = u & 255; out[2 * i + 1] = (u >> 8) & 255;
+    }
+    var bin = "";
+    for (var j = 0; j < out.length; j++) bin += String.fromCharCode(out[j]);
+    return btoa(bin);
+  }
+  function livePlay(b64) {
+    if (!live || !live.pc) return;
+    try {
+      var bin = atob(b64), n = bin.length >> 1, f = new Float32Array(n);
+      for (var i = 0; i < n; i++) {
+        var v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8);
+        if (v >= 32768) v -= 65536;
+        f[i] = v / 32768;
+      }
+      var pc = live.pc;
+      var buf = pc.createBuffer(1, n, 24000);
+      buf.getChannelData(0).set(f);
+      var s = pc.createBufferSource();
+      s.buffer = buf; s.connect(pc.destination);
+      var t0 = Math.max(pc.currentTime + 0.06, live.playT || 0);
+      s.start(t0); live.playT = t0 + buf.duration;
+      live.srcs.push(s);
+      s.onended = function () {
+        if (!live) return;
+        var ix = live.srcs.indexOf(s); if (ix >= 0) live.srcs.splice(ix, 1);
+        if (!live.srcs.length && voiceOn) vSet("listen", vt().listen, "");
+      };
+    } catch (e) {}
+  }
+  function liveStopPlayback() {
+    if (!live) return;
+    live.srcs.forEach(function (s) { try { s.stop(); } catch (e) {} });
+    live.srcs = []; live.playT = 0;
+  }
+  function liveLogTurn() { // fin de turno: transcripciones al chat y al servidor
+    if (!live) return;
+    var u = live.inTx.trim(), a = live.outTx.trim();
+    live.inTx = ""; live.outTx = "";
+    if (!u && !a) return;
+    if (u) { bubble(u, "user"); state.msgs.push({ role: "user", content: u }); }
+    if (a) { bubble(a, "bot"); state.msgs.push({ role: "assistant", content: a }); }
+    save();
+    if (idleTimer) scheduleIdleEnd();
+    try {
+      fetch(EP, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: state.id, action: "log", user: u, agent: a, lang: lang() }) }).catch(function () {});
+    } catch (e) {}
+  }
+  function liveMsg(o) {
+    if (!live || !voiceOn) return;
+    if (o.setupComplete) { try { console.log("[tevi-live] conectado (tiempo real)"); } catch (e) {} vSet("listen", vt().listen, ""); return; }
+    var sc = o.serverContent;
+    if (!sc) return;
+    if (sc.interrupted) { liveStopPlayback(); liveLogTurn(); vSet("listen", vt().listen, ""); return; }
+    if (sc.inputTranscription && sc.inputTranscription.text) { live.inTx += sc.inputTranscription.text; vSet(null, null, live.inTx.slice(-180)); }
+    if (sc.outputTranscription && sc.outputTranscription.text) { live.outTx += sc.outputTranscription.text; }
+    var parts = (sc.modelTurn && sc.modelTurn.parts) || [];
+    var spoke2 = false;
+    parts.forEach(function (p) { if (p.inlineData && p.inlineData.data) { livePlay(p.inlineData.data); spoke2 = true; } });
+    if (spoke2) vSet("speak", vt().speak, live.outTx.slice(-180));
+    if (sc.turnComplete) liveLogTurn();
+  }
+  function stopLive() {
+    if (!live) return;
+    var L2 = live; live = null;
+    try { if (L2.ws) { L2.ws.onclose = null; L2.ws.close(); } } catch (e) {}
+    L2.srcs.forEach(function (s) { try { s.stop(); } catch (e) {} });
+    try { if (L2.proc) L2.proc.disconnect(); } catch (e) {}
+    try { if (L2.ac) L2.ac.close(); } catch (e) {}
+    try { if (L2.pc) L2.pc.close(); } catch (e) {}
+    try { if (L2.stream) L2.stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+  }
+  function startLive(cfg) {
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+      .then(function (stream) {
+        if (!voiceOn) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
+        var ws = new WebSocket(LIVE_WS + "?access_token=" + encodeURIComponent(cfg.token));
+        live = { ws: ws, stream: stream, inTx: "", outTx: "", playT: 0, srcs: [], muted: false, pc: null, ac: null, proc: null };
+        ws.onopen = function () {
+          ws.send(JSON.stringify({ setup: {
+            model: "models/" + cfg.model,
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: cfg.voice || "Kore" } } },
+            },
+            systemInstruction: { parts: [{ text: cfg.sys || "" }] },
+            inputAudioTranscription: {},
+            outputAudioTranscription: {},
+          } }));
+          try {
+            var AC = window.AudioContext || window.webkitAudioContext;
+            var ac; try { ac = new AC({ sampleRate: 16000 }); } catch (e2) { ac = new AC(); }
+            var pc; try { pc = new AC({ sampleRate: 24000 }); } catch (e3) { pc = new AC(); }
+            if (!live) return;
+            live.ac = ac; live.pc = pc;
+            var src = ac.createMediaStreamSource(stream);
+            var proc = ac.createScriptProcessor(4096, 1, 1);
+            var mute = ac.createGain(); mute.gain.value = 0;
+            src.connect(proc); proc.connect(mute); mute.connect(ac.destination);
+            live.proc = proc;
+            proc.onaudioprocess = function (e) {
+              if (!live || live.muted || live.ws.readyState !== 1) return;
+              var b64 = liveB64FromF32(e.inputBuffer.getChannelData(0), ac.sampleRate);
+              live.ws.send(JSON.stringify({ realtimeInput: { audio: { data: b64, mimeType: "audio/pcm;rate=16000" } } }));
+            };
+          } catch (e4) { stopLive(); if (SR) vListen(); }
+        };
+        ws.onmessage = function (ev) {
+          if (typeof ev.data === "string") { try { liveMsg(JSON.parse(ev.data)); } catch (e) {} }
+          else if (ev.data && ev.data.text) ev.data.text().then(function (t2) { try { liveMsg(JSON.parse(t2)); } catch (e) {} });
+        };
+        ws.onclose = function (ev2) { // fin de sesión Live (límite ~15 min o corte): al bucle clásico
+          try { console.log("[tevi-live] cerrado", ev2 && ev2.code, (ev2 && ev2.reason || "").slice(0, 120)); } catch (e) {}
+          if (!live) return;
+          stopLive();
+          if (voiceOn) { if (SR) { vPaused = false; vListen(); } else vSet("", vt().pause, ""); }
+        };
+        ws.onerror = function () { try { ws.close(); } catch (e) {} };
+      })
+      .catch(function () { if (voiceOn) { if (SR) vListen(); else vSet("", vt().denied, ""); } });
+  }
+
   function vTap() { // tocar el avatar: interrumpe al agente, o pausa/reanuda la escucha
     if (!voiceOn) return;
+    if (live) { // en LIVE: si habla, se le interrumpe; si no, silencia/reactiva el micro
+      if (live.srcs.length) { liveStopPlayback(); liveLogTurn(); vSet("listen", vt().listen, ""); return; }
+      live.muted = !live.muted;
+      vSet(live.muted ? "" : "listen", live.muted ? vt().pause : vt().listen, "");
+      return;
+    }
     if (curAudio || ("speechSynthesis" in window && speechSynthesis.speaking)) {
       speakGen++; ttsStop(); vPaused = false; vListen(); return;
     }
@@ -744,12 +896,13 @@
   function stopVoice() {
     if (!voiceOn) return;
     voiceOn = false; vPaused = false;
+    stopLive();
     speakGen++; ttsStop(); vrecStop();
     if (vBox) { vBox.remove(); vBox = null; }
     if (micBtn) micBtn.classList.remove("on");
   }
   function startVoice() {
-    if (!SR || voiceOn) return;
+    if (voiceOn || (!SR && !canLive)) return;
     if (presOn) { presStopAudio(); presOn = false; } // el micro releva a la presentación
     voiceOn = true; vPaused = false;
     if (!started) { started = true; replay(); }
@@ -764,9 +917,25 @@
     vBox.querySelector(".ta-v-exit").addEventListener("click", stopVoice);
     panel.appendChild(vBox);
     if (micBtn) micBtn.classList.add("on");
-    vListen();
+    // Primero el modo LIVE (tiempo real, barge-in); si no está disponible o el
+    // token falla, el bucle clásico escucha→piensa→habla de siempre.
+    if (canLive) {
+      vSet("think", vt().think, "");
+      fetch(EP + "/live-token", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: state.id, lang: lang() }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!voiceOn) return;
+          if (d && d.ok && d.token) startLive(d);
+          else if (SR) vListen();
+          else vSet("", vt().denied, "");
+        })
+        .catch(function () { if (!voiceOn) return; if (SR) vListen(); else vSet("", vt().denied, ""); });
+    } else vListen();
   }
-  if (SR && micBtn) micBtn.addEventListener("click", function () { if (voiceOn) stopVoice(); else startVoice(); });
+  if (micBtn) micBtn.addEventListener("click", function () { if (voiceOn) stopVoice(); else startVoice(); });
 
   // ── VOZ DEL AGENTE (solo en modo voz): premium (ElevenLabs vía /tts) si el
   //    servidor la tiene; si no o si falla, la del navegador. Nunca lee URLs. ──
