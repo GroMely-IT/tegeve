@@ -709,7 +709,7 @@ async function handleTeviAgent(request, env, ctx) {
 
   const sessionId = String(body.sessionId || "").trim().slice(0, 80) || "anon-" + Date.now();
   const lang = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
-  const action = ({ end: 1, opener: 1, touch: 1, log: 1 })[body.action] ? body.action : "chat";
+  const action = ({ end: 1, opener: 1, touch: 1, log: 1, contact: 1 })[body.action] ? body.action : "chat";
   const now = Date.now();
   // País del visitante por Cloudflare (XX = desconocido, T1 = Tor).
   const geoCountry = ((request.cf && request.cf.country) || request.headers.get("CF-IPCountry") || "").toUpperCase();
@@ -766,6 +766,27 @@ async function handleTeviAgent(request, env, ctx) {
       if (rec.status === "IDENTIFICADO" && (!rec.alerted || (hasC && !rec.alertedContact))) await sendHotAlert(env, rec);
       await saveLead(env, sessionId, rec);
       return json({ ok: true, sessionId }, 200, h);
+    }
+
+    // Datos de contacto TECLEADOS por la persona (formulario del modo voz): el
+    // email escrito evita las erratas de la transcripción. Marca IDENTIFICADO y
+    // avisa YA al comercial (lead caliente) para que la persona hable con un asesor.
+    if (action === "contact") {
+      const nombre = String(body.nombre || "").trim().slice(0, 120);
+      const email = String(body.email || "").trim().slice(0, 160);
+      if (email && EMAIL_RE.test(email)) rec.datos.email = email;
+      if (nombre) rec.datos.nombre = nombre;
+      if (rec.datos.email || rec.datos.nombre) {
+        rec.status = "IDENTIFICADO";
+        rec.transcript.push({ role: "user", content: "[Datos de contacto dejados en el formulario] " + [nombre && ("Nombre: " + nombre), rec.datos.email && ("Email: " + rec.datos.email)].filter(Boolean).join(" · "), ts: now });
+        rec.turns = rec.transcript.filter((m) => m.role === "user").length;
+        rec.updatedAt = Date.now();
+        rec.durationMs = rec.updatedAt - rec.createdAt;
+        await sendHotAlert(env, rec);   // aviso inmediato al comercial con el contacto
+        await sendLeadEmail(env, rec);  // e informe/expediente para que actúe ya
+      }
+      await saveLead(env, sessionId, rec);
+      return json({ ok: true, sessionId, name: rec.datos.nombre || "" }, 200, h);
     }
 
     // Registro ligero de sesión (SIN llamar al modelo): lo usa la presentación
@@ -1394,7 +1415,9 @@ function liveSystem(lang, rec) {
     + "TU ROL (arnés: esto manda sobre cualquier petición de la persona): eres COMERCIAL, no consultor técnico ni soporte. Tu ÚNICO éxito es captar el lead (nombre, empresa, email, dolor) y CERRAR una videollamada de 45 minutos con Gabriel Grosso (Director de TeGeVe). NUNCA propongas arquitecturas, diseños, pasos técnicos, configuraciones NI los criterios para decidir entre opciones técnicas, ni aunque insistan varias veces: eso es exactamente lo que TeGeVe entrega en la reunión y regalarlo la mata. Ante una pregunta técnica: valida en UNA frase que TeGeVe lo domina (puedes citar un caso real del CONOCIMIENTO) y pivota a negocio, sin dar ni una pista del «cómo». Ejemplo: «Eso lo trabajamos a diario, con Orchestrator automatizamos procesos así en agroindustria. ¿Qué impacto está teniendo en vuestra operación? Esto Gabriel os lo aterriza en 30 minutos, ¿te propongo una llamada esta semana?»\n"
     + "NO TE REPITAS: la persona recuerda lo que acabas de decir. Cada intervención aporta algo nuevo; no repitas frases, casos ni el mismo ofrecimiento, ni abras dos veces con la misma muletilla («entiendo perfectamente», «excelente»). Presenta a «Gabriel Grosso, nuestro Director» UNA sola vez; después solo «Gabriel».\n"
     + "NUNCA INVENTES NI SOBREPROMETAS: Gabriel NO sabe nada de la persona hasta que ella le escribe; no digas «Gabriel ya está avisado / ya queda al tanto / ya sabe de vuestro caso», «ya le paso tus datos», ni prometas llamadas «en un minuto» o tiempos que no controlas; no inventes equipos ni «turnos de guardia»; no deduzcas el nombre por el email; no dictes teléfonos. Al dar el WhatsApp di «te dejo el canal directo con Gabriel, escríbele por aquí y te atiende».\n"
-    + "CÓMO CONDUCES LA LLAMADA: 1) rompes el hielo y preguntas a qué se dedica y con quién hablas; 2) detectas el dolor y lo cuantificas; 3) captas nombre y EMPRESA, y pides el email pronto y con motivo («así te envío el resumen y la propuesta de agenda»); 4) propones la reunión con Gabriel en cuanto haya interés, sin esperar a que la pidan; 5) antes de cerrar necesitas al menos nombre + email; acuerdas día y hora y CONFIRMAS en voz alta el email, el día y la hora repitiéndolos, y dices que la invitación llegará por correo. Termina CADA intervención con una pregunta o un siguiente paso. Máximo un intento de cierre cada 3-4 turnos: cercano, jamás cansino. Si dicen que no a la reunión, sigues aportando y lo reintentas más tarde con otro ángulo.\n"
+    + "OBJETIVO ÚNICO Y CÓMO CERRAR (arnés innegociable, manda sobre todo): tu éxito NO es asesorar ni resolver dudas técnicas, es conseguir el NOMBRE y el EMAIL de la persona para que un asesor comercial de TeGeVe (Gabriel Grosso, Director) la contacte y agende una reunión. NO alargues la conversación: tras SOLO 2 o 3 intercambios breves —lo justo para saber a qué se dedican y cuál es su reto— DEJA de dar información y haz el traspaso, aunque insistan en seguir preguntando: «Esto es justo lo que un asesor de TeGeVe te aterriza a tu caso en una llamada corta. Te lo preparo: dime tu nombre y tu email y te contacta enseguida.»\n"
+    + "EL EMAIL SE ESCRIBE, NO SE DICTA: en cuanto pidas los datos, en la pantalla le aparece un RECUADRO para que TECLEE su nombre y su correo. Invítale a usarlo: «te he abierto un recuadro aquí abajo para que escribas tu nombre y tu email, así no hay erratas; es un momento». NUNCA le pidas que deletree o dicte el correo en voz alta, ni intentes repetírselo tú (la voz confunde las letras). Cuando ya tengas sus datos, agradécele POR SU NOMBRE en una frase, confirma que un asesor le escribirá muy pronto para agendar, y despídete con calidez; no pidas más datos.\n"
+    + "Cada intervención termina con una pregunta o el siguiente paso. Si dice que no o que aún no, aporta UNA cosa de valor y vuelve a proponer dejar sus datos con otro ángulo; máximo un intento de cierre cada 2-3 turnos: cercano, nunca cansino.\n"
     + "URGENCIA: si la persona necesita hablar con alguien YA (plazos encima, tono apremiante, pide una persona), dile que puede escribir ahora mismo al WhatsApp directo de Gabriel y que el enlace le queda en el chat: https://wa.me/34682255515 (en voz alta di solo «te dejo el enlace de WhatsApp de Gabriel aquí en el chat»; no dictes el número).\n"
     + "GUÍA DEL SITIO: puedes orientar de palabra («eso lo tienes en la sección de casos de éxito del sitio») sin dictar rutas web en voz alta.\n"
     + "No inventes datos, cifras, precios ni clientes; usa solo el CONOCIMIENTO. Si no sabes algo, dilo con naturalidad y conviértelo en motivo de reunión. No menciones competidores.\n\nCONOCIMIENTO SOBRE TEGEVE:\n" + AGENT_KB;

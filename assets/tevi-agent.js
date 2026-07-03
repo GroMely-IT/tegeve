@@ -64,7 +64,7 @@
     + "#taPanel .ai-head{cursor:grab;user-select:none;-webkit-user-select:none}"
     + "#taPanel.ta-dragging .ai-head{cursor:grabbing}"
     // Modo voz: avatar conversacional que cubre el cuerpo del panel.
-    + "#taPanel .ta-voice{position:absolute;left:0;right:0;bottom:0;background:var(--paper,#FBFAF7);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:7;text-align:center;padding:24px;animation:taWel .3s ease}"
+    + "#taPanel .ta-voice{position:absolute;left:0;right:0;bottom:0;top:0;background:var(--paper,#FBFAF7);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:7;text-align:center;padding:24px;overflow-y:auto;animation:taWel .3s ease}"
     + "#taPanel .ta-v-av{width:96px;height:96px;border-radius:50%;background:var(--red,#E4010A);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .16s ease-out}"
     + "#taPanel .ta-v-av:active{transform:scale(.95)}"
     + "#taPanel .ta-v-av svg{width:42px;height:42px}"
@@ -80,6 +80,17 @@
     + "#taPanel .ta-v-hint{font-size:.74rem;color:#8a857b}"
     + "#taPanel .ta-v-exit{border:1px solid var(--line,#dcd8cf);background:#fff;color:#5f5b53;padding:7px 14px;cursor:pointer;font-size:.8rem}"
     + "#taPanel .ta-v-exit:hover{border-color:var(--red,#E4010A);color:var(--red,#E4010A)}"
+    + "#taPanel .ta-v-form{width:100%;max-width:300px;display:flex;flex-direction:column;gap:8px;margin-top:2px}"
+    + "#taPanel .ta-v-form-t{font-size:.9rem;font-weight:600;color:var(--ink,#111114);line-height:1.35}"
+    + "#taPanel .ta-v-form input{width:100%;border:1px solid var(--line,#dcd8cf);border-radius:0;background:#fff;color:var(--ink,#111114);padding:11px 12px;font:inherit;font-size:.92rem;box-sizing:border-box}"
+    + "#taPanel .ta-v-form input:focus{outline:none;border-color:var(--red,#E4010A)}"
+    + "#taPanel .ta-v-form input:disabled{background:#f3f1ec;color:#8a857c}"
+    + "#taPanel .ta-v-send{background:var(--red,#E4010A);color:#fff;border:0;border-radius:0;padding:12px 14px;font:inherit;font-weight:700;font-size:.92rem;cursor:pointer;transition:transform .16s ease-out,opacity .2s}"
+    + "#taPanel .ta-v-send:active{transform:scale(.97)}"
+    + "#taPanel .ta-v-send:disabled{opacity:.6;cursor:default}"
+    + "#taPanel .ta-v-form-msg{font-size:.82rem;min-height:1em;color:#5f5b53;line-height:1.35}"
+    + "#taPanel .ta-v-form-msg.err{color:var(--red,#E4010A)}"
+    + "#taPanel .ta-v-form-msg.ok{color:#127a3e;font-weight:600}"
     + "@media(prefers-reduced-motion:reduce){#taPanel .ta-voice.listen .ta-v-av::before,#taPanel .ta-voice.speak .ta-v-av::before,#taPanel .ta-voice.speak .ta-v-av::after,#taPanel .ta-voice.think .ta-v-av{animation:none;opacity:1}}"
     // Enlace de WhatsApp en la línea de aviso.
     + "#taPanel .ai-disc a{color:inherit;text-decoration:underline;font-weight:600}"
@@ -702,12 +713,12 @@
   var canLive = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.WebSocket && window.AudioContext);
   if (!SR && !canLive && micBtn) micBtn.style.display = "none";
   var VT = {
-    es: { listen: "Te escucho…", think: "Pensando…", speak: "Hablando", pause: "En pausa", hint: "Toca el avatar para interrumpir, pausar o reanudar", exit: "Volver al chat", denied: "No tengo permiso para usar el micrófono. Actívalo en el navegador y vuelve a intentarlo." },
-    en: { listen: "I'm listening…", think: "Thinking…", speak: "Speaking", pause: "Paused", hint: "Tap the avatar to interrupt, pause or resume", exit: "Back to chat", denied: "I don't have microphone permission. Enable it in your browser and try again." },
-    pt: { listen: "Estou ouvindo…", think: "Pensando…", speak: "Falando", pause: "Em pausa", hint: "Toque no avatar para interromper, pausar ou retomar", exit: "Voltar ao chat", denied: "Não tenho permissão para usar o microfone. Ative no navegador e tente de novo." },
-    it: { listen: "Ti ascolto…", think: "Sto pensando…", speak: "Parlo", pause: "In pausa", hint: "Tocca l'avatar per interrompere, mettere in pausa o riprendere", exit: "Torna alla chat", denied: "Non ho il permesso di usare il microfono. Attivalo nel browser e riprova." },
-    fr: { listen: "Je vous écoute…", think: "Je réfléchis…", speak: "Je parle", pause: "En pause", hint: "Touchez l'avatar pour interrompre, mettre en pause ou reprendre", exit: "Retour au chat", denied: "Je n'ai pas la permission d'utiliser le micro. Activez-la dans le navigateur et réessayez." },
-    de: { listen: "Ich höre zu…", think: "Ich denke nach…", speak: "Ich spreche", pause: "Pausiert", hint: "Tippen Sie auf den Avatar zum Unterbrechen, Pausieren oder Fortsetzen", exit: "Zurück zum Chat", denied: "Ich habe keine Mikrofon-Berechtigung. Bitte im Browser aktivieren und erneut versuchen." },
+    es: { listen: "Te escucho…", think: "Pensando…", speak: "Hablando", pause: "En pausa", hint: "Toca el avatar para interrumpir, pausar o reanudar", exit: "Volver al chat", denied: "No tengo permiso para usar el micrófono. Actívalo en el navegador y vuelve a intentarlo.", formTitle: "Déjame tu nombre y tu email y un asesor de TeGeVe te contacta.", formName: "Tu nombre", formEmail: "Tu email", formSend: "Que me contacten", formSending: "Enviando…", formOk: "¡Gracias, {name}! Un asesor te escribirá muy pronto.", formOkNoName: "¡Gracias! Un asesor te escribirá muy pronto.", formErr: "Escribe un email válido." },
+    en: { listen: "I'm listening…", think: "Thinking…", speak: "Speaking", pause: "Paused", hint: "Tap the avatar to interrupt, pause or resume", exit: "Back to chat", denied: "I don't have microphone permission. Enable it in your browser and try again.", formTitle: "Leave your name and email and a TeGeVe advisor will get in touch.", formName: "Your name", formEmail: "Your email", formSend: "Have an advisor contact me", formSending: "Sending…", formOk: "Thanks, {name}! An advisor will write to you very soon.", formOkNoName: "Thanks! An advisor will write to you very soon.", formErr: "Please enter a valid email." },
+    pt: { listen: "Estou ouvindo…", think: "Pensando…", speak: "Falando", pause: "Em pausa", hint: "Toque no avatar para interromper, pausar ou retomar", exit: "Voltar ao chat", denied: "Não tenho permissão para usar o microfone. Ative no navegador e tente de novo.", formTitle: "Deixe seu nome e e-mail e um consultor da TeGeVe entra em contato.", formName: "Seu nome", formEmail: "Seu e-mail", formSend: "Quero ser contatado", formSending: "Enviando…", formOk: "Obrigada, {name}! Um consultor vai te escrever muito em breve.", formOkNoName: "Obrigada! Um consultor vai te escrever muito em breve.", formErr: "Digite um e-mail válido." },
+    it: { listen: "Ti ascolto…", think: "Sto pensando…", speak: "Parlo", pause: "In pausa", hint: "Tocca l'avatar per interrompere, mettere in pausa o riprendere", exit: "Torna alla chat", denied: "Non ho il permesso di usare il microfono. Attivalo nel browser e riprova.", formTitle: "Lasciami il tuo nome e la tua email e un consulente di TeGeVe ti contatta.", formName: "Il tuo nome", formEmail: "La tua email", formSend: "Fatti contattare", formSending: "Invio…", formOk: "Grazie, {name}! Un consulente ti scriverà molto presto.", formOkNoName: "Grazie! Un consulente ti scriverà molto presto.", formErr: "Inserisci un'email valida." },
+    fr: { listen: "Je vous écoute…", think: "Je réfléchis…", speak: "Je parle", pause: "En pause", hint: "Touchez l'avatar pour interrompre, mettre en pause ou reprendre", exit: "Retour au chat", denied: "Je n'ai pas la permission d'utiliser le micro. Activez-la dans le navigateur et réessayez.", formTitle: "Laissez-moi votre nom et votre email et un conseiller TeGeVe vous contacte.", formName: "Votre nom", formEmail: "Votre email", formSend: "Être recontacté", formSending: "Envoi…", formOk: "Merci, {name} ! Un conseiller vous écrira très bientôt.", formOkNoName: "Merci ! Un conseiller vous écrira très bientôt.", formErr: "Saisissez un email valide." },
+    de: { listen: "Ich höre zu…", think: "Ich denke nach…", speak: "Ich spreche", pause: "Pausiert", hint: "Tippen Sie auf den Avatar zum Unterbrechen, Pausieren oder Fortsetzen", exit: "Zurück zum Chat", denied: "Ich habe keine Mikrofon-Berechtigung. Bitte im Browser aktivieren und erneut versuchen.", formTitle: "Hinterlassen Sie Name und E-Mail und ein TeGeVe-Berater meldet sich.", formName: "Ihr Name", formEmail: "Ihre E-Mail", formSend: "Kontaktiert werden", formSending: "Senden…", formOk: "Danke, {name}! Ein Berater schreibt Ihnen sehr bald.", formOkNoName: "Danke! Ein Berater schreibt Ihnen sehr bald.", formErr: "Bitte geben Sie eine gültige E-Mail ein." },
   };
   function vt() { return VT[lang()] || VT.es; }
   var voiceOn = false, vBox = null, vrec = null, vPaused = false;
@@ -808,12 +819,66 @@
     if (u) { bubble(u, "user"); state.msgs.push({ role: "user", content: u }); }
     if (a) { bubble(a, "bot"); state.msgs.push({ role: "assistant", content: a }); }
     save();
+    // OBJETIVO COMERCIAL: tras pocos intercambios (o en cuanto la agente pide el
+    // correo) aparece un recuadro para TECLEAR nombre+email —el email escrito no
+    // tiene las erratas de la voz— y que un asesor le contacte.
+    if (live && !live.formShown) {
+      if (u) live.userTurns = (live.userTurns || 0) + 1;
+      var askEmail = a && /\b(e-?mail|correo|mail|courriel|e-post)\b/i.test(a) && (live.userTurns || 0) >= 2;
+      if (askEmail || (live.userTurns || 0) >= 3) { live.formShown = true; showLiveForm(); }
+    }
     // SIEMPRE se arma el cierre por inactividad (sin esto, una conversación 100%
     // por voz jamás generaba el informe ni los emails al terminar).
     scheduleIdleEnd();
     try {
       fetch(EP, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: state.id, action: "log", user: u, agent: a, lang: lang() }) }).catch(function () {});
+    } catch (e) {}
+  }
+  // Recuadro para TECLEAR los datos (nombre + email) en el modo voz: el correo
+  // escrito evita las erratas de la transcripción. Al enviar, se avisa al comercial.
+  function showLiveForm() {
+    if (!vBox || vBox.querySelector(".ta-v-form")) return;
+    var f = document.createElement("div");
+    f.className = "ta-v-form";
+    f.innerHTML = '<div class="ta-v-form-t"></div>'
+      + '<input class="ta-v-name" type="text" autocomplete="name">'
+      + '<input class="ta-v-email" type="email" inputmode="email" autocomplete="email">'
+      + '<button type="button" class="ta-v-send"></button>'
+      + '<div class="ta-v-form-msg" role="status" aria-live="polite"></div>';
+    f.querySelector(".ta-v-form-t").textContent = vt().formTitle;
+    f.querySelector(".ta-v-name").placeholder = vt().formName;
+    var em = f.querySelector(".ta-v-email"); em.placeholder = vt().formEmail;
+    f.querySelector(".ta-v-send").textContent = vt().formSend;
+    var go = function () { liveFormSubmit(f); };
+    f.querySelector(".ta-v-send").addEventListener("click", go);
+    em.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go(); } });
+    var hint = vBox.querySelector(".ta-v-hint");
+    if (hint) vBox.insertBefore(f, hint); else vBox.appendChild(f);
+    setTimeout(function () { try { f.querySelector(".ta-v-name").focus(); } catch (e) {} }, 120);
+  }
+  function liveFormSubmit(f) {
+    var nameEl = f.querySelector(".ta-v-name"), emEl = f.querySelector(".ta-v-email");
+    var msg = f.querySelector(".ta-v-form-msg"), btn = f.querySelector(".ta-v-send");
+    var nombre = nameEl.value.trim(), email = emEl.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.className = "ta-v-form-msg err"; msg.textContent = vt().formErr; try { emEl.focus(); } catch (e) {} return; }
+    btn.disabled = true; msg.className = "ta-v-form-msg"; msg.textContent = vt().formSending;
+    fetch(EP, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: state.id, action: "contact", nombre: nombre, email: email, lang: lang() }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }); })
+      .then(function () {
+        msg.className = "ta-v-form-msg ok";
+        msg.textContent = nombre ? vt().formOk.replace("{name}", nombre) : vt().formOkNoName;
+        nameEl.disabled = true; emEl.disabled = true; btn.style.display = "none";
+        liveTellContact(nombre, email);   // que la agente lo agradezca y cierre por voz
+      })
+      .catch(function () { btn.disabled = false; msg.className = "ta-v-form-msg err"; msg.textContent = vt().formErr; });
+  }
+  function liveTellContact(nombre, email) {
+    if (!live || !live.ws || live.ws.readyState !== 1) return;
+    try {
+      var t = "[SISTEMA] La persona ACABA de dejar sus datos en el formulario en pantalla — nombre: «" + (nombre || "(no lo puso)") + "», email: «" + email + "». Agradéceselo por su nombre en una frase corta y cálida, confírmale que un asesor de TeGeVe le escribirá muy pronto para agendar la reunión y despídete. No pidas más datos ni el email en voz.";
+      live.ws.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: t }] }], turnComplete: true } }));
     } catch (e) {}
   }
   function liveMsg(o) {
