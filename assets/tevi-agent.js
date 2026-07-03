@@ -30,6 +30,21 @@
     + "#taPanel .ta-mic{flex:0 0 auto;width:42px;border:1px solid var(--line,#dcd8cf);background:#fff;color:#5f5b53;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:0}"
     + "#taPanel .ta-mic.on{background:var(--red,#E4010A);border-color:var(--red,#E4010A);color:#fff;animation:taPulse 1.1s infinite}"
     + "@keyframes taPulse{0%,100%{opacity:1}50%{opacity:.6}}"
+    // Panel minimizado a BARRA horizontal inferior (mientras el agente enseña el
+    // sitio: presentación, tour o foco de sección). Se restaura al tocarla.
+    + "#taPanel.ta-hidden{display:none!important}"
+    + "#taMini{position:fixed;z-index:119;display:none;align-items:center;gap:10px;background:#111114;color:#fff;padding:10px 12px;cursor:pointer;bottom:0;left:0;right:0;border-top:1px solid rgba(255,255,255,.15);animation:taMiniIn .3s ease-out}"
+    + "#taMini.on{display:flex}"
+    + "@media(min-width:720px){#taMini{left:auto;right:18px;bottom:18px;width:400px;max-width:calc(100vw - 36px);border:1px solid #111114}}"
+    + "@keyframes taMiniIn{from{transform:translateY(110%)}to{transform:none}}"
+    + "#taMini .ta-mini-av{width:34px;height:34px;border-radius:50%;background:var(--red,#E4010A);display:flex;align-items:center;justify-content:center;flex:0 0 auto;position:relative;color:#fff}"
+    + "#taMini .ta-mini-av svg{width:17px;height:17px}"
+    + "#taMini .ta-mini-av::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--red,#E4010A);opacity:0;animation:taRing 1.4s ease-out infinite}"
+    + "#taMini .ta-mini-tx{flex:1;font-size:.8rem;line-height:1.35;color:#e8e5de;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-align:left}"
+    + "#taMini .ta-mini-next,#taMini .ta-mini-up{flex:0 0 auto;background:rgba(255,255,255,.14);border:0;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.05rem;line-height:1;display:flex;align-items:center;justify-content:center}"
+    + "#taMini .ta-mini-next{background:var(--red,#E4010A);display:none}"
+    + "#taMini.tour .ta-mini-next{display:flex}"
+    + "@media(prefers-reduced-motion:reduce){#taMini{animation:none}#taMini .ta-mini-av::after{animation:none}}"
     // Botón flotante (FAB) del agente: círculo rojo con latido + etiqueta «IA».
     + "#taFab{position:fixed;right:18px;bottom:18px;z-index:118;display:flex;align-items:center;gap:9px;background:none;border:0;cursor:pointer;padding:0}"
     + "#taFab .ta-fab-dot{width:56px;height:56px;border-radius:50%;background:var(--red,#E4010A);color:#fff;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 10px 26px -10px rgba(228,1,10,.55);animation:taBeat 2.4s ease-in-out infinite}"
@@ -191,6 +206,43 @@
   function fabTag() { fabBtn.querySelector(".ta-fab-tag").textContent = FAB_T[lang()] || FAB_T.es; }
   fabTag();
   function fabSync() { fabBtn.classList.toggle("ta-fab-hide", panel.classList.contains("open") || teviOpen()); }
+
+  // ── PANEL MINIMIZADO: mientras el agente ENSEÑA el sitio (presentación, tour
+  //    o foco de sección) el panel se pliega a una barra horizontal inferior para
+  //    no tapar lo que está mostrando (clave en móvil). Tocarla lo restaura. ──
+  var minOn = false, miniNextFn = null;
+  var miniBar = document.createElement("div");
+  miniBar.id = "taMini";
+  miniBar.setAttribute("role", "button");
+  miniBar.innerHTML = '<span class="ta-mini-av">' + AV + '</span><span class="ta-mini-tx"></span>'
+    + '<button type="button" class="ta-mini-next" aria-label="Siguiente">&rsaquo;</button>'
+    + '<button type="button" class="ta-mini-up" aria-label="Restaurar el chat">&#9650;</button>';
+  document.body.appendChild(miniBar);
+  function miniText(t2) { miniBar.querySelector(".ta-mini-tx").textContent = String(t2 || "").slice(0, 220); }
+  function minimize(txt) {
+    if (voiceOn) return;                               // el modo voz tiene su propia pantalla
+    if (!panel.classList.contains("open") || minOn) { if (txt != null) miniText(txt); return; }
+    minOn = true;
+    panel.classList.add("ta-hidden");
+    miniBar.classList.add("on");
+    if (txt != null) miniText(txt);
+    else {
+      var bs = elBody.querySelectorAll(".msg.bot");
+      miniText(bs.length ? bs[bs.length - 1].textContent : "");
+    }
+  }
+  function restore() {
+    if (!minOn) return;
+    minOn = false;
+    miniBar.classList.remove("on", "tour");
+    panel.classList.remove("ta-hidden");                // el panel vuelve (con su animación)
+    elBody.scrollTop = elBody.scrollHeight;
+  }
+  function miniTour(fn) { miniNextFn = fn || null; miniBar.classList.toggle("tour", !!fn); }
+  miniBar.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest(".ta-mini-next")) { if (miniNextFn) miniNextFn(); return; }
+    restore();
+  });
 
   var elBody = panel.querySelector("#taBody");
   var elIn = panel.querySelector("#taInput");
@@ -523,6 +575,7 @@
   function close() {
     stopVoice(); // si estaba en modo voz, se apagan micro y locución
     if (presOn) { presStopAudio(); presOn = false; } // y la presentación también
+    miniTour(null); restore(); // si estaba minimizado, se recoge la barra
     panel.classList.remove("open");
     var fab = document.getElementById("aiFab"); if (fab && !teviOpen()) fab.classList.remove("is-hidden");
     fabSync();
@@ -880,9 +933,14 @@
     state.msgs.push({ role: "assistant", content: tourNarr(s) }); save();
     if (hash) setTimeout(function () { spotlight(hash); }, 400);
     var last = i === TOUR.length - 1;
-    var chips = [{ label: last ? tourT().stop : tourT().next, fn: function () { if (presOn) presStopAudio(); if (last) tourEnd(); else tourStep(i + 1); } }];
+    var advance = function () { if (presOn) presStopAudio(); if (last) tourEnd(); else tourStep(i + 1); };
+    var chips = [{ label: last ? tourT().stop : tourT().next, fn: advance }];
     if (!last) chips.push({ label: tourT().stop, fn: function () { if (presOn) presStopAudio(); tourEnd(); } });
     addChips(chips);
+    // Mientras se enseña el sitio, el panel va minimizado con la narración a la
+    // vista y el botón de avanzar en la propia barra.
+    minimize(tourNarr(s));
+    miniTour(advance);
     // En presentación: se narra el paso y, al terminar la voz, avanza solo.
     if (presOn) speak(tourNarr(s), function () { setTimeout(function () { if (presOn) { if (last) tourEnd(); else tourStep(i + 1); } }, 700); });
   }
@@ -907,6 +965,9 @@
     bubble(tourT().end, "bot");
     state.msgs.push({ role: "assistant", content: tourT().end }); save();
     addChips(tourT().endChips);
+    // Fin del recorrido: el panel vuelve para el cierre (reto/cita a un clic).
+    miniTour(null);
+    restore();
     elBody.scrollTop = elBody.scrollHeight;
     // Cierre comercial hablado; al terminar, la presentación se apaga.
     if (presOn) speak(tourT().end, function () { presOn = false; });
@@ -930,6 +991,7 @@
     var advanced = false;
     var go = function () { if (!advanced && presOn) { advanced = true; tourStep(0); } };
     speak(intro, go);
+    minimize(intro); // desde la intro, el sitio queda a la vista
     setTimeout(go, 15000);
   }
 
@@ -943,6 +1005,7 @@
   function spotlight(id) {
     var el = id && document.getElementById(id);
     if (!el) return false;
+    minimize(); // al enfocar una sección, el panel se aparta para no taparla
     document.querySelectorAll(".tgv-spot").forEach(function (x) { x.classList.remove("tgv-spot"); });
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.classList.add("tgv-spot");
