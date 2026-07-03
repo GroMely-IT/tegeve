@@ -808,7 +808,9 @@
     })
       .then(function (r) {
         if (gen !== speakGen) return;
-        if (r.status === 204) { ttsPremium = false; speakLocal(clean, gen); return; } // sin voz premium en el servidor
+        // 204 durante la presentación puede ser transitorio (la sesión se acaba de
+        // registrar): solo se da por «sin voz premium» definitivo fuera de ella.
+        if (r.status === 204) { if (!presOn) ttsPremium = false; speakLocal(clean, gen); return; }
         if (!r.ok) { speakLocal(clean, gen); return; } // fallo puntual: no degrada para siempre
         return r.blob().then(function (b) {
           if (gen !== speakGen) return;
@@ -986,13 +988,24 @@
     var intro = presT().intro;
     bubble(intro, "bot");
     state.msgs.push({ role: "assistant", content: intro }); save();
+    minimize(intro); // desde la intro, el sitio queda a la vista
     // Al terminar la locución de apertura arranca el recorrido; si el audio no
     // llega a sonar (autoplay bloqueado), la red de seguridad avanza igual.
     var advanced = false;
     var go = function () { if (!advanced && presOn) { advanced = true; tourStep(0); } };
-    speak(intro, go);
-    minimize(intro); // desde la intro, el sitio queda a la vista
-    setTimeout(go, 15000);
+    // La voz premium (/tts) exige una sesión registrada en el servidor y la
+    // presentación es 100% de cliente: se registra primero (barato, sin modelo)
+    // y DESPUÉS se habla. Si el registro falla, se habla igual (voz del navegador).
+    var spoke = false;
+    var talk = function () { if (spoke || !presOn) return; spoke = true; speak(intro, go); };
+    try {
+      fetch(EP, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: state.id, action: "touch", seed: intro, lang: lang() }),
+      }).then(talk, talk);
+    } catch (e) { talk(); }
+    setTimeout(talk, 2500);  // por si la red va lenta: nunca nos quedamos mudos
+    setTimeout(go, 18000);   // y nunca clavados en la intro
   }
 
   // ── CO-NAVEGACIÓN: el agente te lleva a la sección exacta (scroll + foco) ──

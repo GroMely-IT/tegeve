@@ -664,7 +664,7 @@ async function handleTeviAgent(request, env, ctx) {
 
   const sessionId = String(body.sessionId || "").trim().slice(0, 80) || "anon-" + Date.now();
   const lang = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
-  const action = body.action === "end" ? "end" : body.action === "opener" ? "opener" : "chat";
+  const action = ({ end: 1, opener: 1, touch: 1 })[body.action] ? body.action : "chat";
   const now = Date.now();
   // País del visitante por Cloudflare (XX = desconocido, T1 = Tor).
   const geoCountry = ((request.cf && request.cf.country) || request.headers.get("CF-IPCountry") || "").toUpperCase();
@@ -705,6 +705,19 @@ async function handleTeviAgent(request, env, ctx) {
     if (action === "end") {
       const report = await generateReport(env, rec, now);
       return json({ ok: true, sessionId, report }, 200, h);
+    }
+
+    // Registro ligero de sesión (SIN llamar al modelo): lo usa la presentación
+    // con voz —que es 100% de cliente— para habilitar /tts, que exige una
+    // sesión real en KV como blindaje anti-abuso.
+    if (action === "touch") {
+      if (!rec.transcript.length) {
+        const seed = String(body.seed || "").trim().slice(0, 400) || "(presentación del sitio iniciada)";
+        rec.transcript.push({ role: "assistant", content: seed, ts: now });
+      }
+      rec.updatedAt = Date.now();
+      await saveLead(env, sessionId, rec);
+      return json({ ok: true, sessionId }, 200, h);
     }
 
     // Apertura proactiva: saludo breve y específico de la página actual (el
@@ -1302,7 +1315,13 @@ async function handleAgentTts(request, env) {
   // coste: sin esto sería un text-to-speech gratuito con nuestra cuota).
   const sessionId = String(body.sessionId || "").trim().slice(0, 80);
   if (!sessionId) return new Response(null, { status: 204, headers: h });
-  const rec = await loadLead(env, sessionId);
+  let rec = await loadLead(env, sessionId);
+  if (!rec) {
+    // KV es de consistencia eventual: si la sesión se registró hace un instante
+    // (la presentación hace «touch» y pide voz acto seguido), un reintento corto basta.
+    await new Promise((res) => setTimeout(res, 450));
+    rec = await loadLead(env, sessionId);
+  }
   if (!rec || !(rec.transcript || []).length) return new Response(null, { status: 204, headers: h });
   const day = new Date().toISOString().slice(0, 10);
   if (rec.ttsDay !== day) { rec.ttsDay = day; rec.ttsChars = 0; }
