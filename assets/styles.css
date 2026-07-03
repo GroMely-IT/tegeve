@@ -413,6 +413,9 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 
 /* Intro logo a pantalla completa */
 #intro{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:radial-gradient(62% 62% at 50% 45%,#ffffff,#EEF2F7)}
+/* En recargas dentro de la misma sesión el intro NO se pinta (evita el destello
+   del logo grande): un guardián en <head> pone .no-intro si ya se mostró antes. */
+html.no-intro #intro{display:none!important}
 #intro img{width:min(82vw,720px);height:auto;opacity:0;transform:scale(.85);animation:introIn .7s var(--ease-out) forwards}
 #intro.out{animation:introOut .7s var(--ease-out) forwards;pointer-events:none}
 @keyframes introIn{to{opacity:1;transform:scale(1)}}

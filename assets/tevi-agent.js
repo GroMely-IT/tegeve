@@ -462,7 +462,8 @@
       }
       if (list.length) addChips(list);
     }
-    autoSpot(reply);
+    // En chat NO se arrastra a la persona por el sitio: el agente enlaza la
+    // sección como texto clicable y es ella quien decide ir (el chat sigue visible).
     speak(reply);
     elBody.scrollTop = elBody.scrollHeight;
   }
@@ -1112,7 +1113,7 @@
     var hash = s.u.split("#")[1] || "";
     bubble(tourNarr(s), "bot");
     state.msgs.push({ role: "assistant", content: tourNarr(s) }); save();
-    if (hash) setTimeout(function () { spotlight(hash); }, 400);
+    if (hash) setTimeout(function () { spotlight(hash, true); }, 400);
     var last = i === TOUR.length - 1;
     var advance = function () { if (presOn) presStopAudio(); if (last) tourEnd(); else tourStep(i + 1); };
     var chips = [{ label: last ? tourT().stop : tourT().next, fn: advance }];
@@ -1198,10 +1199,13 @@
     if (p.charAt(p.length - 1) !== "/") p += "/";
     return p.replace(/index\.html\/$/, "");
   }
-  function spotlight(id) {
+  // spot(id, guiado): resalta una sección. Solo minimiza el chat cuando el
+  // recorrido es GUIADO (presentación/tour). En una charla normal el chat SIEMPRE
+  // queda a la vista: nunca se minimiza ni se arrastra a la persona por el sitio.
+  function spotlight(id, guiado) {
     var el = id && document.getElementById(id);
     if (!el) return false;
-    minimize(); // al enfocar una sección, el panel se aparta para no taparla
+    if (guiado) minimize(); // solo en presentación/tour se aparta el panel
     document.querySelectorAll(".tgv-spot").forEach(function (x) { x.classList.remove("tgv-spot"); });
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.classList.add("tgv-spot");
@@ -1224,11 +1228,6 @@
       location.href = href;                            // otra página: la conversación viaja contigo
     }
   });
-  // Si el agente cita una sección de ESTA página, la enfoca él solo mientras habla.
-  function autoSpot(reply) {
-    var m = (reply || "").match(/(^|[\s(])(\/[a-z0-9][a-z0-9\/_-]*|\/)#([a-z0-9-]+)/i);
-    if (m && normPath(m[2]) === normPath(location.pathname)) setTimeout(function () { spotlight(m[3]); }, 600);
-  }
   (function resumeCarry() { // reanudación tras una navegación guiada por el agente
     var raw = null;
     try { raw = sessionStorage.getItem(CARRY); if (raw) sessionStorage.removeItem(CARRY); } catch (e) {}
