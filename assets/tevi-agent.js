@@ -963,6 +963,11 @@
       speechSynthesis.speak(u);
     } catch (e) { speakEnd(gen); }
   }
+  // Fallback al fallar la voz premium. UNA ÚNICA VOZ: en la PRESENTACIÓN nunca se
+  // usa la voz del navegador (evita la mezcla de voces); simplemente se avanza (el
+  // texto ya está visible en la barra). Fuera de la presentación (modo voz clásico)
+  // sí se usa la del navegador como último recurso.
+  function speakFallback(clean, gen) { if (presOn) speakEnd(gen); else speakLocal(clean, gen); }
   function speak(text, cb) {
     if (!voiceOn && !presOn) { if (cb) cb(); return; }
     var clean = String(text).replace(/https?:\/\/\S+/g, "").replace(/\/[a-z0-9\/_#-]{4,}/g, "").trim();
@@ -970,7 +975,7 @@
     speakCb = cb || null;
     if (!clean) { speakEnd(gen); return; }
     vSet("speak", vt().speak, clean.slice(0, 150) + (clean.length > 150 ? "…" : ""));
-    if (!ttsPremium) { speakLocal(clean, gen); return; }
+    if (!ttsPremium) { speakFallback(clean, gen); return; }
     ttsStop();
     fetch(EP + "/tts", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -980,17 +985,17 @@
         if (gen !== speakGen) return;
         // 204 durante la presentación puede ser transitorio (la sesión se acaba de
         // registrar): solo se da por «sin voz premium» definitivo fuera de ella.
-        if (r.status === 204) { if (!presOn) ttsPremium = false; speakLocal(clean, gen); return; }
-        if (!r.ok) { speakLocal(clean, gen); return; } // fallo puntual: no degrada para siempre
+        if (r.status === 204) { if (!presOn) ttsPremium = false; speakFallback(clean, gen); return; }
+        if (!r.ok) { speakFallback(clean, gen); return; } // fallo puntual: no degrada para siempre
         return r.blob().then(function (b) {
           if (gen !== speakGen) return;
           curAudio = new Audio(URL.createObjectURL(b));
           curAudio.onended = function () { speakEnd(gen); };
-          curAudio.onerror = function () { speakLocal(clean, gen); };
-          curAudio.play().catch(function () { speakLocal(clean, gen); });
+          curAudio.onerror = function () { speakFallback(clean, gen); };
+          curAudio.play().catch(function () { speakFallback(clean, gen); });
         });
       })
-      .catch(function () { if (gen === speakGen) speakLocal(clean, gen); });
+      .catch(function () { if (gen === speakGen) speakFallback(clean, gen); });
   }
 
   // ── TOUR GUIADO: recorrido demo por las secciones clave (multi-página) ──
@@ -999,87 +1004,87 @@
   var TOUR_KEY = "tgv_agent_tour";
   var TOUR = [
     { u: "/#servicios-overview", x: {
-      es: "Empezamos por lo esencial: estas son nuestras áreas de servicio, de SAP y Oracle JD Edwards a IA empresarial, desarrollo a medida y modernización de legacy.",
-      en: "Let's start with the essentials: these are our service areas, from SAP and Oracle JD Edwards to enterprise AI, custom development and legacy modernization.",
-      pt: "Começamos pelo essencial: estas são nossas áreas de serviço, de SAP e Oracle JD Edwards a IA empresarial, desenvolvimento sob medida e modernização de legado.",
-      it: "Partiamo dall'essenziale: queste sono le nostre aree di servizio, da SAP e Oracle JD Edwards all'IA aziendale, sviluppo su misura e modernizzazione legacy.",
-      fr: "Commençons par l'essentiel : voici nos domaines de service, de SAP et Oracle JD Edwards à l'IA d'entreprise, au développement sur mesure et à la modernisation legacy.",
-      de: "Beginnen wir mit dem Wesentlichen: Das sind unsere Servicebereiche, von SAP und Oracle JD Edwards bis zu Unternehmens-KI, Individualentwicklung und Legacy-Modernisierung." } },
+      es: "Déjame contarte una historia. Hace más de treinta años, tres personas en Argentina decidieron que los proyectos tecnológicos más difíciles merecían soluciones de verdad. Hoy eso es TeGeVe: acompañamos a grandes empresas en SAP, Oracle JD Edwards, desarrollo a medida, inteligencia artificial y modernización de sistemas. Empecemos por aquí, y déjame enseñarte por qué encajaríamos contigo.",
+      en: "Let me tell you a story. Over thirty years ago, three people in Argentina decided that the toughest technology projects deserved real solutions. Today that is TeGeVe: we support large companies in SAP, Oracle JD Edwards, custom development, artificial intelligence and system modernization. Let us start here, and let me show you why we would be a fit for you.",
+      pt: "Deixa eu te contar uma história. Há mais de trinta anos, três pessoas na Argentina decidiram que os projetos de tecnologia mais difíceis mereciam soluções de verdade. Hoje isso é a TeGeVe: acompanhamos grandes empresas em SAP, Oracle JD Edwards, desenvolvimento sob medida, inteligência artificial e modernização de sistemas. Vamos começar por aqui.",
+      it: "Lascia che ti racconti una storia. Oltre trent'anni fa, tre persone in Argentina decisero che i progetti tecnologici più difficili meritavano soluzioni vere. Oggi questo è TeGeVe: affianchiamo grandi aziende su SAP, Oracle JD Edwards, sviluppo su misura, intelligenza artificiale e modernizzazione dei sistemi. Partiamo da qui.",
+      fr: "Laisse-moi te raconter une histoire. Il y a plus de trente ans, trois personnes en Argentine ont décidé que les projets technologiques les plus difficiles méritaient de vraies solutions. Aujourd'hui, c'est TeGeVe : nous accompagnons de grandes entreprises sur SAP, Oracle JD Edwards, le développement sur mesure, l'intelligence artificielle et la modernisation des systèmes.",
+      de: "Lass mich dir eine Geschichte erzählen. Vor über dreißig Jahren entschieden drei Menschen in Argentinien, dass die schwierigsten Technologieprojekte echte Lösungen verdienen. Heute ist das TeGeVe: Wir begleiten große Unternehmen bei SAP, Oracle JD Edwards, Individualentwicklung, künstlicher Intelligenz und Systemmodernisierung. Fangen wir hier an." } },
     { u: "/#por-industria", x: {
-      es: "No trabajamos igual para todos: hay soluciones por sector — banca y medios de pago, energía, sector público, retail y alimentación.",
-      en: "We don't work the same way for everyone: there are solutions by sector — banking and payments, energy, public sector, retail and food.",
-      pt: "Não trabalhamos igual para todos: há soluções por setor — bancos e meios de pagamento, energia, setor público, varejo e alimentos.",
-      it: "Non lavoriamo allo stesso modo per tutti: ci sono soluzioni per settore — banche e pagamenti, energia, settore pubblico, retail e alimentare.",
-      fr: "Nous ne travaillons pas pareil pour tous : il y a des solutions par secteur — banque et paiements, énergie, secteur public, retail et agroalimentaire.",
-      de: "Wir arbeiten nicht für alle gleich: Es gibt Lösungen je Branche — Banken und Zahlungsverkehr, Energie, öffentlicher Sektor, Handel und Lebensmittel." } },
+      es: "No le hablamos igual a un banco que a una empresa de energía. Por eso trabajamos por sectores: banca y medios de pago, energía, sector público, retail y alimentación. De hecho, seis de las diez mayores compañías de alimentación del mundo confían en nosotros. Cada industria tiene su lenguaje, y nosotros lo hablamos.",
+      en: "We do not speak to a bank the way we speak to an energy company. That is why we work by sector: banking and payments, energy, public sector, retail and food. In fact, six of the ten largest food companies in the world trust us. Every industry has its language, and we speak it.",
+      pt: "Não falamos com um banco do mesmo jeito que com uma empresa de energia. Por isso trabalhamos por setores: bancos e meios de pagamento, energia, setor público, varejo e alimentos. Aliás, seis das dez maiores empresas de alimentos do mundo confiam em nós. Cada setor tem sua linguagem, e nós a falamos.",
+      it: "Non parliamo a una banca come parliamo a un'azienda energetica. Per questo lavoriamo per settori: banche e pagamenti, energia, settore pubblico, retail e alimentare. Anzi, sei delle dieci maggiori aziende alimentari al mondo si affidano a noi. Ogni settore ha il suo linguaggio, e noi lo parliamo.",
+      fr: "Nous ne parlons pas à une banque comme à une entreprise d'énergie. C'est pourquoi nous travaillons par secteur : banque et paiements, énergie, secteur public, retail et agroalimentaire. D'ailleurs, six des dix plus grandes entreprises alimentaires du monde nous font confiance. Chaque secteur a son langage, et nous le parlons.",
+      de: "Wir sprechen mit einer Bank anders als mit einem Energieunternehmen. Deshalb arbeiten wir nach Branchen: Banken und Zahlungsverkehr, Energie, öffentlicher Sektor, Handel und Lebensmittel. Sechs der zehn größten Lebensmittelkonzerne der Welt vertrauen uns. Jede Branche hat ihre Sprache, und wir sprechen sie." } },
     { u: "/casos/#ia-conciliacion-fci", x: {
-      es: "Un caso real que lo resume bien: automatizamos con IA la conciliación de fondos de inversión en SAP y el proceso pasó de 4 días a horas.",
-      en: "A real case that sums it up: we automated investment-fund reconciliation in SAP with AI, and the process went from 4 days to hours.",
-      pt: "Um caso real que resume bem: automatizamos com IA a conciliação de fundos de investimento no SAP e o processo passou de 4 dias para horas.",
-      it: "Un caso reale che lo riassume bene: abbiamo automatizzato con l'IA la riconciliazione dei fondi in SAP e il processo è passato da 4 giorni a poche ore.",
-      fr: "Un cas réel qui résume bien : nous avons automatisé avec l'IA le rapprochement des fonds dans SAP, et le processus est passé de 4 jours à quelques heures.",
-      de: "Ein realer Fall, der es gut zusammenfasst: Wir haben die Fondsabstimmung in SAP mit KI automatisiert — von 4 Tagen auf wenige Stunden." } },
+      es: "Te cuento un caso que me encanta. Un equipo financiero perdía cuatro días cada mes cuadrando la conciliación de sus fondos de inversión, a mano y con errores. Construimos una solución de inteligencia artificial dentro de su SAP, y ese proceso pasó de cuatro días a unas pocas horas, sin errores. Eso es lo que buscamos: devolverte tiempo y tranquilidad.",
+      en: "Here is a case I love. A finance team was losing four days every month reconciling their investment funds by hand, with errors. We built an artificial-intelligence solution inside their SAP, and that process went from four days to a few hours, error-free. That is what we are after: giving you back time and peace of mind.",
+      pt: "Vou te contar um caso que eu adoro. Uma equipe financeira perdia quatro dias por mês conciliando seus fundos de investimento na mão, com erros. Construímos uma solução de inteligência artificial dentro do SAP deles, e esse processo passou de quatro dias para poucas horas, sem erros. É isso que buscamos: te devolver tempo e tranquilidade.",
+      it: "Ti racconto un caso che adoro. Un team finanziario perdeva quattro giorni al mese per riconciliare i propri fondi di investimento a mano, con errori. Abbiamo costruito una soluzione di intelligenza artificiale dentro il loro SAP, e quel processo è passato da quattro giorni a poche ore, senza errori. È questo che cerchiamo: ridarti tempo e serenità.",
+      fr: "Voici un cas que j'adore. Une équipe financière perdait quatre jours par mois à rapprocher ses fonds d'investissement à la main, avec des erreurs. Nous avons construit une solution d'intelligence artificielle dans leur SAP, et ce processus est passé de quatre jours à quelques heures, sans erreurs. C'est ce que nous cherchons : vous rendre du temps et de la sérénité.",
+      de: "Ein Fall, den ich liebe. Ein Finanzteam verlor jeden Monat vier Tage mit der manuellen Abstimmung seiner Investmentfonds, fehleranfällig. Wir bauten eine KI-Lösung direkt in ihr SAP, und dieser Prozess ging von vier Tagen auf wenige Stunden, fehlerfrei. Genau darum geht es uns: Ihnen Zeit und Ruhe zurückzugeben." } },
     { u: "/casos/#control-permanencia-offline", x: {
-      es: "Otro caso real: una app móvil que funciona sin cobertura, con la que se hicieron 4.000 inspecciones de campo.",
-      en: "Another real case: a mobile app that works with no connectivity, used to complete 4,000 field inspections.",
-      pt: "Outro caso real: um app móvel que funciona sem conexão, com o qual foram feitas 4.000 inspeções de campo.",
-      it: "Un altro caso reale: un'app mobile che funziona senza copertura, con cui sono state fatte 4.000 ispezioni sul campo.",
-      fr: "Un autre cas réel : une application mobile qui fonctionne sans réseau, avec laquelle 4 000 inspections de terrain ont été réalisées.",
-      de: "Noch ein realer Fall: eine mobile App, die ohne Netzabdeckung funktioniert — damit wurden 4.000 Vor-Ort-Inspektionen durchgeführt." } },
+      es: "Y otra historia muy distinta. Inspectores que trabajaban a pie de campo, muchas veces sin cobertura. Les creamos una aplicación móvil que funciona sin conexión y se sincroniza sola al volver la señal. Con ella se completaron más de cuatro mil inspecciones. Da igual el reto: si tiene que ver con tecnología, lo resolvemos.",
+      en: "And a very different story. Inspectors working out in the field, often with no signal. We built them a mobile app that works offline and syncs on its own when the signal returns. With it, over four thousand inspections were completed. Whatever the challenge: if it is about technology, we solve it.",
+      pt: "E uma história bem diferente. Inspetores que trabalhavam em campo, muitas vezes sem sinal. Criamos para eles um aplicativo móvel que funciona sem conexão e sincroniza sozinho quando o sinal volta. Com ele foram feitas mais de quatro mil inspeções. Não importa o desafio: se é tecnologia, a gente resolve.",
+      it: "E una storia molto diversa. Ispettori che lavoravano sul campo, spesso senza copertura. Abbiamo creato per loro un'app mobile che funziona offline e si sincronizza da sola quando torna il segnale. Con essa sono state completate oltre quattromila ispezioni. Qualunque sia la sfida: se riguarda la tecnologia, la risolviamo.",
+      fr: "Et une histoire très différente. Des inspecteurs sur le terrain, souvent sans réseau. Nous leur avons créé une application mobile qui fonctionne hors ligne et se synchronise seule au retour du signal. Grâce à elle, plus de quatre mille inspections ont été réalisées. Quel que soit le défi : s'il touche à la technologie, nous le résolvons.",
+      de: "Und eine ganz andere Geschichte. Prüfer im Außendienst, oft ohne Empfang. Wir bauten ihnen eine mobile App, die offline funktioniert und sich selbst synchronisiert, sobald das Signal zurück ist. Damit wurden über viertausend Inspektionen durchgeführt. Egal die Herausforderung: Wenn es um Technologie geht, lösen wir sie." } },
     { u: "/servicios/#modelos-de-servicio", x: {
-      es: "Hay varias formas de trabajar con nosotros: proyecto a medida, software factory, staff augmentation o soporte AMS, siempre en modalidad nearshore eficiente.",
-      en: "There are several ways to work with us: custom projects, software factory, staff augmentation or AMS support — always in an efficient nearshore model.",
-      pt: "Há várias formas de trabalhar conosco: projeto sob medida, software factory, staff augmentation ou suporte AMS, sempre em modalidade nearshore eficiente.",
-      it: "Ci sono vari modi di lavorare con noi: progetto su misura, software factory, staff augmentation o supporto AMS, sempre in modalità nearshore efficiente.",
-      fr: "Il existe plusieurs façons de travailler avec nous : projet sur mesure, software factory, staff augmentation ou support AMS, toujours en mode nearshore efficace.",
-      de: "Es gibt mehrere Wege, mit uns zu arbeiten: Individualprojekt, Software Factory, Staff Augmentation oder AMS-Support — immer im effizienten Nearshore-Modell." } },
+      es: "¿Y cómo trabajaríamos contigo? Como te venga mejor. Podemos llevarte un proyecto llave en mano, montarte una fábrica de software dedicada, sumar perfiles senior a tu propio equipo, o encargarnos del soporte y la evolución de tus sistemas. Nos adaptamos a tu realidad, nunca al revés.",
+      en: "And how would we work with you? Whatever suits you best. We can run a turnkey project, set up a dedicated software factory, add senior profiles to your own team, or take care of the support and evolution of your systems. We adapt to your reality, never the other way around.",
+      pt: "E como trabalharíamos com você? Do jeito que for melhor pra você. Podemos tocar um projeto chave na mão, montar uma fábrica de software dedicada, somar perfis seniores ao seu time, ou cuidar do suporte e da evolução dos seus sistemas. Nos adaptamos à sua realidade, nunca o contrário.",
+      it: "E come lavoreremmo con te? Come preferisci. Possiamo gestire un progetto chiavi in mano, allestire una software factory dedicata, aggiungere profili senior al tuo team, o occuparci del supporto e dell'evoluzione dei tuoi sistemi. Ci adattiamo alla tua realtà, mai il contrario.",
+      fr: "Et comment travaillerions-nous avec vous ? Comme cela vous convient le mieux. Nous pouvons mener un projet clé en main, monter une software factory dédiée, ajouter des profils seniors à votre équipe, ou gérer le support et l'évolution de vos systèmes. Nous nous adaptons à votre réalité, jamais l'inverse.",
+      de: "Und wie würden wir mit Ihnen arbeiten? Ganz wie es Ihnen passt. Wir übernehmen ein schlüsselfertiges Projekt, bauen eine dedizierte Software Factory auf, ergänzen Ihr Team um erfahrene Profile oder kümmern uns um Support und Weiterentwicklung Ihrer Systeme. Wir passen uns Ihrer Realität an, nie umgekehrt." } },
     { u: "/servicios/#nearshore", x: {
-      es: "Y siempre en modalidad nearshore: equipos en tu misma franja horaria, con costes eficientes y trato directo.",
-      en: "And always nearshore: teams in your time zone, with efficient costs and direct contact.",
-      pt: "E sempre em modalidade nearshore: equipes no seu fuso horário, com custos eficientes e contato direto.",
-      it: "E sempre in modalità nearshore: team nel tuo stesso fuso orario, con costi efficienti e rapporto diretto.",
-      fr: "Et toujours en nearshore : des équipes sur votre fuseau horaire, avec des coûts maîtrisés et un contact direct.",
-      de: "Und immer nearshore: Teams in Ihrer Zeitzone, mit effizienten Kosten und direktem Draht." } },
+      es: "Y aquí está una de nuestras claves: trabajamos en modalidad nearshore. Equipos en tu misma franja horaria, que hablan tu idioma, con costes eficientes y trato directo, sin intermediarios. La cercanía de tener el equipo al lado, con la solidez de una consultora internacional.",
+      en: "And here is one of our keys: we work nearshore. Teams in your own time zone, speaking your language, with efficient costs and direct contact, no middlemen. The closeness of having the team right beside you, with the solidity of an international consultancy.",
+      pt: "E aqui está uma das nossas chaves: trabalhamos em modelo nearshore. Equipes no seu fuso horário, que falam a sua língua, com custos eficientes e contato direto, sem intermediários. A proximidade de ter o time do seu lado, com a solidez de uma consultoria internacional.",
+      it: "Ed ecco una delle nostre chiavi: lavoriamo in modalità nearshore. Team nel tuo stesso fuso orario, che parlano la tua lingua, con costi efficienti e rapporto diretto, senza intermediari. La vicinanza di avere il team accanto, con la solidità di una società di consulenza internazionale.",
+      fr: "Et voici l'une de nos clés : nous travaillons en nearshore. Des équipes sur votre fuseau horaire, qui parlent votre langue, avec des coûts maîtrisés et un contact direct, sans intermédiaires. La proximité d'avoir l'équipe à vos côtés, avec la solidité d'un cabinet international.",
+      de: "Und hier ist einer unserer Schlüssel: Wir arbeiten nearshore. Teams in Ihrer Zeitzone, die Ihre Sprache sprechen, mit effizienten Kosten und direktem Kontakt, ohne Zwischenhändler. Die Nähe eines Teams an Ihrer Seite, mit der Solidität einer internationalen Beratung." } },
     { u: "/nosotros/#nuestra-historia", x: {
-      es: "Detrás hay más de 30 años de trayectoria, presencia en 4 países y nivel 3 de madurez CMMI: equipos senior y estables.",
-      en: "Behind it all: over 30 years of track record, presence in 4 countries and CMMI maturity level 3 — senior, stable teams.",
-      pt: "Por trás disso: mais de 30 anos de trajetória, presença em 4 países e nível 3 de maturidade CMMI — equipes seniores e estáveis.",
-      it: "Dietro c'è una storia di oltre 30 anni, presenza in 4 paesi e livello 3 di maturità CMMI: team senior e stabili.",
-      fr: "Derrière tout cela : plus de 30 ans d'expérience, une présence dans 4 pays et le niveau 3 de maturité CMMI — des équipes seniors et stables.",
-      de: "Dahinter stehen über 30 Jahre Erfahrung, Präsenz in 4 Ländern und CMMI-Reifegrad 3: erfahrene, stabile Teams." } },
+      es: "Detrás de todo esto hay más de treinta años de trayectoria, oficinas en cuatro países y equipos senior que se quedan. Somos partners de SAP, Oracle e IBM, con nivel tres de madurez CMMI. Más de ochenta clientes en dieciséis países ya nos han confiado sus proyectos más críticos.",
+      en: "Behind all of this: over thirty years of track record, offices in four countries and senior teams that stay. We are partners of SAP, Oracle and IBM, with CMMI maturity level three. More than eighty clients in sixteen countries have already trusted us with their most critical projects.",
+      pt: "Por trás de tudo isso: mais de trinta anos de trajetória, escritórios em quatro países e equipes seniores que ficam. Somos parceiros de SAP, Oracle e IBM, com nível três de maturidade CMMI. Mais de oitenta clientes em dezesseis países já nos confiaram seus projetos mais críticos.",
+      it: "Dietro tutto questo: oltre trent'anni di percorso, uffici in quattro paesi e team senior che restano. Siamo partner di SAP, Oracle e IBM, con livello tre di maturità CMMI. Più di ottanta clienti in sedici paesi ci hanno già affidato i loro progetti più critici.",
+      fr: "Derrière tout cela : plus de trente ans d'expérience, des bureaux dans quatre pays et des équipes seniors qui restent. Nous sommes partenaires de SAP, Oracle et IBM, avec le niveau trois de maturité CMMI. Plus de quatre-vingts clients dans seize pays nous ont déjà confié leurs projets les plus critiques.",
+      de: "Hinter all dem: über dreißig Jahre Erfahrung, Büros in vier Ländern und erfahrene Teams, die bleiben. Wir sind Partner von SAP, Oracle und IBM, mit CMMI-Reifegrad drei. Mehr als achtzig Kunden in sechzehn Ländern haben uns bereits ihre kritischsten Projekte anvertraut." } },
     { u: "/nosotros/#testimonios-clientes", x: {
-      es: "Y no lo decimos solo nosotros: aquí tienes lo que cuentan quienes ya trabajan con TeGeVe.",
-      en: "And it's not just us saying it: here's what the people already working with TeGeVe have to say.",
-      pt: "E não somos só nós que dizemos: aqui está o que contam os que já trabalham com a TeGeVe.",
-      it: "E non lo diciamo solo noi: ecco cosa raccontano quelli che già lavorano con TeGeVe.",
-      fr: "Et ce n'est pas que nous qui le disons : voici ce qu'en disent ceux qui travaillent déjà avec TeGeVe.",
-      de: "Und das sagen nicht nur wir: Hier lesen Sie, was die berichten, die schon mit TeGeVe arbeiten." } },
+      es: "Pero no tienes que creerme solo a mí. Aquí puedes leer lo que cuentan quienes ya trabajan con nosotros: empresas que llegaron con un problema difícil y se quedaron porque cumplimos. Esa confianza, año tras año, es lo que mejor nos define.",
+      en: "But you do not have to take just my word for it. Here you can read what those already working with us say: companies that came with a hard problem and stayed because we delivered. That trust, year after year, is what defines us best.",
+      pt: "Mas você não precisa acreditar só em mim. Aqui você pode ler o que dizem quem já trabalha com a gente: empresas que chegaram com um problema difícil e ficaram porque cumprimos. Essa confiança, ano após ano, é o que melhor nos define.",
+      it: "Ma non devi credere solo a me. Qui puoi leggere cosa raccontano quelli che già lavorano con noi: aziende arrivate con un problema difficile e rimaste perché abbiamo mantenuto le promesse. Questa fiducia, anno dopo anno, è ciò che ci definisce meglio.",
+      fr: "Mais vous n'avez pas à me croire sur parole. Vous pouvez lire ici ce que disent ceux qui travaillent déjà avec nous : des entreprises arrivées avec un problème difficile et restées parce que nous avons tenu parole. Cette confiance, année après année, est ce qui nous définit le mieux.",
+      de: "Aber Sie müssen nicht nur mir glauben. Hier lesen Sie, was jene sagen, die schon mit uns arbeiten: Unternehmen, die mit einem schwierigen Problem kamen und blieben, weil wir liefern. Dieses Vertrauen, Jahr für Jahr, definiert uns am besten." } },
     { u: "/#contacto-titulo", x: {
-      es: "Y este es el último paso del recorrido: desde aquí puedes contarnos tu reto o agendar un diagnóstico con Gabriel, nuestro Director.",
-      en: "And this is the last stop: from here you can tell us your challenge or schedule a diagnosis with Gabriel, our Director.",
-      pt: "E esta é a última parada: daqui você pode nos contar seu desafio ou agendar um diagnóstico com Gabriel, nosso Diretor.",
-      it: "E questa è l'ultima tappa: da qui puoi raccontarci la tua sfida o fissare una diagnosi con Gabriel, il nostro Direttore.",
-      fr: "Et voici la dernière étape : d'ici, vous pouvez nous décrire votre défi ou planifier un diagnostic avec Gabriel, notre Directeur.",
-      de: "Und das ist die letzte Station: Von hier aus können Sie uns Ihre Herausforderung schildern oder eine Diagnose mit Gabriel, unserem Direktor, vereinbaren." } },
+      es: "Y así llegamos al final del recorrido, aquí, justo en el punto de partida de tu propia historia con nosotros.",
+      en: "And so we reach the end of the tour, right here, at the starting point of your own story with us.",
+      pt: "E assim chegamos ao fim do passeio, bem aqui, no ponto de partida da sua própria história com a gente.",
+      it: "E così arriviamo alla fine del percorso, proprio qui, al punto di partenza della tua storia con noi.",
+      fr: "Et nous voici à la fin de la visite, ici même, au point de départ de votre propre histoire avec nous.",
+      de: "Und so erreichen wir das Ende der Tour, genau hier, am Ausgangspunkt Ihrer eigenen Geschichte mit uns." } },
   ];
   var TOUR_T = {
-    es: { start: "Enséñame el sitio en 1 minuto", next: "Siguiente →", stop: "Terminar el tour",
-      end: "Hasta aquí el recorrido. Si quieres, cuéntame tu reto y vemos cómo ayudarte, o agendamos una reunión con Gabriel.",
+    es: { start: "Recorrido rápido (sin voz)", next: "Siguiente →", stop: "Terminar",
+      end: "Después de todo lo que has visto, estoy convencido de que somos la consultora que puede ayudarte. Cuéntame tu reto y te propongo el mejor siguiente paso: una videollamada de 45 minutos con Gabriel, nuestro Director, para verlo sobre tu caso.",
       endChips: ["Te cuento mi reto", "Quiero una reunión con Gabriel"] },
-    en: { start: "Show me the site in 1 minute", next: "Next →", stop: "End the tour",
-      end: "That's the end of the tour. If you like, tell me your challenge and we'll see how to help, or we can schedule a meeting with Gabriel.",
+    en: { start: "Quick tour (no audio)", next: "Next →", stop: "End",
+      end: "After everything you've seen, I'm convinced we're the consultancy that can help you. Tell me your challenge and I'll propose the best next step: a 45-minute video call with Gabriel, our Director, to look at your case.",
       endChips: ["Let me tell you my challenge", "I'd like a meeting with Gabriel"] },
-    pt: { start: "Mostre-me o site em 1 minuto", next: "Próximo →", stop: "Encerrar o tour",
-      end: "Fim do tour. Se quiser, conte-me seu desafio e vemos como ajudar, ou agendamos uma reunião com o Gabriel.",
+    pt: { start: "Tour rápido (sem voz)", next: "Próximo →", stop: "Encerrar",
+      end: "Depois de tudo o que você viu, estou convencido de que somos a consultoria que pode te ajudar. Conte-me seu desafio e eu proponho o melhor próximo passo: uma videochamada de 45 minutos com o Gabriel, nosso Diretor, para ver o seu caso.",
       endChips: ["Vou contar meu desafio", "Quero uma reunião com o Gabriel"] },
-    it: { start: "Mostrami il sito in 1 minuto", next: "Avanti →", stop: "Termina il tour",
-      end: "Il tour finisce qui. Se vuoi, raccontami la tua sfida e vediamo come aiutarti, oppure fissiamo un incontro con Gabriel.",
+    it: { start: "Tour rapido (senza voce)", next: "Avanti →", stop: "Termina",
+      end: "Dopo tutto quello che hai visto, sono convinto che siamo la società di consulenza che può aiutarti. Raccontami la tua sfida e ti propongo il miglior passo successivo: una videochiamata di 45 minuti con Gabriel, il nostro Direttore, per vedere il tuo caso.",
       endChips: ["Ti racconto la mia sfida", "Vorrei un incontro con Gabriel"] },
-    fr: { start: "Montrez-moi le site en 1 minute", next: "Suivant →", stop: "Terminer la visite",
-      end: "C'est la fin de la visite. Si vous voulez, décrivez-moi votre défi et voyons comment vous aider, ou planifions une réunion avec Gabriel.",
+    fr: { start: "Visite rapide (sans voix)", next: "Suivant →", stop: "Terminer",
+      end: "Après tout ce que vous avez vu, je suis convaincu que nous sommes le cabinet qui peut vous aider. Décrivez-moi votre défi et je vous propose la meilleure étape suivante : un appel vidéo de 45 minutes avec Gabriel, notre Directeur, pour étudier votre cas.",
       endChips: ["Je vous décris mon défi", "Je veux une réunion avec Gabriel"] },
-    de: { start: "Zeigen Sie mir die Website in 1 Minute", next: "Weiter →", stop: "Tour beenden",
-      end: "Das war die Tour. Erzählen Sie mir gern Ihre Herausforderung, oder wir vereinbaren ein Treffen mit Gabriel.",
+    de: { start: "Kurze Tour (ohne Ton)", next: "Weiter →", stop: "Beenden",
+      end: "Nach allem, was Sie gesehen haben, bin ich überzeugt, dass wir die Beratung sind, die Ihnen helfen kann. Schildern Sie mir Ihre Herausforderung und ich schlage den besten nächsten Schritt vor: einen 45-minütigen Videocall mit Gabriel, unserem Direktor, um Ihren Fall anzusehen.",
       endChips: ["Ich schildere meine Herausforderung", "Ich möchte ein Treffen mit Gabriel"] },
   };
   function tourT() { return TOUR_T[lang()] || TOUR_T.es; }
