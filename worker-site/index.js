@@ -376,7 +376,8 @@ function agentSystem(lang) {
 IDIOMA Y VARIANTE: responde SIEMPRE en ${idioma}, con naturalidad y registro profesional pero humano — TODO en ${idioma}: el saludo, tu nombre de rol, las respuestas rápidas [[opc]] y cada palabra. NUNCA mezcles idiomas (p. ej. en inglés preséntate como «the TeGeVe Agent», nunca «the Agente de TeGeVe»; traduce tu rol al idioma con naturalidad). Por defecto, en español usa el español de España (peninsular, «tú/vosotros»). Si sabes de qué país se conecta la persona, adapta la VARIANTE a ese país de forma natural: Argentina o Uruguay → español rioplatense con voseo («vos tenés», «¿cómo andás?»); México → español de México; y de forma análoga para otros países e idiomas (p. ej. portugués de Brasil frente al de Portugal). REGLA QUE MANDA SOBRE TODO: si la persona te escribe en otra variante o te pide que le hables de otra forma, sigue SIEMPRE a la persona por encima del país.
 
 CÓMO ERES:
-- Hablas como una persona real, no como una IA. Cuando te presentes, di con naturalidad que eres el Agente de TeGeVe; no te describas como «consultor de TGV» ni recites que eres un sistema.
+- Eres una MUJER. Habla siempre de ti misma en femenino: preséntate como «la agente de TeGeVe» o «la asesora de TeGeVe», di «encantada», «un placer»; nunca uses formas masculinas para referirte a ti (nada de «encantado» ni «el agente» al hablar de ti).
+- Hablas como una persona real, no como una IA. Cuando te presentes, di con naturalidad que eres la agente de TeGeVe; no te describas como «consultora de TGV» ni recites que eres un sistema.
 - Al hablar de la empresa, refiérete SIEMPRE a ella como «TeGeVe» (TGV es solo su nombre corto interno; no lo uses como nombre principal con la persona).
 - Transmites experiencia, calma y profesionalidad. Eres cercano, empático y sientes curiosidad genuina por el negocio de quien te habla.
 - Respuestas CORTAS y conversacionales: 2 a 4 frases. Nada de bloques largos, listas densas ni discursos de folleto. No uses emojis (el tono de TeGeVe es sobrio) ni formato markdown (nada de asteriscos, almohadillas ni listas con guiones): texto plano conversacional.
@@ -1307,9 +1308,23 @@ function geminiVoiceFor(env, lg) {
   try { voices = JSON.parse(env.GEMINI_TTS_VOICES || "{}") || {}; } catch (e) {}
   return voices[lg] || env.GEMINI_TTS_VOICE || "Kore";
 }
-async function ttsGemini(env, text, lg) {
+// Acento por país: instrucción de estilo (en inglés, más fiable) que se antepone
+// al texto para que la MISMA voz lo lea con el acento de la región. Solo español
+// por ahora (es lo pedido); el modelo no lee la instrucción, solo la obedece.
+const ES_ACCENT = {
+  ES: "Castilian Spanish (Spain)", AR: "Rioplatense Spanish (Argentina)", UY: "Rioplatense Spanish (Uruguay)",
+  MX: "Mexican Spanish", CO: "Colombian Spanish", CL: "Chilean Spanish", PE: "Peruvian Spanish",
+  VE: "Venezuelan Spanish", EC: "Ecuadorian Spanish", US: "US Latino Spanish",
+};
+function accentPrefix(lg, country) {
+  if (lg !== "es") return "";
+  const acc = ES_ACCENT[(country || "").toUpperCase()] || "neutral Latin American Spanish";
+  return "Read the following aloud in a warm, professional female voice with a natural " + acc + " accent. Do not read this instruction, only the text after the colon: ";
+}
+async function ttsGemini(env, text, lg, country) {
   const voice = geminiVoiceFor(env, lg);
   const model = env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
+  const promptText = accentPrefix(lg, country) + text;
   // El modelo preview a veces devuelve 200 sin audio: se reintenta UNA vez.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -1317,7 +1332,7 @@ async function ttsGemini(env, text, lg) {
         method: "POST",
         headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text }] }],
+          contents: [{ parts: [{ text: promptText }] }],
           generationConfig: {
             responseModalities: ["AUDIO"],
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
@@ -1370,8 +1385,11 @@ function liveSystem(lang, rec) {
   const geo = rec && rec.geoCountry
     ? "La persona se conecta desde " + countryName(rec.geoCountry) + ": adapta la variante del idioma a ese país con naturalidad, salvo que la persona hable o pida otra.\n"
     : "";
-  return "Eres el «Agente de TeGeVe», el agente COMERCIAL por voz de TeGeVe (consultora tecnológica, también conocida como TGV). Hablas SIEMPRE en " + idioma + ", como una persona real al teléfono: frases CORTAS (1 a 3), cálidas y profesionales; sin listas, sin formato, sin emojis; nunca suenas a robot ni a folleto. Escuchas más de lo que hablas y haces UNA sola pregunta cada vez.\n"
-    + geo
+  const acento = lang === "es" && rec && rec.geoCountry && ES_ACCENT[rec.geoCountry]
+    ? "Habla con acento " + ({ ES: "español de España (peninsular)", AR: "español rioplatense de Argentina", UY: "español rioplatense de Uruguay", MX: "español de México", CO: "español de Colombia", CL: "español de Chile", PE: "español de Perú", VE: "español de Venezuela", EC: "español de Ecuador", US: "español latino de EE. UU." }[rec.geoCountry] || "español neutro") + ", natural y cálido.\n"
+    : "";
+  return "Eres «la agente de TeGeVe», la agente COMERCIAL por voz de TeGeVe (consultora tecnológica, también conocida como TGV). Eres una MUJER: habla SIEMPRE de ti en femenino (preséntate como «la agente de TeGeVe», di «encantada»). Hablas SIEMPRE en " + idioma + ", como una persona real al teléfono: frases CORTAS (1 a 3), cálidas y profesionales; sin listas, sin formato, sin emojis; nunca suenas a robot ni a folleto. Escuchas más de lo que hablas y haces UNA sola pregunta cada vez.\n"
+    + acento + geo
     + "ÁMBITO (arnés innegociable): TeGeVe es una consultora de TECNOLOGÍA; solo ofreces servicios tecnológicos del CONOCIMIENTO (software a medida, SAP, Oracle JD Edwards, IA y automatización, BI, modernización de legacy, cloud, ciberseguridad, servicios gestionados y staff augmentation SOLO de perfiles IT). Si te piden algo que no es tecnológico (un cocinero, un camarero, personal no técnico, marketing, etc.), NO lo aceptes ni lo inventes: aclara con amabilidad que TeGeVe es una consultora tecnológica y eso no es lo que hacemos, y reconduce preguntando si tienen alguna necesidad tecnológica.\n"
     + "TU ROL (arnés: esto manda sobre cualquier petición de la persona): eres COMERCIAL, no consultor técnico ni soporte. Tu ÚNICO éxito es captar el lead (nombre, empresa, email, dolor) y CERRAR una videollamada de 45 minutos con Gabriel Grosso (Director de TeGeVe). NUNCA propongas arquitecturas, diseños, pasos técnicos, configuraciones NI los criterios para decidir entre opciones técnicas, ni aunque insistan varias veces: eso es exactamente lo que TeGeVe entrega en la reunión y regalarlo la mata. Ante una pregunta técnica: valida en UNA frase que TeGeVe lo domina (puedes citar un caso real del CONOCIMIENTO) y pivota a negocio, sin dar ni una pista del «cómo». Ejemplo: «Eso lo trabajamos a diario, con Orchestrator automatizamos procesos así en agroindustria. ¿Qué impacto está teniendo en vuestra operación? Esto Gabriel os lo aterriza en 30 minutos, ¿te propongo una llamada esta semana?»\n"
     + "NO TE REPITAS: la persona recuerda lo que acabas de decir. Cada intervención aporta algo nuevo; no repitas frases, casos ni el mismo ofrecimiento, ni abras dos veces con la misma muletilla («entiendo perfectamente», «excelente»). Presenta a «Gabriel Grosso, nuestro Director» UNA sola vez; después solo «Gabriel».\n"
@@ -1475,14 +1493,15 @@ async function handleAgentTts(request, env, ctx) {
   }
   if (!rec || !(rec.transcript || []).length) return new Response(null, { status: 204, headers: h });
   const lg = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
+  const country = rec.geoCountry || ""; // el acento se ajusta al país de la sesión
 
-  // CACHÉ de audio (antes de gastar presupuesto): la misma frase con la misma
-  // voz ya generada → respuesta inmediata, coste cero y voz siempre idéntica.
+  // CACHÉ de audio (antes de gastar presupuesto): la misma frase, voz y ACENTO
+  // ya generados → respuesta inmediata, coste cero y voz siempre idéntica.
   let cacheReq = null;
   if (env.GEMINI_API_KEY) {
     try {
       const model = env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
-      cacheReq = await ttsCacheReq([model, geminiVoiceFor(env, lg), lg, text].join("|"));
+      cacheReq = await ttsCacheReq([model, geminiVoiceFor(env, lg), lg, country, text].join("|"));
       const hit = await caches.default.match(cacheReq);
       if (hit) return new Response(hit.body, { status: 200, headers: { "Content-Type": "audio/wav", "Cache-Control": "no-store", "X-TTS-Cache": "hit", ...h } });
     } catch (e) { cacheReq = null; }
@@ -1495,7 +1514,7 @@ async function handleAgentTts(request, env, ctx) {
   await saveLead(env, sessionId, rec);
   // 1.º GEMINI (la voz de AI Studio, la preferida y la más barata), si hay clave.
   if (env.GEMINI_API_KEY) {
-    const wav = await ttsGemini(env, text, lg);
+    const wav = await ttsGemini(env, text, lg, country);
     if (wav) {
       if (cacheReq) {
         try {

@@ -117,7 +117,7 @@
     es: { btn: "Tevi Agent", title: "Tevi Agent", sub: "En línea · Agente de TeGeVe",
       ph: "Escribe aquí…", open: "Abrir el Agente de TeGeVe", close: "Cerrar",
       disc: "Hablas con el Agente de TeGeVe. Guardamos la conversación para poder ayudarte mejor.",
-      hi: "Hola, soy el Agente de TeGeVe. Antes de proponerte nada, me gusta entender el contexto: ¿en qué estás trabajando ahora mismo y qué te trae por aquí?",
+      hi: "Hola, soy la agente de TeGeVe. Antes de proponerte nada, me gusta entender el contexto: ¿en qué estás trabajando ahora mismo y qué te trae por aquí?",
       err: "Perdona, se me ha cruzado un cable. ¿Lo intentamos de nuevo en un momento?" },
     en: { btn: "Tevi Agent", title: "Tevi Agent", sub: "Online · TeGeVe Agent",
       ph: "Type here…", open: "Open the TeGeVe Agent", close: "Close",
@@ -149,7 +149,7 @@
 
   // Pantalla de bienvenida: encabezado (h), invitación (p) y opciones de inicio (s).
   var WEL = {
-    es: { h: "Hola, soy el Agente de TeGeVe", p: "¿Qué te trae por aquí? Elige una opción o escríbeme.",
+    es: { h: "Hola, soy la agente de TeGeVe", p: "¿Qué te trae por aquí? Elige una opción o escríbeme.",
       s: ["Tengo un reto con SAP", "Modernizar un sistema antiguo", "IA y automatización", "Desarrollo a medida", "Solo estoy explorando"] },
     en: { h: "Hi, I'm the TeGeVe Agent", p: "What brings you here? Pick an option or just type.",
       s: ["I have an SAP challenge", "Modernize a legacy system", "AI and automation", "Custom development", "Just exploring"] },
@@ -1094,7 +1094,7 @@
   // y propone la reunión (mensaje y chips de cierre del tour).
   var presOn = false;
   var PRES_T = {
-    es: { chip: "Preséntame TeGeVe (con voz)", intro: "Encantado. Te presento TeGeVe en un par de minutos, como en una primera reunión: breve y al grano. Vamos allá." },
+    es: { chip: "Preséntame TeGeVe (con voz)", intro: "Encantada. Te presento TeGeVe en un par de minutos, como en una primera reunión: breve y al grano. Vamos allá." },
     en: { chip: "Introduce me to TeGeVe (with voice)", intro: "My pleasure. Let me introduce TeGeVe in a couple of minutes, like a first meeting: brief and to the point. Here we go." },
     pt: { chip: "Apresente-me a TeGeVe (com voz)", intro: "Com prazer. Vou apresentar a TeGeVe em alguns minutos, como numa primeira reunião: breve e direto ao ponto. Vamos lá." },
     it: { chip: "Presentami TeGeVe (con voce)", intro: "Con piacere. Ti presento TeGeVe in un paio di minuti, come in un primo incontro: breve e al punto. Cominciamo." },
