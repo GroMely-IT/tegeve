@@ -451,17 +451,12 @@
     renderUI(ui);
     if (pres) { setTimeout(startPres, 900); }          // el agente aceptó presentar: arranca con voz
     else if (tour) { setTimeout(startTour, 900); }     // el agente aceptó el tour: arranca solo
-    else {
-      var list = (chips && chips.length) ? chips.slice(0) : [];
-      // Al principio de la conversación (primera respuesta), ofrece también
-      // la presentación con voz y el tour.
-      if (!tourOffered && state.msgs.filter(function (m) { return m.role === "user"; }).length <= 1) {
-        tourOffered = true;
-        list.push({ label: presT().chip, fn: startPres });
-        list.push({ label: tourT().start, fn: startTour });
-      }
-      if (list.length) addChips(list);
-    }
+    // Los chips que muestre son SOLO los que proponga el agente para ESA respuesta.
+    // (Ya NO se fuerza «preséntame TeGeVe / recorrido» encima de la respuesta: si
+    // la persona ya está hablando de su reto, ofrecerle la presentación chirría.
+    // La presentación se ofrece en la bienvenida, en el saludo proactivo o cuando
+    // el propio agente lo cree oportuno.)
+    else if (chips && chips.length) addChips(chips);
     // En chat NO se arrastra a la persona por el sitio: el agente enlaza la
     // sección como texto clicable y es ella quien decide ir (el chat sigue visible).
     speak(reply);
