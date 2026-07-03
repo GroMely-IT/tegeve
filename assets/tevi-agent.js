@@ -981,6 +981,18 @@
   // texto ya está visible en la barra). Fuera de la presentación (modo voz clásico)
   // sí se usa la del navegador como último recurso.
   function speakFallback(clean, gen) { if (presOn) speakEnd(gen); else speakLocal(clean, gen); }
+  // Sin voz premium DENTRO de la presentación no usamos la del navegador (evita la
+  // mezcla de voces), pero TAMPOCO saltamos en seco: dejamos leer el paso y
+  // avanzamos a ritmo de lectura. Así un fallo nunca convierte el recorrido en una
+  // «carrera muda» entre secciones.
+  function speakEndDwell(gen, clean) {
+    if (gen !== speakGen) return;
+    var ms = Math.max(5000, Math.min(14000, (clean ? clean.length : 60) * 55));
+    setTimeout(function () { speakEnd(gen); }, ms);
+  }
+  // Locución RESILIENTE. En la presentación un fallo puntual de /tts (p. ej. un 503
+  // transitorio del modelo de voz preview) NO debe cortar la narración ni disparar
+  // el auto-avance: se reintenta un par de veces y solo entonces se cede.
   function speak(text, cb) {
     if (!voiceOn && !presOn) { if (cb) cb(); return; }
     var clean = String(text).replace(/https?:\/\/\S+/g, "").replace(/\/[a-z0-9\/_#-]{4,}/g, "").trim();
@@ -990,25 +1002,41 @@
     vSet("speak", vt().speak, clean.slice(0, 150) + (clean.length > 150 ? "…" : ""));
     if (!ttsPremium) { speakFallback(clean, gen); return; }
     ttsStop();
-    fetch(EP + "/tts", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: clean.slice(0, 480), lang: lang(), sessionId: state.id }),
-    })
-      .then(function (r) {
+    var tries = presOn ? 3 : 1; // en la presentación insistimos: un 503 puntual no enmudece el recorrido
+    (function attempt() {
+      if (gen !== speakGen) return;
+      // El audio existe pero el navegador no lo reproduce (autoplay): reintentar la
+      // RED no ayuda; cedemos ya (lectura en presentación, voz del navegador fuera).
+      function noPlay() {
         if (gen !== speakGen) return;
-        // 204 durante la presentación puede ser transitorio (la sesión se acaba de
-        // registrar): solo se da por «sin voz premium» definitivo fuera de ella.
-        if (r.status === 204) { if (!presOn) ttsPremium = false; speakFallback(clean, gen); return; }
-        if (!r.ok) { speakFallback(clean, gen); return; } // fallo puntual: no degrada para siempre
-        return r.blob().then(function (b) {
-          if (gen !== speakGen) return;
-          curAudio = new Audio(URL.createObjectURL(b));
-          curAudio.onended = function () { speakEnd(gen); };
-          curAudio.onerror = function () { speakFallback(clean, gen); };
-          curAudio.play().catch(function () { speakFallback(clean, gen); });
-        });
+        if (presOn) speakEndDwell(gen, clean); else speakFallback(clean, gen);
+      }
+      // Fallo de RED / servidor: reintenta (si procede) o cede con elegancia.
+      function again(status) {
+        if (gen !== speakGen) return;
+        if (!presOn && status === 204) ttsPremium = false; // 204 = este servidor no da voz premium (definitivo)
+        var transient = status !== 204;
+        if (presOn && transient && tries > 1) { tries--; setTimeout(attempt, 700); return; }
+        if (presOn) speakEndDwell(gen, clean); else speakFallback(clean, gen);
+      }
+      fetch(EP + "/tts", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: clean.slice(0, 480), lang: lang(), sessionId: state.id }),
       })
-      .catch(function () { if (gen === speakGen) speakFallback(clean, gen); });
+        .then(function (r) {
+          if (gen !== speakGen) return;
+          if (!r.ok || r.status !== 200) { again(r.status); return; } // 204/5xx/4xx
+          return r.blob().then(function (b) {
+            if (gen !== speakGen) return;
+            ttsStop();
+            curAudio = new Audio(URL.createObjectURL(b));
+            curAudio.onended = function () { speakEnd(gen); };
+            curAudio.onerror = noPlay;
+            curAudio.play().catch(noPlay);
+          });
+        })
+        .catch(function () { again(0); }); // error de red: transitorio, reintenta
+    })();
   }
 
   // ── TOUR GUIADO: recorrido demo por las secciones clave (multi-página) ──
@@ -1145,7 +1173,11 @@
     // Mientras suena, se precarga el audio del paso siguiente (o del cierre).
     if (presOn) {
       speak(tourNarr(s), function () { setTimeout(function () { if (presOn) { if (last) tourEnd(); else tourStep(i + 1); } }, 700); });
-      warmTts(last ? tourT().end : tourNarr(TOUR[i + 1]));
+      // La precarga del SIGUIENTE audio NO debe competir con la locución en curso:
+      // dos /tts pesados a la vez cargaban el modelo de voz y provocaban 503. Se
+      // lanza con la voz ya empezada (para el auto-avance da tiempo de sobra).
+      var nextText = last ? tourT().end : tourNarr(TOUR[i + 1]);
+      setTimeout(function () { if (presOn) warmTts(nextText); }, 1800);
     }
   }
   function tourStep(i) {
@@ -1199,7 +1231,7 @@
     // presentación es 100% de cliente: se registra primero (barato, sin modelo)
     // y DESPUÉS se habla. Si el registro falla, se habla igual (voz del navegador).
     var spoke = false;
-    var talk = function () { if (spoke || !presOn) return; spoke = true; speak(intro, go); warmTts(tourNarr(TOUR[0])); };
+    var talk = function () { if (spoke || !presOn) return; spoke = true; speak(intro, go); setTimeout(function () { if (presOn) warmTts(tourNarr(TOUR[0])); }, 1800); };
     try {
       fetch(EP, {
         method: "POST", headers: { "Content-Type": "application/json" },
