@@ -256,18 +256,13 @@
   var guided = false;  // navegación guiada en curso (tour/enlace del chat): NO es un abandono
   var tourOffered = false; // el tour se ofrece UNA vez, al principio de la conversación
 
-  // WhatsApp directo de Gabriel (mensaje prellenado por idioma).
-  // NOTA: cuando Meta active la resolución web de usernames (wa.me/<usuario>,
-  // hoy devuelve not_found para TODOS los usernames), cambiar WA_LINK a
-  // "https://wa.me/gabrielgrosso" para ocultar el número.
-  var WA_LINK = "https://wa.me/34682255515";
-  var WAMSG = { es: "Hola Gabriel, vengo de la web de TeGeVe.", en: "Hi Gabriel, I'm coming from the TeGeVe website.", pt: "Olá Gabriel, venho do site da TeGeVe.", it: "Ciao Gabriel, arrivo dal sito TeGeVe.", fr: "Bonjour Gabriel, je viens du site TeGeVe.", de: "Hallo Gabriel, ich komme von der TeGeVe-Website." };
+  // (El WhatsApp de Gabriel lo ofrece el AGENTE dentro de la conversación cuando
+  // detecta urgencia — el enlace fijo del pie se quitó porque no aportaba.)
   function applyText() {
     var x = t();
     panel.querySelector(".ta-title").textContent = x.title;
     panel.querySelector(".ta-sub").textContent = x.sub;
-    panel.querySelector(".ta-disc").innerHTML = esc(x.disc) +
-      ' · <a href="' + WA_LINK + '?text=' + encodeURIComponent(WAMSG[lang()] || WAMSG.es) + '" target="_blank" rel="noopener">WhatsApp</a>';
+    panel.querySelector(".ta-disc").textContent = x.disc;
     elIn.placeholder = x.ph;
     panel.querySelector("#taClose").setAttribute("aria-label", x.close);
     var b = document.querySelector(".nav-ai-agent");
@@ -799,7 +794,9 @@
     if (u) { bubble(u, "user"); state.msgs.push({ role: "user", content: u }); }
     if (a) { bubble(a, "bot"); state.msgs.push({ role: "assistant", content: a }); }
     save();
-    if (idleTimer) scheduleIdleEnd();
+    // SIEMPRE se arma el cierre por inactividad (sin esto, una conversación 100%
+    // por voz jamás generaba el informe ni los emails al terminar).
+    scheduleIdleEnd();
     try {
       fetch(EP, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: state.id, action: "log", user: u, agent: a, lang: lang() }) }).catch(function () {});
@@ -900,6 +897,8 @@
     speakGen++; ttsStop(); vrecStop();
     if (vBox) { vBox.remove(); vBox = null; }
     if (micBtn) micBtn.classList.remove("on");
+    // Si hubo conversación, el cierre por inactividad queda armado (informe/email).
+    if (state.msgs.some(function (m) { return m.role === "user"; })) scheduleIdleEnd();
   }
   function startVoice() {
     if (voiceOn || (!SR && !canLive)) return;
