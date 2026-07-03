@@ -33,16 +33,21 @@
     // Panel minimizado a BARRA horizontal inferior (mientras el agente enseña el
     // sitio: presentación, tour o foco de sección). Se restaura al tocarla.
     + "#taPanel.ta-hidden{display:none!important}"
-    + "#taMini{position:fixed;z-index:119;display:none;align-items:center;gap:10px;background:#111114;color:#fff;padding:10px 12px;cursor:pointer;bottom:0;left:0;right:0;border-top:1px solid rgba(255,255,255,.15);animation:taMiniIn .3s ease-out}"
+    + "#taMini{position:fixed;z-index:119;display:none;flex-direction:column;gap:11px;background:#111114;color:#fff;padding:13px 14px;bottom:0;left:0;right:0;border-top:1px solid rgba(255,255,255,.15);animation:taMiniIn .3s ease-out}"
     + "#taMini.on{display:flex}"
-    + "@media(min-width:720px){#taMini{left:auto;right:18px;bottom:18px;width:400px;max-width:calc(100vw - 36px);border:1px solid #111114}}"
+    + "@media(min-width:720px){#taMini{left:auto;right:18px;bottom:18px;width:420px;max-width:calc(100vw - 36px);border:1px solid #111114}}"
     + "@keyframes taMiniIn{from{transform:translateY(110%)}to{transform:none}}"
+    + "#taMini .ta-mini-head{display:flex;align-items:flex-start;gap:10px}"
     + "#taMini .ta-mini-av{width:34px;height:34px;border-radius:50%;background:var(--red,#E4010A);display:flex;align-items:center;justify-content:center;flex:0 0 auto;position:relative;color:#fff}"
     + "#taMini .ta-mini-av svg{width:17px;height:17px}"
     + "#taMini .ta-mini-av::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--red,#E4010A);opacity:0;animation:taRing 1.4s ease-out infinite}"
-    + "#taMini .ta-mini-tx{flex:1;font-size:.86rem;line-height:1.45;color:#f2f0ea;text-align:left;max-height:34vh;overflow-y:auto;padding:2px 0}"
-    + "#taMini .ta-mini-next,#taMini .ta-mini-up{flex:0 0 auto;background:rgba(255,255,255,.14);border:0;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.05rem;line-height:1;display:flex;align-items:center;justify-content:center}"
-    + "#taMini .ta-mini-next{background:var(--red,#E4010A);display:none}"
+    + "#taMini .ta-mini-tx{flex:1;font-size:.9rem;line-height:1.5;color:#f2f0ea;text-align:left;max-height:32vh;overflow-y:auto;padding-top:5px}"
+    + "#taMini .ta-mini-btns{display:flex;gap:9px}"
+    + "#taMini .ta-mini-next,#taMini .ta-mini-up{border:0;cursor:pointer;font:600 .9rem/1 inherit;padding:12px 14px;display:flex;align-items:center;justify-content:center;white-space:nowrap}"
+    + "#taMini .ta-mini-up{flex:1;background:rgba(255,255,255,.14);color:#fff}"
+    + "#taMini .ta-mini-up:hover{background:rgba(255,255,255,.22)}"
+    + "#taMini .ta-mini-next{flex:1.4;background:var(--red,#E4010A);color:#fff;display:none}"
+    + "#taMini .ta-mini-next:hover{background:#B80008}"
     + "#taMini.tour .ta-mini-next{display:flex}"
     + "@media(prefers-reduced-motion:reduce){#taMini{animation:none}#taMini .ta-mini-av::after{animation:none}}"
     // Botón flotante (FAB) del agente: círculo rojo con latido + etiqueta «IA».
@@ -214,19 +219,23 @@
   var miniBar = document.createElement("div");
   miniBar.id = "taMini";
   miniBar.setAttribute("role", "button");
-  miniBar.innerHTML = '<span class="ta-mini-av">' + AV + '</span><span class="ta-mini-tx"></span>'
-    + '<button type="button" class="ta-mini-next" aria-label="Siguiente">&rsaquo;</button>'
-    + '<button type="button" class="ta-mini-up" aria-label="Restaurar el chat">&#9650;</button>';
+  miniBar.innerHTML = '<div class="ta-mini-head"><span class="ta-mini-av">' + AV + '</span><span class="ta-mini-tx"></span></div>'
+    + '<div class="ta-mini-btns"><button type="button" class="ta-mini-up"></button><button type="button" class="ta-mini-next"></button></div>';
   document.body.appendChild(miniBar);
   function miniText(t2) { // el texto completo, siempre legible (la barra crece hacia arriba)
     var el2 = miniBar.querySelector(".ta-mini-tx");
     el2.textContent = String(t2 || "").slice(0, 800);
     el2.scrollTop = 0;
   }
+  function miniLabels() { // etiquetas claras y en el idioma vigente
+    miniBar.querySelector(".ta-mini-next").textContent = tourT().next;
+    miniBar.querySelector(".ta-mini-up").textContent = tourT().back;
+  }
   function minimize(txt) {
     if (voiceOn) return;                               // el modo voz tiene su propia pantalla
     if (!panel.classList.contains("open") || minOn) { if (txt != null) miniText(txt); return; }
     minOn = true;
+    miniLabels();
     panel.classList.add("ta-hidden");
     miniBar.classList.add("on");
     if (txt != null) miniText(txt);
@@ -243,9 +252,18 @@
     elBody.scrollTop = elBody.scrollHeight;
   }
   function miniTour(fn) { miniNextFn = fn || null; miniBar.classList.toggle("tour", !!fn); }
-  miniBar.addEventListener("click", function (e) {
-    if (e.target.closest && e.target.closest(".ta-mini-next")) { if (miniNextFn) miniNextFn(); return; }
+  // «Volver al asistente»: termina la presentación/recorrido y muestra el chat.
+  function exitGuided() {
+    if (presOn) { presStopAudio(); presOn = false; } // corta la locución de la presentación
+    miniTour(null);
     restore();
+    setTimeout(function () { try { elIn.focus(); } catch (e) {} }, 250);
+  }
+  miniBar.addEventListener("click", function (e) {
+    var b = e.target && e.target.closest ? e.target.closest("button") : null;
+    if (!b) return;                                    // el texto ya no restaura al tocarlo: botones claros
+    if (b.classList.contains("ta-mini-next")) { if (miniNextFn) miniNextFn(); }
+    else if (b.classList.contains("ta-mini-up")) { exitGuided(); }
   });
 
   var elBody = panel.querySelector("#taBody");
@@ -1063,22 +1081,22 @@
       de: "Und so erreichen wir das Ende der Tour, genau hier, am Ausgangspunkt Ihrer eigenen Geschichte mit uns." } },
   ];
   var TOUR_T = {
-    es: { start: "Recorrido rápido (sin voz)", next: "Siguiente →", stop: "Terminar",
+    es: { start: "Recorrido rápido (sin voz)", next: "Siguiente →", stop: "Terminar", back: "Volver al asistente",
       end: "Después de todo lo que has visto, estoy convencido de que somos la consultora que puede ayudarte. Cuéntame tu reto y te propongo el mejor siguiente paso: una videollamada de 45 minutos con Gabriel, nuestro Director, para verlo sobre tu caso.",
       endChips: ["Te cuento mi reto", "Quiero una reunión con Gabriel"] },
-    en: { start: "Quick tour (no audio)", next: "Next →", stop: "End",
+    en: { start: "Quick tour (no audio)", next: "Next →", stop: "End", back: "Back to the assistant",
       end: "After everything you've seen, I'm convinced we're the consultancy that can help you. Tell me your challenge and I'll propose the best next step: a 45-minute video call with Gabriel, our Director, to look at your case.",
       endChips: ["Let me tell you my challenge", "I'd like a meeting with Gabriel"] },
-    pt: { start: "Tour rápido (sem voz)", next: "Próximo →", stop: "Encerrar",
+    pt: { start: "Tour rápido (sem voz)", next: "Próximo →", stop: "Encerrar", back: "Voltar ao assistente",
       end: "Depois de tudo o que você viu, estou convencido de que somos a consultoria que pode te ajudar. Conte-me seu desafio e eu proponho o melhor próximo passo: uma videochamada de 45 minutos com o Gabriel, nosso Diretor, para ver o seu caso.",
       endChips: ["Vou contar meu desafio", "Quero uma reunião com o Gabriel"] },
-    it: { start: "Tour rapido (senza voce)", next: "Avanti →", stop: "Termina",
+    it: { start: "Tour rapido (senza voce)", next: "Avanti →", stop: "Termina", back: "Torna all\u2019assistente",
       end: "Dopo tutto quello che hai visto, sono convinto che siamo la società di consulenza che può aiutarti. Raccontami la tua sfida e ti propongo il miglior passo successivo: una videochiamata di 45 minuti con Gabriel, il nostro Direttore, per vedere il tuo caso.",
       endChips: ["Ti racconto la mia sfida", "Vorrei un incontro con Gabriel"] },
-    fr: { start: "Visite rapide (sans voix)", next: "Suivant →", stop: "Terminer",
+    fr: { start: "Visite rapide (sans voix)", next: "Suivant →", stop: "Terminer", back: "Revenir à l\u2019assistant",
       end: "Après tout ce que vous avez vu, je suis convaincu que nous sommes le cabinet qui peut vous aider. Décrivez-moi votre défi et je vous propose la meilleure étape suivante : un appel vidéo de 45 minutes avec Gabriel, notre Directeur, pour étudier votre cas.",
       endChips: ["Je vous décris mon défi", "Je veux une réunion avec Gabriel"] },
-    de: { start: "Kurze Tour (ohne Ton)", next: "Weiter →", stop: "Beenden",
+    de: { start: "Kurze Tour (ohne Ton)", next: "Weiter →", stop: "Beenden", back: "Zurück zum Assistenten",
       end: "Nach allem, was Sie gesehen haben, bin ich überzeugt, dass wir die Beratung sind, die Ihnen helfen kann. Schildern Sie mir Ihre Herausforderung und ich schlage den besten nächsten Schritt vor: einen 45-minütigen Videocall mit Gabriel, unserem Direktor, um Ihren Fall anzusehen.",
       endChips: ["Ich schildere meine Herausforderung", "Ich möchte ein Treffen mit Gabriel"] },
   };
