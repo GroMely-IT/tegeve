@@ -445,12 +445,13 @@
   // Los marcadores internos ([[opc]]/[[cita]]/[[ui]]/[[score]]…) nunca deben verse,
   // ni a medio llegar, estén donde estén (se corta desde «[[» al final de la línea).
   function stripMk(s) { return s.replace(/[ \t]*\[\[.*$/gm, ""); }
-  // Cierre común de una respuesta del agente: historial, chips, widget, tour, foco y voz.
-  function addBotReply(reply, chips, el, ui, tour) {
+  // Cierre común de una respuesta del agente: historial, chips, widget, tour/presentación, foco y voz.
+  function addBotReply(reply, chips, el, ui, tour, pres) {
     if (el) el.innerHTML = rich(reply); else bubble(reply, "bot");
     state.msgs.push({ role: "assistant", content: reply }); save();
     renderUI(ui);
-    if (tour) { setTimeout(startTour, 900); }          // el agente aceptó el tour: arranca solo
+    if (pres) { setTimeout(startPres, 900); }          // el agente aceptó presentar: arranca con voz
+    else if (tour) { setTimeout(startTour, 900); }     // el agente aceptó el tour: arranca solo
     else {
       var list = (chips && chips.length) ? chips.slice(0) : [];
       // Al principio de la conversación (primera respuesta), ofrece también
@@ -486,7 +487,7 @@
           elBody.scrollTop = elBody.scrollHeight;
         } else if (ev.done) {
           finished = true; typing(false);
-          addBotReply(ev.reply || stripMk(acc).trim(), ev.chips || [], el, ev.ui, ev.tour);
+          addBotReply(ev.reply || stripMk(acc).trim(), ev.chips || [], el, ev.ui, ev.tour, ev.pres);
         } else if (ev.error && !el) {
           typing(false); bubble(t().err, "bot");
           finished = true;
@@ -523,7 +524,7 @@
         await readStream(r); // respuesta en vivo, token a token
       } else {
         var d = await r.json(); typing(false);
-        addBotReply((d && d.reply) || t().err, (d && d.chips) || [], null, d && d.ui, d && d.tour);
+        addBotReply((d && d.reply) || t().err, (d && d.chips) || [], null, d && d.ui, d && d.tour, d && d.pres);
       }
     } catch (e) { typing(false); bubble(t().err, "bot"); }
     busy = false; elSnd.disabled = false; elIn.focus();
@@ -928,6 +929,16 @@
   };
   function presT() { return PRES_T[lang()] || PRES_T.es; }
   function presStopAudio() { speakGen++; speakCb = null; ttsStop(); }
+  // Precarga el audio de una frase (calienta la caché del edge): así el paso
+  // siguiente suena al instante y siempre con la misma voz.
+  function warmTts(text) {
+    try {
+      fetch(EP + "/tts", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: String(text).replace(/https?:\/\/\S+/g, "").trim().slice(0, 480), lang: lang(), sessionId: state.id }),
+      }).then(function (r) { try { if (r.body && r.body.cancel) r.body.cancel(); } catch (e) {} }).catch(function () {});
+    } catch (e) {}
+  }
   function tourShow(i) { // narración + foco + controles del paso i (ya en su página)
     var s = TOUR[i]; if (!s) return tourEnd();
     var hash = s.u.split("#")[1] || "";
@@ -944,7 +955,11 @@
     minimize(tourNarr(s));
     miniTour(advance);
     // En presentación: se narra el paso y, al terminar la voz, avanza solo.
-    if (presOn) speak(tourNarr(s), function () { setTimeout(function () { if (presOn) { if (last) tourEnd(); else tourStep(i + 1); } }, 700); });
+    // Mientras suena, se precarga el audio del paso siguiente (o del cierre).
+    if (presOn) {
+      speak(tourNarr(s), function () { setTimeout(function () { if (presOn) { if (last) tourEnd(); else tourStep(i + 1); } }, 700); });
+      warmTts(last ? tourT().end : tourNarr(TOUR[i + 1]));
+    }
   }
   function tourStep(i) {
     var s = TOUR[i]; if (!s) return tourEnd();
@@ -997,7 +1012,7 @@
     // presentación es 100% de cliente: se registra primero (barato, sin modelo)
     // y DESPUÉS se habla. Si el registro falla, se habla igual (voz del navegador).
     var spoke = false;
-    var talk = function () { if (spoke || !presOn) return; spoke = true; speak(intro, go); };
+    var talk = function () { if (spoke || !presOn) return; spoke = true; speak(intro, go); warmTts(tourNarr(TOUR[0])); };
     try {
       fetch(EP, {
         method: "POST", headers: { "Content-Type": "application/json" },

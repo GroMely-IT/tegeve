@@ -401,8 +401,12 @@ DATOS DEL CLIENTE (captación natural):
 - Nunca insistas si la persona no quiere darlos: sigue ayudando con normalidad igualmente.
 - Pide un dato cada vez, cuando encaje en la conversación; nunca varios de golpe.
 
-OBJETIVO:
-- Tu meta no es responder preguntas: es entender a la persona, detectar oportunidades, asesorar, generar confianza y, CUANDO TENGA SENTIDO, conseguir una reunión o diagnóstico con Gabriel Grosso (Director de TeGeVe). No fuerces la reunión si aún no hay encaje.
+OBJETIVO (lo más importante de todo): eres un AGENTE COMERCIAL de élite, no un chatbot informativo. Tu meta en CADA conversación —da igual si es por chat o por voz— es AVANZAR: entender el negocio de la persona, detectar su dolor, aportar valor concreto y CERRAR una reunión con Gabriel Grosso (Director de TeGeVe). Reglas de oro:
+- Termina SIEMPRE tu mensaje con una pregunta o una propuesta de siguiente paso concreto. Nunca dejes la conversación en punto muerto ni cierres con un simple «¿algo más?».
+- En cuanto detectes una necesidad real o interés claro, propone la reunión con naturalidad y en positivo («esto Gabriel te lo aterriza en una llamada de 30 minutos; ¿te viene bien esta semana?»). NO esperes a que te la pidan.
+- Si no aceptan la reunión, ni insistas ni te rindas: sigue aportando valor y reintenta más adelante con otro ángulo (máximo un intento de cierre cada 3-4 turnos; cercano, jamás cansino).
+- Si es pura curiosidad o la cosa se enfría, siembra el siguiente paso: ofrece la presentación ([[pres]]), un caso afín a su sector o el WhatsApp de Gabriel.
+- Piensa como el mejor comercial de una multinacional: escucha el doble de lo que habla, personaliza cada respuesta con lo que la persona ya contó y convierte cada objeción en una pregunta útil.
 
 MEMORIA: recuerda todo lo que ya te han contado en esta conversación; no repitas preguntas y construye una imagen clara del cliente.
 
@@ -420,9 +424,10 @@ TERMÓMETRO INTERNO: al final de CADA respuesta añade SIEMPRE, en su propia lí
 [[score]] N
 donde N es un entero de 0 a 100 con la temperatura comercial de la conversación hasta ahora: 0-25 curiosidad sin proyecto; 30-50 interés real pero sin urgencia ni proyecto definido; 55-70 necesidad clara identificada; 75-100 oportunidad caliente (necesidad + urgencia, presupuesto, datos de contacto o petición de reunión). Sube o baja el número según avance la conversación; sé honesto, no optimista. Esta línea es interna: nunca la menciones, nunca la expliques y no cuenta como parte de tu mensaje.
 
-TOUR GUIADO: si la persona pide que le enseñes el sitio o un recorrido general («hazme un tour», «enséñame la web», «¿por dónde empiezo?»), acepta con UNA frase breve y termina el mensaje con una línea propia EXACTAMENTE así:
-[[tour]]
-El sistema iniciará entonces un recorrido guiado paso a paso por las secciones clave; no describas tú las secciones en ese mensaje. También puedes OFRECERLO tú al principio de la conversación, si notas que la persona aún se está orientando o no sabe por dónde empezar («si quieres, te enseño el sitio en un par de minutos»); si acepta, emite la línea [[tour]] igual. Nunca menciones ni expliques este formato.
+PRESENTACIÓN Y RECORRIDO (modos guiados que el sistema ejecuta por ti):
+[[pres]] — presentación de TeGeVe CON VOZ: el sistema recorre el sitio narrando la compañía como un comercial (y cierra proponiendo reunión).
+[[tour]] — recorrido guiado del sitio SIN voz.
+CUÁNDO EMITIRLOS (muy importante, no lo pases por alto): si la persona pide que le PRESENTES la empresa o que se la enseñes —«preséntame TGV/TeGeVe», «preséntame la compañía», «hazme la presentación», «guíame por el sitio», «enséñame la web/el sitio», «hazme un tour», «¿por dónde empiezo?»— responde con UNA sola frase breve y cálida aceptando, y TERMINA ese mismo mensaje con la línea [[pres]]. TODAS esas peticiones —incluido «guíame por el sitio» y «hazme un tour»— van con [[pres]]; usa [[tour]] ÚNICAMENTE si la persona dice expresamente que lo quiere sin voz, sin audio o solo leyendo. NO respondas con un resumen de la empresa en su lugar: el sistema hace la presentación por ti. Si preguntan «¿quiénes sois?» o «¿qué hacéis?» sin pedir presentación, responde breve y OFRECE la presentación como opción rápida ([[opc]] Preséntamela | Prefiero preguntar). No emitas estos marcadores si ya hay una presentación en curso. También puedes ofrecer la presentación tú al principio si la persona se está orientando. Nunca menciones ni expliques este formato.
 
 GUÍA AL SITIO: cuando lo que pregunta la persona está desarrollado en una sección concreta del sitio, después de responder breve y útilmente puedes invitarla a verlo ahí. Escribe la RUTA RELATIVA tal cual, empezando por «/» y SIN el dominio ni formato markdown (correcto: «lo tienes con detalle en /servicios/sap/#casos-relacionados»; NO uses «https://...» ni «[texto](url)»). Usa SOLO rutas y anclas del MAPA DEL SITIO de abajo; nunca inventes una. No enlaces por enlazar: solo cuando aporte valor real y encaje con lo que pide. El enlace complementa tu respuesta, no la sustituye.
 
@@ -443,31 +448,38 @@ ${SITE_MAP}`;
 // cliente) con CLAUDE como respaldo si Google falla o no hay clave. ----
 const GEMINI_CHAT_DEFAULT = "gemini-2.5-flash"; // el flash de menor latencia; override: GEMINI_CHAT_MODEL
 const geminiMsgs = (messages) => messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
-const geminiBody = (system, messages, maxTokens) => JSON.stringify({
+const geminiBody = (system, messages, maxTokens, noThink) => JSON.stringify({
   systemInstruction: { parts: [{ text: system.map((b) => b.text).join("\n\n") }] },
   contents: geminiMsgs(messages),
-  // Sin «pensamiento» interno: prima la latencia (la conversación debe ser fluida).
-  generationConfig: { maxOutputTokens: maxTokens || 1024, temperature: 0.7, thinkingConfig: { thinkingBudget: 0 } },
+  // Sin «pensamiento» interno por defecto: prima la latencia (conversación fluida).
+  generationConfig: Object.assign(
+    { maxOutputTokens: maxTokens || 1024, temperature: 0.7 },
+    noThink ? {} : { thinkingConfig: { thinkingBudget: 0 } }
+  ),
 });
+// Algunos modelos nuevos rechazan thinkingConfig con un 400: se reintenta sin él
+// (así se puede cambiar de modelo con GEMINI_CHAT_MODEL sin tocar código).
+async function geminiFetch(env, path, system, messages, maxTokens) {
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/" + path;
+  const hs = { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" };
+  let r = await fetch(url, { method: "POST", headers: hs, body: geminiBody(system, messages, maxTokens) });
+  if (r.status === 400) {
+    const et = await r.text();
+    if (!/think/i.test(et)) throw new Error("gemini 400 " + et.slice(0, 300));
+    r = await fetch(url, { method: "POST", headers: hs, body: geminiBody(system, messages, maxTokens, true) });
+  }
+  if (!r.ok) throw new Error("gemini " + r.status + " " + (await r.text()).slice(0, 300));
+  return r;
+}
 async function callGemini(env, system, messages, maxTokens) {
   const model = env.GEMINI_CHAT_MODEL || GEMINI_CHAT_DEFAULT;
-  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
-    method: "POST",
-    headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
-    body: geminiBody(system, messages, maxTokens),
-  });
-  if (!r.ok) throw new Error("gemini " + r.status + " " + (await r.text()).slice(0, 300));
+  const r = await geminiFetch(env, encodeURIComponent(model) + ":generateContent", system, messages, maxTokens);
   const d = await r.json();
   return ((((d.candidates || [])[0] || {}).content || {}).parts || []).map((p) => p.text || "").join("").trim();
 }
 async function callGeminiStream(env, system, messages, maxTokens, onDelta) {
   const model = env.GEMINI_CHAT_MODEL || GEMINI_CHAT_DEFAULT;
-  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":streamGenerateContent?alt=sse", {
-    method: "POST",
-    headers: { "x-goog-api-key": env.GEMINI_API_KEY, "Content-Type": "application/json" },
-    body: geminiBody(system, messages, maxTokens),
-  });
-  if (!r.ok) throw new Error("gemini " + r.status + " " + (await r.text()).slice(0, 300));
+  const r = await geminiFetch(env, encodeURIComponent(model) + ":streamGenerateContent?alt=sse", system, messages, maxTokens);
   const reader = r.body.getReader();
   const dec = new TextDecoder();
   let buf = "", full = "";
@@ -731,7 +743,7 @@ async function handleTeviAgent(request, env, ctx) {
       let ochips = [];
       const oom = opener.match(/^[ \t]*\[\[opc\]\][ \t]*(.+?)[ \t]*$/im);
       if (oom) { ochips = oom[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5); opener = opener.replace(oom[0], ""); }
-      opener = opener.replace(/[ \t]*\[\[(?:opc|cita|ui|score|tour)\]\][^\n]*/g, "").replace(/\n{3,}/g, "\n\n").trim();
+      opener = opener.replace(/[ \t]*\[\[(?:opc|cita|ui|score|tour|pres)\]\][^\n]*/g, "").replace(/\n{3,}/g, "\n\n").trim();
       if (!opener) return json({ reply: "", sessionId }, 200, h);
       rec.transcript.push({ role: "assistant", content: opener, ts: now });
       rec.updatedAt = Date.now();
@@ -812,10 +824,12 @@ async function handleTeviAgent(request, env, ctx) {
           }
         }
       }
-      // Tour guiado: línea «[[tour]]» → el cliente arranca el recorrido por el sitio.
-      let tour = false;
+      // Modos guiados: «[[tour]]» (recorrido) y «[[pres]]» (presentación con voz).
+      let tour = false, pres = false;
       const tm = reply.match(/^[ \t]*\[\[tour\]\][ \t]*$/im);
       if (tm) { tour = true; reply = reply.replace(tm[0], ""); }
+      const prm = reply.match(/^[ \t]*\[\[pres\]\][ \t]*$/im);
+      if (prm) { pres = true; reply = reply.replace(prm[0], ""); }
 
       // Termómetro comercial: «[[score]] N» (interno, lo emite en cada turno).
       // Sin ancla de línea: si el modelo lo pega tras la última frase, también cuenta.
@@ -827,7 +841,7 @@ async function handleTeviAgent(request, env, ctx) {
       }
       // Red de seguridad: ningún marcador debe llegar a la persona, esté donde esté
       // (se elimina desde el marcador hasta el fin de esa línea).
-      reply = reply.replace(/[ \t]*\[\[(?:opc|cita|ui|score|tour)\]\][^\n]*/g, "").replace(/\n{3,}/g, "\n\n").trim();
+      reply = reply.replace(/[ \t]*\[\[(?:opc|cita|ui|score|tour|pres)\]\][^\n]*/g, "").replace(/\n{3,}/g, "\n\n").trim();
 
       rec.transcript.push({ role: "assistant", content: reply, ts: Date.now() });
       rec.turns = rec.transcript.filter((m) => m.role === "user").length;
@@ -841,7 +855,7 @@ async function handleTeviAgent(request, env, ctx) {
       if ((rec.status === "IDENTIFICADO" || (rec.score || 0) >= 75) &&
           (!rec.alerted || (hasContact && !rec.alertedContact))) await sendHotAlert(env, rec);
       await saveLead(env, sessionId, rec);
-      return { reply, chips, ui, tour };
+      return { reply, chips, ui, tour, pres };
     };
 
     // STREAMING (SSE): el texto va llegando al navegador token a token; al final
@@ -855,7 +869,7 @@ async function handleTeviAgent(request, env, ctx) {
         try {
           const raw = await agentGenerateStream(env, system, buildWindow(rec), 1024, (t) => emit({ d: t }));
           const fin = await doFinish(raw);
-          await emit({ done: true, reply: fin.reply, chips: fin.chips, ui: fin.ui, tour: fin.tour, sessionId, geo: rec.geoCountry });
+          await emit({ done: true, reply: fin.reply, chips: fin.chips, ui: fin.ui, tour: fin.tour, pres: fin.pres, sessionId, geo: rec.geoCountry });
         } catch (err) {
           await emit({ error: "Agent unavailable.", detail: String(err).slice(0, 120) });
         }
@@ -866,7 +880,7 @@ async function handleTeviAgent(request, env, ctx) {
     }
 
     const fin = await doFinish(await agentGenerate(env, system, buildWindow(rec), 1024));
-    return json({ reply: fin.reply, chips: fin.chips, ui: fin.ui, tour: fin.tour, sessionId, geo: rec.geoCountry }, 200, h);
+    return json({ reply: fin.reply, chips: fin.chips, ui: fin.ui, tour: fin.tour, pres: fin.pres, sessionId, geo: rec.geoCountry }, 200, h);
   } catch (err) {
     return json({ error: "Agent unavailable.", detail: String(err).slice(0, 200) }, 502, h);
   }
@@ -1238,10 +1252,13 @@ async function handleAgentLeads(request, env) {
 // Devuelve un WAV (Uint8Array) o null si falla; el llamador cae a ElevenLabs.
 // Voz por idioma con GEMINI_TTS_VOICES (JSON {"es":"Kore",...}), voz global con
 // GEMINI_TTS_VOICE y modelo con GEMINI_TTS_MODEL (por si Google lo renombra).
-async function ttsGemini(env, text, lg) {
+function geminiVoiceFor(env, lg) {
   let voices = {};
   try { voices = JSON.parse(env.GEMINI_TTS_VOICES || "{}") || {}; } catch (e) {}
-  const voice = voices[lg] || env.GEMINI_TTS_VOICE || "Kore";
+  return voices[lg] || env.GEMINI_TTS_VOICE || "Kore";
+}
+async function ttsGemini(env, text, lg) {
+  const voice = geminiVoiceFor(env, lg);
   const model = env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
   // El modelo preview a veces devuelve 200 sin audio: se reintenta UNA vez.
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -1293,11 +1310,21 @@ function wavFromPcm(pcm, rate) {
   return out;
 }
 
+// Clave de caché para un audio (frase+voz+idioma+modelo → URL sintética).
+// El Cache API de Workers guarda el WAV en el edge: la misma frase (narraciones
+// de la presentación, textos repetidos) se cobra UNA vez a Google y después
+// suena al instante y SIEMPRE con la misma voz (sin mezclar con la del navegador).
+async function ttsCacheReq(s) {
+  const hBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  const hex = Array.from(new Uint8Array(hBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return new Request("https://tts-cache.tegevem.es/" + hex, { method: "GET" });
+}
+
 // Voz premium para la lectura en voz alta del panel: GEMINI si hay clave
 // (GEMINI_API_KEY; es la voz de AI Studio y la más barata), si no ElevenLabs
 // (ELEVENLABS_API_KEY); sin claves responde 204 y el cliente usa la voz del
 // navegador.
-async function handleAgentTts(request, env) {
+async function handleAgentTts(request, env, ctx) {
   const origin = request.headers.get("Origin") || "";
   const h = corsHeaders(origin);
   if (request.method === "OPTIONS") return new Response(null, { headers: h });
@@ -1323,16 +1350,37 @@ async function handleAgentTts(request, env) {
     rec = await loadLead(env, sessionId);
   }
   if (!rec || !(rec.transcript || []).length) return new Response(null, { status: 204, headers: h });
+  const lg = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
+
+  // CACHÉ de audio (antes de gastar presupuesto): la misma frase con la misma
+  // voz ya generada → respuesta inmediata, coste cero y voz siempre idéntica.
+  let cacheReq = null;
+  if (env.GEMINI_API_KEY) {
+    try {
+      const model = env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
+      cacheReq = await ttsCacheReq([model, geminiVoiceFor(env, lg), lg, text].join("|"));
+      const hit = await caches.default.match(cacheReq);
+      if (hit) return new Response(hit.body, { status: 200, headers: { "Content-Type": "audio/wav", "Cache-Control": "no-store", "X-TTS-Cache": "hit", ...h } });
+    } catch (e) { cacheReq = null; }
+  }
+
   const day = new Date().toISOString().slice(0, 10);
   if (rec.ttsDay !== day) { rec.ttsDay = day; rec.ttsChars = 0; }
   if ((rec.ttsChars || 0) + text.length > 8000) return new Response(null, { status: 204, headers: h });
   rec.ttsChars = (rec.ttsChars || 0) + text.length;
   await saveLead(env, sessionId, rec);
-  const lg = ({ es: 1, en: 1, pt: 1, it: 1, fr: 1, de: 1 })[body.lang] ? body.lang : "es";
   // 1.º GEMINI (la voz de AI Studio, la preferida y la más barata), si hay clave.
   if (env.GEMINI_API_KEY) {
     const wav = await ttsGemini(env, text, lg);
-    if (wav) return new Response(wav, { status: 200, headers: { "Content-Type": "audio/wav", "Cache-Control": "no-store", ...h } });
+    if (wav) {
+      if (cacheReq) {
+        try {
+          const put = caches.default.put(cacheReq, new Response(wav, { headers: { "Content-Type": "audio/wav", "Cache-Control": "public, max-age=2592000" } }));
+          if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put;
+        } catch (e) { /* la caché nunca rompe la voz */ }
+      }
+      return new Response(wav, { status: 200, headers: { "Content-Type": "audio/wav", "Cache-Control": "no-store", ...h } });
+    }
   }
   // 2.º ELEVENLABS como respaldo. Voz por idioma con ELEVENLABS_VOICES
   // (JSON {"es":"voiceId",...}) → ELEVENLABS_VOICE_ID → Rachel (multilingüe);
@@ -1480,7 +1528,7 @@ export default {
       return handleAgentPanel(request, env);
     }
     if (url.pathname === "/api/tevi-agent/tts") {
-      return handleAgentTts(request, env);
+      return handleAgentTts(request, env, ctx);
     }
     // Todo lo demás: el sitio estático (lo sirve el binding ASSETS).
     return env.ASSETS.fetch(request);
