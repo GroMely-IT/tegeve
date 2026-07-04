@@ -22,5 +22,14 @@
   "kv_namespaces": [
     { "binding": "TEVI_AGENT_KV", "id": "bf9d0bdccb644ce48f1a0a4ddc541c4e" }
   ],
+  // Analytics Engine: embudo de conversión de TevIA (apertura, primer mensaje,
+  // email captado, urgencia alta, cita, cierre/abandono). Escrituras gratis, sin
+  // tocar el KV de leads. Se consulta por SQL (Analytics Engine SQL API).
+  // ── PARA ACTIVARLO: habilita Analytics Engine (gratis) en el panel de Cloudflare
+  //    (Workers & Pages → Analytics Engine) y descomenta este binding + redeploy.
+  //    El código ya está instrumentado; sin el binding, trackFunnel() no hace nada.
+  // "analytics_engine_datasets": [
+  //   { "binding": "TEVIA_FUNNEL", "dataset": "tevia_funnel" }
+  // ],
   "observability": { "enabled": true }
 }

@@ -698,6 +698,21 @@ function buildWindow(rec) {
   return win;
 }
 
+// Embudo de conversión de TevIA → Analytics Engine (escritura gratis, sin tocar
+// el KV de leads). Eventos: open | first_msg | email | hot | cita | end. Se
+// consulta por SQL. Nunca rompe la conversación si el binding no está.
+function trackFunnel(env, event, rec, note) {
+  try {
+    if (!env || !env.TEVIA_FUNNEL) return;
+    rec = rec || {};
+    env.TEVIA_FUNNEL.writeDataPoint({
+      indexes: [String(event).slice(0, 32)],
+      blobs: [String(event), rec.lang || "", rec.geoCountry || "", (rec.page || "").slice(0, 120), rec.status || "", String(note || "")],
+      doubles: [rec.score || 0, rec.turns || 0, Math.round((rec.durationMs || 0) / 1000)],
+    });
+  } catch (e) { /* la analítica nunca rompe nada */ }
+}
+
 async function handleTeviAgent(request, env, ctx) {
   const origin = request.headers.get("Origin") || "";
   const h = corsHeaders(origin);
@@ -749,6 +764,7 @@ async function handleTeviAgent(request, env, ctx) {
   try {
     if (action === "end") {
       const report = await generateReport(env, rec, now);
+      trackFunnel(env, "end", rec, (rec.cita && rec.cita.sent) ? "cita" : (rec.datos.email || rec.datos.telefono) ? "contacto" : "abandono");
       return json({ ok: true, sessionId, report }, 200, h);
     }
 
@@ -762,6 +778,7 @@ async function handleTeviAgent(request, env, ctx) {
       rec.turns = rec.transcript.filter((m) => m.role === "user").length;
       rec.updatedAt = Date.now();
       rec.durationMs = rec.updatedAt - rec.createdAt;
+      if (u && rec.turns === 1 && !rec.trackedFirst) { rec.trackedFirst = true; trackFunnel(env, "first_msg", rec, "voz"); }
       const hasC = !!(rec.datos.email || rec.datos.telefono);
       if (rec.status === "IDENTIFICADO" && (!rec.alerted || (hasC && !rec.alertedContact))) await sendHotAlert(env, rec);
       await saveLead(env, sessionId, rec);
@@ -784,6 +801,7 @@ async function handleTeviAgent(request, env, ctx) {
         rec.durationMs = rec.updatedAt - rec.createdAt;
         await sendHotAlert(env, rec);   // aviso inmediato al comercial con el contacto
         await sendLeadEmail(env, rec);  // e informe/expediente para que actúe ya
+        if (!rec.trackedEmail) { rec.trackedEmail = true; trackFunnel(env, "email", rec, "form_voz"); }
       }
       await saveLead(env, sessionId, rec);
       return json({ ok: true, sessionId, name: rec.datos.nombre || "" }, 200, h);
@@ -817,6 +835,7 @@ async function handleTeviAgent(request, env, ctx) {
       if (!opener) return json({ reply: "", sessionId }, 200, h);
       rec.transcript.push({ role: "assistant", content: opener, ts: now });
       rec.updatedAt = Date.now();
+      trackFunnel(env, "open", rec, "proactivo");
       await saveLead(env, sessionId, rec);
       return json({ reply: opener, chips: ochips, sessionId, geo: rec.geoCountry }, 200, h);
     }
@@ -876,6 +895,7 @@ async function handleTeviAgent(request, env, ctx) {
           rec.status = "IDENTIFICADO";
         }
         await sendCita(env, rec, { nombre: f.nombre, email: f.email, dia: f.dia, fecha: f.fecha, hora: f.hora });
+        if (rec.cita && rec.cita.sent && !rec.trackedCita) { rec.trackedCita = true; trackFunnel(env, "cita", rec); }
       }
 
       // UI generativa: línea «[[ui]] roi» o «[[ui]] servicios|casos: clave | clave»
@@ -908,6 +928,7 @@ async function handleTeviAgent(request, env, ctx) {
         reply = reply.replace(scm[0], "");
         rec.score = Math.max(0, Math.min(100, parseInt(scm[1], 10)));
         if (rec.score > (rec.scoreMax || 0)) rec.scoreMax = rec.score;
+        if (rec.score >= 75 && !rec.trackedHot) { rec.trackedHot = true; trackFunnel(env, "hot", rec); }
       }
       // Red de seguridad: ningún marcador debe llegar a la persona, esté donde esté
       // (se elimina desde el marcador hasta el fin de esa línea).
@@ -919,6 +940,8 @@ async function handleTeviAgent(request, env, ctx) {
       rec.turns = rec.transcript.filter((m) => m.role === "user").length;
       rec.updatedAt = Date.now();
       rec.durationMs = rec.updatedAt - rec.createdAt;
+      if (rec.turns === 1 && !rec.trackedFirst) { rec.trackedFirst = true; trackFunnel(env, "first_msg", rec, "chat"); }
+      if ((rec.datos.email || rec.datos.telefono) && !rec.trackedEmail) { rec.trackedEmail = true; trackFunnel(env, "email", rec, "chat"); }
       // Alerta de lead caliente: al identificarse (email/teléfono), agendar reunión
       // o cuando el termómetro marca oportunidad clara aunque aún no haya datos.
       // Si la primera alerta fue solo por temperatura (sin contacto), se permite UNA
