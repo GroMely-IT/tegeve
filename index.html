@@ -134,7 +134,7 @@
 </script>
 
 <link rel="stylesheet" href="assets/styles.css?v=52">
-<link rel="stylesheet" href="assets/tgv.css?v=54">
+<link rel="stylesheet" href="assets/tgv.css?v=55">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -336,7 +336,7 @@
           <a href="nosotros/#testimonios">Testimonios</a>
           <a href="casos/#clientes">Clientes</a>
           <a href="nosotros/#premios">Reconocimientos</a>
-          <a href="#linkedin">Novedades</a>
+          <a href="#testimonios">Testimonios</a>
           <a href="#faq">FAQ</a>
         </div>
       </div>
@@ -375,6 +375,7 @@
         <a href="diagnostico/" class="btn btn-primary btn-tgv">Agenda un diagnóstico <span class="btn-arrow">→</span></a>
         <button type="button" class="btn btn-ghost agent-open-link">Hablar con TevIA</button>
       </div>
+      <p class="hero-trust reveal in" data-d="4"><span class="hero-trust-k">Ya confían en nosotros</span> <b>Banco&nbsp;Itaú · Weatherford · Kimberly-Clark · First&nbsp;Data</b></p>
     </div>
   </div>
   <!-- Diapositiva 2: Tevi (asistente con IA) -->
@@ -813,17 +814,49 @@
   </div>
 </section>
 
-<!-- En LinkedIn / Novedades (widget SociableKit, auto-actualizable) -->
-<section class="sec sec-light" id="linkedin" aria-label="Novedades de TeGeVe en LinkedIn" style="background:var(--mist)">
+<!-- Testimonios: prueba social nominal C-level (clientes reales reconocibles) -->
+<section class="sec sec-light tgv-tst" id="testimonios" aria-label="Testimonios de clientes" style="background:var(--mist)">
   <div class="wrap">
     <div class="sec-head reveal">
-      <span class="eyebrow">Novedades</span>
-      <h2 class="h2" id="novedades-linkedin">Lo último que compartimos en LinkedIn.</h2>
-      <p class="lede">Ideas, proyectos y aprendizajes de nuestro equipo sobre SAP, Oracle JD Edwards, IA empresarial y modernización de sistemas.</p>
+      <span class="eyebrow">Testimonios</span>
+      <h2 class="h2" id="home-testimonios">Lo que dicen quienes ya trabajan con nosotros.</h2>
+      <p class="lede">Relaciones de confianza que se sostienen durante años, en banca, energía e infraestructuras.</p>
     </div>
-
-    <!-- Widget de SociableKit (tal cual). Para cambiarlo, edita el src del iframe. -->
-    <iframe src="https://widgets.sociablekit.com/linkedin-page-posts/iframe/25692794" frameborder="0" width="100%" height="1000px"></iframe>
+    <div class="tgv-tst-grid">
+      <details class="tgv-tst-card reveal">
+        <summary class="tgv-tst-sum">
+          <span class="tgv-tst-q">«TGV es nuestro proveedor desde 2011.»</span>
+          <span class="tgv-tst-who"><b>Marcelo Migale</b><span class="r">IT Development Manager · Banco Itaú</span></span>
+          <span class="tgv-tst-toggle" aria-hidden="true"></span>
+        </summary>
+        <p class="tgv-tst-full">TGV es nuestro proveedor desde 2011. No dudamos en recomendarlos como una empresa a la cual contratar.</p>
+      </details>
+      <details class="tgv-tst-card reveal">
+        <summary class="tgv-tst-sum">
+          <span class="tgv-tst-q">«…una alternativa a medida, ágil y viable, sin la cual no hubiéramos podido alcanzar nuestro objetivo.»</span>
+          <span class="tgv-tst-who"><b>David Blaustein</b><span class="r">IT Region Manager, Latinoamérica · Weatherford</span></span>
+          <span class="tgv-tst-toggle" aria-hidden="true"></span>
+        </summary>
+        <p class="tgv-tst-full">TGV nos ha permitido convertirnos en una alternativa a medida, ágil y viable, sin la cual no hubiéramos podido alcanzar nuestro objetivo. El impacto positivo en nuestro departamento ha sido muy sólido, gracias a la voluntad y la flexibilidad de TGV para discutir, proponer y acordar una alternativa viable para nuestra situación.</p>
+      </details>
+      <details class="tgv-tst-card reveal">
+        <summary class="tgv-tst-sum">
+          <span class="tgv-tst-q">«Con la ayuda de TGV como socio tecnológico genuino, logramos desarrollar un sistema de control de permanencia…»</span>
+          <span class="tgv-tst-who"><b>Fabián Ricciardi</b><span class="r">Director General de Sistemas y TI · Dirección Nacional de Migraciones</span><img class="client-logo client-logo--tst" src="assets/dnm-migraciones.png" alt="Dirección Nacional de Migraciones" loading="lazy"></span>
+          <span class="tgv-tst-toggle" aria-hidden="true"></span>
+        </summary>
+        <p class="tgv-tst-full">Con la ayuda de TGV como socio tecnológico genuino, logramos desarrollar un sistema de control de permanencia que gestiona más de 400 dispositivos móviles distribuidos en todo el país.</p>
+      </details>
+      <details class="tgv-tst-card reveal">
+        <summary class="tgv-tst-sum">
+          <span class="tgv-tst-q">«Han demostrado ser un proveedor confiable.»</span>
+          <span class="tgv-tst-who"><b>Graciela Liliana Arosa</b><span class="r">Gerente de Desarrollo Core · Banco Comafi</span><img class="client-logo client-logo--tst" src="assets/banco-comafi.png" alt="Banco Comafi" loading="lazy"></span>
+          <span class="tgv-tst-toggle" aria-hidden="true"></span>
+        </summary>
+        <p class="tgv-tst-full">Han demostrado ser un proveedor confiable, y los servicios que nos brindan nos ayudan a cumplir con nuestros proyectos. Sin dudas, podemos recomendarlos como una empresa a la cual contratar.</p>
+      </details>
+    </div>
+    <p class="reveal" style="text-align:center;margin-top:28px"><a href="https://www.linkedin.com/company/tegeve/" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Síguenos en LinkedIn <span aria-hidden="true">→</span></a></p>
   </div>
 </section>
 
@@ -909,7 +942,7 @@
   </div>
 </div>
 
-<script src="assets/app.js?v=65" defer></script>
+<script src="assets/app.js?v=66" defer></script>
 <script src="assets/tevi-agent.js?v=91" defer></script>
 
 

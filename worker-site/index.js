@@ -626,7 +626,10 @@ async function saveLead(env, id, rec) {
     } catch (e) { /* si falla la relectura, se escribe igualmente */ }
     // Metadatos: el listado de KV los devuelve sin gastar un «get» por clave
     // (el panel ordena por recencia con ellos y solo lee los más recientes).
-    await env.TEVI_AGENT_KV.put(leadKey(id), JSON.stringify(rec), { metadata: { u: rec.updatedAt || 0 } });
+    // RETENCIÓN/PRIVACIDAD: los leads (email, transcripción, IP) caducan solos a
+    // los 180 días de su ÚLTIMA actividad; un lead activo se reescribe y renueva su
+    // plazo, así que solo se purgan los inactivos. El informe ya llegó por email.
+    await env.TEVI_AGENT_KV.put(leadKey(id), JSON.stringify(rec), { metadata: { u: rec.updatedAt || 0 }, expirationTtl: 60 * 60 * 24 * 180 });
   } catch { /* no romper la conversación */ }
 }
 function newLead(id, lang, now) {

@@ -112,6 +112,11 @@ body.tgv .allies--clients .allies-row{gap:clamp(26px,5vw,54px)}
 body.tgv .allies--clients .client-logo{height:30px;width:auto;max-width:148px;filter:grayscale(1) brightness(.42) contrast(1.05);opacity:.82;transition:filter .4s var(--ease-out),opacity .4s var(--ease-out)}
 body.tgv .allies--clients .client-logo:hover{filter:grayscale(0);opacity:1}
 @media(max-width:640px){body.tgv .allies--clients .client-logo{height:23px}}
+/* Línea de confianza en el hero: prueba social sobria en el PRIMER viewport. */
+body.tgv .hero-trust{margin-top:22px;display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 10px;font-size:.82rem;line-height:1.5;color:var(--t2,#5f5b53)}
+body.tgv .hero-trust-k{text-transform:uppercase;letter-spacing:.13em;font-size:.66rem;font-weight:700;color:var(--t3,#8a857c)}
+body.tgv .hero-trust b{color:var(--ink,#111114);font-weight:600;letter-spacing:.01em}
+@media(max-width:560px){body.tgv .hero-trust{font-size:.76rem;margin-top:16px}body.tgv .hero-trust-k{width:100%}}
 
 /* Una sola franja oscura de autoridad por página (#contacto) */
 body.tgv .sec-dark{background:var(--ink); border-top:0}
