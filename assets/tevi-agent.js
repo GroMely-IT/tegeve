@@ -37,8 +37,10 @@
     + "#taPanel .ai-send:active{transform:scale(.9)}"
     + "#taPanel .ta-mic{transition:background .2s var(--ease-out,ease),color .2s,border-color .2s,transform .15s var(--ease-out,ease)}"
     + "#taPanel .ta-mic:hover{border-color:var(--red,#E4010A);color:var(--red,#E4010A)}"
-    + "#taPanel .ta-mic:active{transform:scale(.92)}"
+    + "#taPanel .ta-mic:active{transform:scale(.95)}"
     + "#taFab:active .ta-fab-dot{animation-play-state:paused;transform:scale(.95)}"
+    // Accesibilidad: foco por teclado VISIBLE en los botones del agente (WCAG 2.1 AA).
+    + "#taPanel .chip:focus-visible,#taPanel .ai-send:focus-visible,#taPanel .ta-mic:focus-visible,#taPanel .ta-v-send:focus-visible,#taPanel .ta-mini-next:focus-visible,#taPanel .ta-mini-up:focus-visible,#taFab:focus-visible .ta-fab-dot{outline:2px solid var(--red,#E4010A);outline-offset:2px}"
     // Panel minimizado a BARRA horizontal inferior (mientras el agente enseña el
     // sitio: presentación, tour o foco de sección). Se restaura al tocarla.
     + "#taPanel.ta-hidden{display:none!important}"
@@ -106,7 +108,7 @@
     // Entrada «genio de la lámpara»: el panel surge desde su esquina (transform-origin
     // bottom-right, heredado de .ai-panel) aplastado y se despliega con un rebote
     // sutil (curva con sobreimpulso). La salida usa la transición rápida existente.
-    + "#taPanel.open{animation:taGenie .5s cubic-bezier(.26,1.32,.4,1) both}"
+    + "#taPanel.open{animation:taGenie .42s cubic-bezier(.16,1,.3,1) both}"
     + "@keyframes taGenie{0%{opacity:0;transform:translateY(46px) scale(.55,.28)}60%{opacity:1}100%{opacity:1;transform:none}}"
     + "@media(prefers-reduced-motion:reduce){#taPanel.open{animation:taFadeIn .2s ease both}}"
     + "@keyframes taFadeIn{from{opacity:0}to{opacity:1}}"
@@ -139,35 +141,35 @@
 
   // ── Textos de interfaz por idioma (el Agente se identifica como «Agente de TeGeVe») ──
   var T = {
-    es: { btn: "TevIA", title: "TevIA", sub: "En línea · Agente de TeGeVe",
-      ph: "Escribe aquí…", open: "Abrir el Agente de TeGeVe", close: "Cerrar",
-      disc: "Hablas con el Agente de TeGeVe. Guardamos la conversación para poder ayudarte mejor.",
-      hi: "Hola, soy la agente de TeGeVe. Antes de proponerte nada, me gusta entender el contexto: ¿en qué estás trabajando ahora mismo y qué te trae por aquí?",
+    es: { btn: "TevIA", title: "TevIA", sub: "En línea · Asesora comercial de TeGeVe",
+      ph: "Escribe aquí…", open: "Abrir a TevIA, la asesora comercial", close: "Cerrar",
+      disc: "Hablas con TevIA, la asesora comercial de TeGeVe. Guardamos la conversación para poder ayudarte mejor.",
+      hi: "Hola, soy TevIA, la asesora comercial de TeGeVe. Antes de proponerte nada, me gusta entender el contexto: ¿en qué estás trabajando ahora mismo y qué te trae por aquí?",
       err: "Perdona, se me ha cruzado un cable. ¿Lo intentamos de nuevo en un momento?" },
-    en: { btn: "TevIA", title: "TevIA", sub: "Online · TeGeVe Agent",
-      ph: "Type here…", open: "Open the TeGeVe Agent", close: "Close",
-      disc: "You're chatting with the TeGeVe Agent. We keep the conversation to help you better.",
-      hi: "Hi, I'm the TeGeVe Agent. Before suggesting anything, I like to understand the context: what are you working on right now, and what brings you here?",
+    en: { btn: "TevIA", title: "TevIA", sub: "Online · TeGeVe sales advisor",
+      ph: "Type here…", open: "Open TevIA, TeGeVe's sales advisor", close: "Close",
+      disc: "You're chatting with TevIA, TeGeVe's sales advisor. We keep the conversation to help you better.",
+      hi: "Hi, I'm TevIA, TeGeVe's sales advisor. Before suggesting anything, I like to understand the context: what are you working on right now, and what brings you here?",
       err: "Sorry, something glitched on my end. Shall we try again in a moment?" },
-    pt: { btn: "TevIA", title: "TevIA", sub: "Online · Agente da TeGeVe",
-      ph: "Escreva aqui…", open: "Abrir o Agente da TeGeVe", close: "Fechar",
-      disc: "Você fala com o Agente da TeGeVe. Guardamos a conversa para ajudar melhor.",
-      hi: "Olá, sou o Agente da TeGeVe. Antes de propor qualquer coisa, gosto de entender o contexto: no que você está trabalhando agora e o que traz você aqui?",
+    pt: { btn: "TevIA", title: "TevIA", sub: "Online · Consultora comercial da TeGeVe",
+      ph: "Escreva aqui…", open: "Abrir a TevIA, consultora comercial", close: "Fechar",
+      disc: "Você fala com a TevIA, consultora comercial da TeGeVe. Guardamos a conversa para ajudar melhor.",
+      hi: "Olá, sou a TevIA, consultora comercial da TeGeVe. Antes de propor qualquer coisa, gosto de entender o contexto: no que você está trabalhando agora e o que traz você aqui?",
       err: "Desculpe, deu um problema aqui. Tentamos de novo num instante?" },
-    it: { btn: "TevIA", title: "TevIA", sub: "Online · Agente di TeGeVe",
-      ph: "Scrivi qui…", open: "Apri l'Agente di TeGeVe", close: "Chiudi",
-      disc: "Stai parlando con l'Agente di TeGeVe. Conserviamo la conversazione per aiutarti meglio.",
-      hi: "Ciao, sono l'Agente di TeGeVe. Prima di proporti qualcosa, mi piace capire il contesto: a cosa stai lavorando in questo momento e cosa ti porta qui?",
+    it: { btn: "TevIA", title: "TevIA", sub: "Online · Consulente commerciale di TeGeVe",
+      ph: "Scrivi qui…", open: "Apri TevIA, la consulente commerciale", close: "Chiudi",
+      disc: "Stai parlando con TevIA, la consulente commerciale di TeGeVe. Conserviamo la conversazione per aiutarti meglio.",
+      hi: "Ciao, sono TevIA, la consulente commerciale di TeGeVe. Prima di proporti qualcosa, mi piace capire il contesto: a cosa stai lavorando in questo momento e cosa ti porta qui?",
       err: "Scusa, qui si è inceppato qualcosa. Riproviamo tra un attimo?" },
-    fr: { btn: "TevIA", title: "TevIA", sub: "En ligne · Agent TeGeVe",
-      ph: "Écrivez ici…", open: "Ouvrir l'Agent TeGeVe", close: "Fermer",
-      disc: "Vous parlez à l'Agent TeGeVe. Nous conservons la conversation pour mieux vous aider.",
-      hi: "Bonjour, je suis l'Agent TeGeVe. Avant de proposer quoi que ce soit, j'aime comprendre le contexte : sur quoi travaillez-vous en ce moment, et qu'est-ce qui vous amène ?",
+    fr: { btn: "TevIA", title: "TevIA", sub: "En ligne · Conseillère commerciale TeGeVe",
+      ph: "Écrivez ici…", open: "Ouvrir TevIA, la conseillère commerciale", close: "Fermer",
+      disc: "Vous parlez à TevIA, la conseillère commerciale de TeGeVe. Nous conservons la conversation pour mieux vous aider.",
+      hi: "Bonjour, je suis TevIA, la conseillère commerciale de TeGeVe. Avant de proposer quoi que ce soit, j'aime comprendre le contexte : sur quoi travaillez-vous en ce moment, et qu'est-ce qui vous amène ?",
       err: "Désolé, un petit bug de mon côté. On réessaie dans un instant ?" },
-    de: { btn: "TevIA", title: "TevIA", sub: "Online · TeGeVe-Agent",
-      ph: "Hier schreiben…", open: "Den TeGeVe-Agenten öffnen", close: "Schließen",
-      disc: "Sie sprechen mit dem TeGeVe-Agenten. Wir speichern das Gespräch, um besser zu helfen.",
-      hi: "Hallo, ich bin der TeGeVe-Agent. Bevor ich etwas vorschlage, möchte ich den Kontext verstehen: Woran arbeiten Sie gerade, und was führt Sie hierher?",
+    de: { btn: "TevIA", title: "TevIA", sub: "Online · Vertriebsberaterin von TeGeVe",
+      ph: "Hier schreiben…", open: "TevIA öffnen, die Vertriebsberaterin", close: "Schließen",
+      disc: "Sie sprechen mit TevIA, der Vertriebsberaterin von TeGeVe. Wir speichern das Gespräch, um besser zu helfen.",
+      hi: "Hallo, ich bin TevIA, die Vertriebsberaterin von TeGeVe. Bevor ich etwas vorschlage, möchte ich den Kontext verstehen: Woran arbeiten Sie gerade, und was führt Sie hierher?",
       err: "Entschuldigung, da hat etwas geklemmt. Versuchen wir es gleich noch einmal?" },
   };
   function t() { return T[lang()] || T.es; }
