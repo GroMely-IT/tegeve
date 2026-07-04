@@ -68,6 +68,25 @@ body.tgv .btn-primary{background:var(--red); border:1px solid var(--red); color:
 body.tgv .btn-primary:hover{background:#B80008; transform:none}
 body.tgv .btn-ghost,body.tgv .btn-outline{border:1px solid rgba(17,17,20,.22); color:var(--ink); background:transparent}
 
+/* Craft de botones: respuesta al PULSAR (lo que faltaba), transición nítida y
+   flecha viva. Mantiene la sobriedad del sistema (radio 0, plano); solo añade
+   la sensación de que el botón "está vivo" bajo el dedo/cursor. */
+body.tgv .btn,body.tgv .btn-tgv,body.tgv .btn-primary,body.tgv .btn-ghost,
+body.tgv .btn-outline,body.tgv .btn-light,body.tgv .btn-ghost-d,body.tgv .nav-cta{
+  transition:background .18s var(--ease-out),border-color .18s var(--ease-out),color .18s var(--ease-out),transform .16s var(--ease-out);
+  will-change:transform;
+}
+body.tgv .btn-ghost:hover,body.tgv .btn-outline:hover{border-color:var(--red); color:var(--red)}
+body.tgv .hc-msg .btn-outline:hover{border-color:#fff; color:#fff}
+body.tgv .btn:active,body.tgv .btn-tgv:active,body.tgv .btn-primary:active,
+body.tgv .btn-ghost:active,body.tgv .btn-outline:active,body.tgv .btn-light:active,
+body.tgv .btn-ghost-d:active,body.tgv .nav-cta:active{transform:scale(.97)}
+body.tgv .btn .btn-arrow{transition:transform .22s var(--ease-out)}
+body.tgv .btn:hover .btn-arrow{transform:translateX(3px)}
+@media(prefers-reduced-motion:reduce){
+  body.tgv .btn:active,body.tgv .btn-tgv:active,body.tgv .btn-primary:active,body.tgv .btn-ghost:active,body.tgv .btn-outline:active,body.tgv .btn-light:active,body.tgv .btn-ghost-d:active,body.tgv .nav-cta:active{transform:none}
+}
+
 /* Navegación: papel sólido con filete inferior, consistente en TODAS las páginas
    (se usa #nav — selector de ID — para ganar a .nav.nav-dark de los heros de vídeo) */
 body.tgv #nav,body.tgv #nav.scrolled,body.tgv #nav.nav-dark:not(.scrolled){

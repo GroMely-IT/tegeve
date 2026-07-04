@@ -30,6 +30,15 @@
     + "#taPanel .ta-mic{flex:0 0 auto;width:42px;border:1px solid var(--line,#dcd8cf);background:#fff;color:#5f5b53;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:0}"
     + "#taPanel .ta-mic.on{background:var(--red,#E4010A);border-color:var(--red,#E4010A);color:#fff;animation:taPulse 1.1s infinite}"
     + "@keyframes taPulse{0%,100%{opacity:1}50%{opacity:.6}}"
+    // Craft de botones del agente: transiciones concretas + respuesta al pulsar.
+    + "#taPanel .chip{transition:border-color .2s var(--ease-out,ease),color .2s var(--ease-out,ease),background .2s var(--ease-out,ease),transform .16s var(--ease-out,ease)}"
+    + "#taPanel .chip:active{transform:scale(.97)}"
+    + "#taPanel .ai-send{transition:background .2s var(--ease-out,ease),transform .15s var(--ease-out,ease)}"
+    + "#taPanel .ai-send:active{transform:scale(.9)}"
+    + "#taPanel .ta-mic{transition:background .2s var(--ease-out,ease),color .2s,border-color .2s,transform .15s var(--ease-out,ease)}"
+    + "#taPanel .ta-mic:hover{border-color:var(--red,#E4010A);color:var(--red,#E4010A)}"
+    + "#taPanel .ta-mic:active{transform:scale(.92)}"
+    + "#taFab:active .ta-fab-dot{animation-play-state:paused;transform:scale(.95)}"
     // Panel minimizado a BARRA horizontal inferior (mientras el agente enseña el
     // sitio: presentación, tour o foco de sección). Se restaura al tocarla.
     + "#taPanel.ta-hidden{display:none!important}"
@@ -130,32 +139,32 @@
 
   // ── Textos de interfaz por idioma (el Agente se identifica como «Agente de TeGeVe») ──
   var T = {
-    es: { btn: "Tevi Agent", title: "Tevi Agent", sub: "En línea · Agente de TeGeVe",
+    es: { btn: "TevIA", title: "TevIA", sub: "En línea · Agente de TeGeVe",
       ph: "Escribe aquí…", open: "Abrir el Agente de TeGeVe", close: "Cerrar",
       disc: "Hablas con el Agente de TeGeVe. Guardamos la conversación para poder ayudarte mejor.",
       hi: "Hola, soy la agente de TeGeVe. Antes de proponerte nada, me gusta entender el contexto: ¿en qué estás trabajando ahora mismo y qué te trae por aquí?",
       err: "Perdona, se me ha cruzado un cable. ¿Lo intentamos de nuevo en un momento?" },
-    en: { btn: "Tevi Agent", title: "Tevi Agent", sub: "Online · TeGeVe Agent",
+    en: { btn: "TevIA", title: "TevIA", sub: "Online · TeGeVe Agent",
       ph: "Type here…", open: "Open the TeGeVe Agent", close: "Close",
       disc: "You're chatting with the TeGeVe Agent. We keep the conversation to help you better.",
       hi: "Hi, I'm the TeGeVe Agent. Before suggesting anything, I like to understand the context: what are you working on right now, and what brings you here?",
       err: "Sorry, something glitched on my end. Shall we try again in a moment?" },
-    pt: { btn: "Tevi Agent", title: "Tevi Agent", sub: "Online · Agente da TeGeVe",
+    pt: { btn: "TevIA", title: "TevIA", sub: "Online · Agente da TeGeVe",
       ph: "Escreva aqui…", open: "Abrir o Agente da TeGeVe", close: "Fechar",
       disc: "Você fala com o Agente da TeGeVe. Guardamos a conversa para ajudar melhor.",
       hi: "Olá, sou o Agente da TeGeVe. Antes de propor qualquer coisa, gosto de entender o contexto: no que você está trabalhando agora e o que traz você aqui?",
       err: "Desculpe, deu um problema aqui. Tentamos de novo num instante?" },
-    it: { btn: "Tevi Agent", title: "Tevi Agent", sub: "Online · Agente di TeGeVe",
+    it: { btn: "TevIA", title: "TevIA", sub: "Online · Agente di TeGeVe",
       ph: "Scrivi qui…", open: "Apri l'Agente di TeGeVe", close: "Chiudi",
       disc: "Stai parlando con l'Agente di TeGeVe. Conserviamo la conversazione per aiutarti meglio.",
       hi: "Ciao, sono l'Agente di TeGeVe. Prima di proporti qualcosa, mi piace capire il contesto: a cosa stai lavorando in questo momento e cosa ti porta qui?",
       err: "Scusa, qui si è inceppato qualcosa. Riproviamo tra un attimo?" },
-    fr: { btn: "Tevi Agent", title: "Tevi Agent", sub: "En ligne · Agent TeGeVe",
+    fr: { btn: "TevIA", title: "TevIA", sub: "En ligne · Agent TeGeVe",
       ph: "Écrivez ici…", open: "Ouvrir l'Agent TeGeVe", close: "Fermer",
       disc: "Vous parlez à l'Agent TeGeVe. Nous conservons la conversation pour mieux vous aider.",
       hi: "Bonjour, je suis l'Agent TeGeVe. Avant de proposer quoi que ce soit, j'aime comprendre le contexte : sur quoi travaillez-vous en ce moment, et qu'est-ce qui vous amène ?",
       err: "Désolé, un petit bug de mon côté. On réessaie dans un instant ?" },
-    de: { btn: "Tevi Agent", title: "Tevi Agent", sub: "Online · TeGeVe-Agent",
+    de: { btn: "TevIA", title: "TevIA", sub: "Online · TeGeVe-Agent",
       ph: "Hier schreiben…", open: "Den TeGeVe-Agenten öffnen", close: "Schließen",
       disc: "Sie sprechen mit dem TeGeVe-Agenten. Wir speichern das Gespräch, um besser zu helfen.",
       hi: "Hallo, ich bin der TeGeVe-Agent. Bevor ich etwas vorschlage, möchte ich den Kontext verstehen: Woran arbeiten Sie gerade, und was führt Sie hierher?",
@@ -165,18 +174,18 @@
 
   // Pantalla de bienvenida: encabezado (h), invitación (p) y opciones de inicio (s).
   var WEL = {
-    es: { h: "Hola, soy la agente de TeGeVe", p: "¿Qué te trae por aquí? Elige una opción o escríbeme.",
-      s: ["Tengo un reto con SAP", "Modernizar un sistema antiguo", "IA y automatización", "Desarrollo a medida", "Solo estoy explorando"] },
-    en: { h: "Hi, I'm the TeGeVe Agent", p: "What brings you here? Pick an option or just type.",
-      s: ["I have an SAP challenge", "Modernize a legacy system", "AI and automation", "Custom development", "Just exploring"] },
-    pt: { h: "Olá, sou o Agente da TeGeVe", p: "O que traz você aqui? Escolha uma opção ou escreva.",
-      s: ["Tenho um desafio com SAP", "Modernizar um sistema antigo", "IA e automação", "Desenvolvimento sob medida", "Só estou explorando"] },
-    it: { h: "Ciao, sono l'Agente di TeGeVe", p: "Cosa ti porta qui? Scegli un'opzione o scrivimi.",
-      s: ["Ho una sfida con SAP", "Modernizzare un sistema legacy", "IA e automazione", "Sviluppo su misura", "Sto solo esplorando"] },
-    fr: { h: "Bonjour, je suis l'Agent TeGeVe", p: "Qu'est-ce qui vous amène ? Choisissez une option ou écrivez-moi.",
-      s: ["J'ai un défi avec SAP", "Moderniser un système ancien", "IA et automatisation", "Développement sur mesure", "Je regarde juste"] },
-    de: { h: "Hallo, ich bin der TeGeVe-Agent", p: "Was führt Sie her? Wählen Sie eine Option oder schreiben Sie einfach.",
-      s: ["Ich habe eine SAP-Herausforderung", "Ein Altsystem modernisieren", "KI und Automatisierung", "Individuelle Entwicklung", "Ich schaue mich nur um"] },
+    es: { h: "Hola, soy TevIA, la asesora comercial de TeGeVe", p: "¿Qué te trae por aquí? Elige una opción o escríbeme.",
+      s: ["Necesito hablar hoy", "Estamos evaluando proveedores", "Tengo una migración en marcha", "Quiero IA en producción", "Solo estoy explorando"] },
+    en: { h: "Hi, I'm TevIA, TeGeVe's sales advisor", p: "What brings you here? Pick an option or just type.",
+      s: ["I need to talk today", "We're evaluating vendors", "I have a migration underway", "I want AI in production", "Just exploring"] },
+    pt: { h: "Olá, sou a TevIA, consultora comercial da TeGeVe", p: "O que traz você aqui? Escolha uma opção ou escreva.",
+      s: ["Preciso falar hoje", "Estamos avaliando fornecedores", "Tenho uma migração em curso", "Quero IA em produção", "Só estou explorando"] },
+    it: { h: "Ciao, sono TevIA, la consulente commerciale di TeGeVe", p: "Cosa ti porta qui? Scegli un'opzione o scrivimi.",
+      s: ["Devo parlare oggi", "Stiamo valutando fornitori", "Ho una migrazione in corso", "Voglio l'IA in produzione", "Sto solo esplorando"] },
+    fr: { h: "Bonjour, je suis TevIA, la conseillère commerciale de TeGeVe", p: "Qu'est-ce qui vous amène ? Choisissez une option ou écrivez-moi.",
+      s: ["Je dois parler aujourd'hui", "Nous évaluons des prestataires", "J'ai une migration en cours", "Je veux de l'IA en production", "Je regarde juste"] },
+    de: { h: "Hallo, ich bin TevIA, die Vertriebsberaterin von TeGeVe", p: "Was führt Sie her? Wählen Sie eine Option oder schreiben Sie einfach.",
+      s: ["Ich muss heute sprechen", "Wir vergleichen Anbieter", "Ich habe eine Migration laufen", "Ich will KI in Produktion", "Ich schaue mich nur um"] },
   };
   function wel() { return WEL[lang()] || WEL.es; }
 
@@ -198,7 +207,7 @@
   var panel = document.createElement("div");
   panel.className = "ai-panel"; panel.id = "taPanel";
   panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true");
-  panel.setAttribute("aria-label", "Tevi Agent");
+  panel.setAttribute("aria-label", "TevIA");
   var MIC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>';
   panel.innerHTML =
     '<div class="ai-head"><div class="av">' + AV + '</div>'
@@ -213,10 +222,10 @@
 
   // ── BOTÓN FLOTANTE (FAB): entrada al agente siempre a la vista, sobre todo
   //    en móvil. Late como un corazón y la etiqueta deja claro que es una IA. ──
-  var FAB_T = { es: "IA de TeGeVe", en: "TeGeVe AI", pt: "IA da TeGeVe", it: "IA di TeGeVe", fr: "IA TeGeVe", de: "TeGeVe-KI" };
+  var FAB_T = { es: "TevIA", en: "TevIA", pt: "TevIA", it: "TevIA", fr: "TevIA", de: "TevIA" };
   var fabBtn = document.createElement("button");
   fabBtn.type = "button"; fabBtn.id = "taFab";
-  fabBtn.setAttribute("aria-label", "Tevi Agent");
+  fabBtn.setAttribute("aria-label", "TevIA");
   fabBtn.innerHTML = '<span class="ta-fab-tag"></span><span class="ta-fab-dot">' + AV + "</span>";
   document.body.appendChild(fabBtn);
   function fabTag() { fabBtn.querySelector(".ta-fab-tag").textContent = FAB_T[lang()] || FAB_T.es; }
@@ -692,7 +701,9 @@
   // Abrir Tevi Agent desde cualquier elemento con .agent-open-link (p. ej. el
   // botón del carrusel). data-aq opcional siembra el primer mensaje del usuario.
   function wireOpeners() {
-    document.querySelectorAll(".agent-open-link").forEach(function (b) {
+    // Un solo agente: TevIA. Los botones «pregúntale a la IA» (antes abrían el
+    // asistente informativo) ahora abren también a TevIA, la asesora comercial.
+    document.querySelectorAll(".agent-open-link, .ai-open-link").forEach(function (b) {
       if (b.__taWired) return; b.__taWired = true;
       b.addEventListener("click", function () {
         open();

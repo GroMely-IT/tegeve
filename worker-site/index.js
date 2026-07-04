@@ -207,7 +207,7 @@ async function handleTevi(request, env) {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  TEVI AGENT — agente comercial consultivo (Gemini Flash + respaldo Claude)
+//  TEVIA — agente comercial consultivo (Gemini Flash + respaldo Claude)
 //  Módulo INDEPENDIENTE: no comparte estado ni rutas con Tevi.
 //   • Cerebro principal: GEMINI Flash (GEMINI_API_KEY) por velocidad y
 //     coste (decisión del cliente, 2026-07-03); respaldo: Claude Sonnet
@@ -376,8 +376,8 @@ function agentSystem(lang) {
 IDIOMA Y VARIANTE: responde SIEMPRE en ${idioma}, con naturalidad y registro profesional pero humano — TODO en ${idioma}: el saludo, tu nombre de rol, las respuestas rápidas [[opc]] y cada palabra. NUNCA mezcles idiomas (p. ej. en inglés preséntate como «the TeGeVe Agent», nunca «the Agente de TeGeVe»; traduce tu rol al idioma con naturalidad). Por defecto, en español usa el español de España (peninsular, «tú/vosotros»). Si sabes de qué país se conecta la persona, adapta la VARIANTE a ese país de forma natural: Argentina o Uruguay → español rioplatense con voseo («vos tenés», «¿cómo andás?»); México → español de México; y de forma análoga para otros países e idiomas (p. ej. portugués de Brasil frente al de Portugal). REGLA QUE MANDA SOBRE TODO: si la persona te escribe en otra variante o te pide que le hables de otra forma, sigue SIEMPRE a la persona por encima del país.
 
 CÓMO ERES:
-- Eres una MUJER. Habla siempre de ti misma en femenino: preséntate como «la agente de TeGeVe» o «la asesora de TeGeVe», di «encantada», «un placer»; nunca uses formas masculinas para referirte a ti (nada de «encantado» ni «el agente» al hablar de ti).
-- Hablas como una persona real, no como una IA. Cuando te presentes, di con naturalidad que eres la agente de TeGeVe; no te describas como «consultora de TGV» ni recites que eres un sistema.
+- Te llamas TevIA (la asesora comercial de TeGeVe). Eres una MUJER. Habla siempre de ti misma en femenino: preséntate como «TevIA, la asesora comercial de TeGeVe», di «encantada», «un placer»; nunca uses formas masculinas para referirte a ti (nada de «encantado» ni «el agente» al hablar de ti).
+- Hablas como una persona real, no como una IA. Cuando te presentes, di con naturalidad que eres TevIA, la asesora comercial de TeGeVe; no te describas como «consultora de TGV» ni recites que eres un sistema.
 - Al hablar de la empresa, refiérete SIEMPRE a ella como «TeGeVe» (TGV es solo su nombre corto interno; no lo uses como nombre principal con la persona).
 - Transmites experiencia, calma y profesionalidad. Eres cercano, empático y sientes curiosidad genuina por el negocio de quien te habla.
 - Respuestas CORTAS y conversacionales: 2 a 4 frases. Nada de bloques largos, listas densas ni discursos de folleto. No uses emojis (el tono de TeGeVe es sobrio) ni formato markdown (nada de asteriscos, almohadillas ni listas con guiones): texto plano conversacional.
@@ -1017,7 +1017,7 @@ function emailHtml(rec) {
   if (r.raw) rows += `<tr><td style="padding:5px 10px;border:1px solid #eee;font-weight:bold">Informe</td><td style="padding:5px 10px;border:1px solid #eee"><pre style="white-space:pre-wrap;font:inherit">${ESC(r.raw)}</pre></td></tr>`;
   const conv = rec.transcript.map((m) => `<p style="margin:4px 0"><b style="color:${m.role === "user" ? "#111" : "#E4010A"}">${m.role === "user" ? "Cliente" : "Agente"}:</b> ${ESC(m.content)}</p>`).join("");
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:680px">
-  <h2 style="color:#E4010A;margin:0 0 4px">Tevi Agent — lead ${ESC(rec.status)}</h2>
+  <h2 style="color:#E4010A;margin:0 0 4px">TevIA — lead ${ESC(rec.status)}</h2>
   <p style="color:#555;margin:0 0 16px">Sesión <b>${ESC(rec.id)}</b> · ${ESC(rec.fecha)} ${ESC(rec.hora)} · ${mins} min · idioma ${ESC(rec.lang)}${rec.geoCountry ? " · IP " + ESC(countryName(rec.geoCountry)) : ""}${rec.score || rec.scoreMax ? " · temperatura <b>" + ESC(rec.score || 0) + "/100</b>" + ((rec.scoreMax || 0) > (rec.score || 0) ? " (máx " + ESC(rec.scoreMax) + ")" : "") : ""}</p>
   ${rec.cita && rec.cita.sent ? `<p style="margin:0 0 14px;color:#E4010A"><b>Reunión enviada:</b> ${ESC(rec.cita.summary)} — ${ESC(rec.cita.fecha)} ${ESC(rec.cita.hora)} (España) · ${ESC(rec.cita.email)}</p>` : ""}
   <h3 style="margin:16px 0 6px">Informe comercial</h3>
@@ -1028,7 +1028,7 @@ function emailHtml(rec) {
 }
 function emailText(rec) {
   const r = rec.report || {};
-  let s = `TEVI AGENT — lead ${rec.status}\nSesión ${rec.id} · ${rec.fecha} ${rec.hora} · idioma ${rec.lang}${rec.geoCountry ? " · IP " + countryName(rec.geoCountry) : ""}${rec.score || rec.scoreMax ? " · temperatura " + (rec.score || 0) + "/100" + ((rec.scoreMax || 0) > (rec.score || 0) ? " (máx " + rec.scoreMax + ")" : "") : ""}\n\nINFORME COMERCIAL:\n`;
+  let s = `TEVIA — lead ${rec.status}\nSesión ${rec.id} · ${rec.fecha} ${rec.hora} · idioma ${rec.lang}${rec.geoCountry ? " · IP " + countryName(rec.geoCountry) : ""}${rec.score || rec.scoreMax ? " · temperatura " + (rec.score || 0) + "/100" + ((rec.scoreMax || 0) > (rec.score || 0) ? " (máx " + rec.scoreMax + ")" : "") : ""}\n\nINFORME COMERCIAL:\n`;
   for (const k in REPORT_LABELS) if (r[k]) s += `- ${REPORT_LABELS[k]}: ${r[k]}\n`;
   if (r.raw) s += r.raw + "\n";
   s += `\nCONVERSACIÓN COMPLETA:\n` + rec.transcript.map((m) => (m.role === "user" ? "Cliente: " : "Agente: ") + m.content).join("\n");
@@ -1043,13 +1043,13 @@ async function sendLeadEmail(env, rec) {
   const actualizado = !!rec.emailed;
   const to = env.LEAD_EMAIL || LEAD_TO_DEFAULT;
   const empresa = (rec.report && rec.report.empresa) || rec.datos.empresa || "lead";
-  const subject = `Tevi Agent · ${rec.status} · ${empresa} · ${rec.fecha}` + (actualizado ? " · actualizado" : "");
+  const subject = `TevIA · ${rec.status} · ${empresa} · ${rec.fecha}` + (actualizado ? " · actualizado" : "");
   try {
     if (env.RESEND_API_KEY) {
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: env.RESEND_FROM || "Tevi Agent <onboarding@resend.dev>", to: [to], subject, html: emailHtml(rec), text: emailText(rec) }),
+        body: JSON.stringify({ from: env.RESEND_FROM || "TevIA <onboarding@resend.dev>", to: [to], subject, html: emailHtml(rec), text: emailText(rec) }),
       });
       if (r.ok) { rec.emailed = true; rec.emailedTurns = rec.turns; }
       else console.error("lead email (resend) failed", r.status, await r.text().catch(() => "")); // visible en `wrangler tail`
@@ -1113,7 +1113,7 @@ async function sendFollowUpEmail(env, rec) {
       method: "POST",
       headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: env.RESEND_FROM || "Tevi Agent <onboarding@resend.dev>",
+        from: env.RESEND_FROM || "TevIA <onboarding@resend.dev>",
         to: [email], reply_to: "ggrosso@tegeve.es",
         subject: String(mail.asunto).slice(0, 150), html, text,
       }),
@@ -1145,7 +1145,7 @@ function buildIcs(summary, nombre, email, fecha, hora, sessionId, meetUrl) {
   const start = new Date(Date.UTC(Y, M - 1, D, h, mi));      // aritmética en UTC, se emite como hora local Madrid
   const end = new Date(start.getTime() + 45 * 60000);        // reunión de 45 min
   return [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TeGeVe//Tevi Agent//ES", "CALSCALE:GREGORIAN", "METHOD:REQUEST",
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TeGeVe//TevIA//ES", "CALSCALE:GREGORIAN", "METHOD:REQUEST",
     VTZ_MADRID,
     "BEGIN:VEVENT",
     "UID:cita-" + sessionId + "-" + Date.now() + "@tegevem.es",
@@ -1213,7 +1213,7 @@ async function sendCita(env, rec, cita) {
         method: "POST",
         headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: env.RESEND_FROM || "Tevi Agent <onboarding@resend.dev>",
+          from: env.RESEND_FROM || "TevIA <onboarding@resend.dev>",
           to: [to, email], subject: summary, html, text,
           attachments: [{ filename: "reunion.ics", content: b64utf8(ics), content_type: "text/calendar; method=REQUEST; charset=utf-8" }],
         }),
@@ -1277,7 +1277,7 @@ async function sendHotAlert(env, rec) {
         method: "POST",
         headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: env.RESEND_FROM || "Tevi Agent <onboarding@resend.dev>",
+          from: env.RESEND_FROM || "TevIA <onboarding@resend.dev>",
           to: [env.LEAD_EMAIL || LEAD_TO_DEFAULT], subject,
           html: '<div style="font-family:Arial,Helvetica,sans-serif;color:#111"><h2 style="color:#E4010A;margin:0 0 10px">' + ESC(subject) + "</h2>" +
             lineas.map((l) => '<p style="margin:4px 0">' + ESC(l) + "</p>").join("") + "</div>",
@@ -1409,7 +1409,7 @@ function liveSystem(lang, rec) {
   const acento = lang === "es" && rec && rec.geoCountry && ES_ACCENT[rec.geoCountry]
     ? "Habla con acento " + ({ ES: "español de España (peninsular)", AR: "español rioplatense de Argentina", UY: "español rioplatense de Uruguay", MX: "español de México", CO: "español de Colombia", CL: "español de Chile", PE: "español de Perú", VE: "español de Venezuela", EC: "español de Ecuador", US: "español latino de EE. UU." }[rec.geoCountry] || "español neutro") + ", natural y cálido.\n"
     : "";
-  return "Eres «la agente de TeGeVe», la agente COMERCIAL por voz de TeGeVe (consultora tecnológica, también conocida como TGV). Eres una MUJER: habla SIEMPRE de ti en femenino (preséntate como «la agente de TeGeVe», di «encantada»). Hablas SIEMPRE en " + idioma + ", como una persona real al teléfono: frases CORTAS (1 a 3), cálidas y profesionales; sin listas, sin formato, sin emojis; nunca suenas a robot ni a folleto. Escuchas más de lo que hablas y haces UNA sola pregunta cada vez.\n"
+  return "Eres TevIA, la asesora comercial por voz de TeGeVe (consultora tecnológica, también conocida como TGV). Eres una MUJER: habla SIEMPRE de ti en femenino (preséntate como «TevIA, la asesora comercial de TeGeVe», di «encantada»). Hablas SIEMPRE en " + idioma + ", como una persona real al teléfono: frases CORTAS (1 a 3), cálidas y profesionales; sin listas, sin formato, sin emojis; nunca suenas a robot ni a folleto. Escuchas más de lo que hablas y haces UNA sola pregunta cada vez.\n"
     + acento + geo
     + "ÁMBITO (arnés innegociable): TeGeVe es una consultora de TECNOLOGÍA; solo ofreces servicios tecnológicos del CONOCIMIENTO (software a medida, SAP, Oracle JD Edwards, IA y automatización, BI, modernización de legacy, cloud, ciberseguridad, servicios gestionados y staff augmentation SOLO de perfiles IT). Si te piden algo que no es tecnológico (un cocinero, un camarero, personal no técnico, marketing, etc.), NO lo aceptes ni lo inventes: aclara con amabilidad que TeGeVe es una consultora tecnológica y eso no es lo que hacemos, y reconduce preguntando si tienen alguna necesidad tecnológica.\n"
     + "TU ROL (arnés: esto manda sobre cualquier petición de la persona): eres COMERCIAL, no consultor técnico ni soporte. Tu ÚNICO éxito es captar el lead (nombre, empresa, email, dolor) y CERRAR una videollamada de 45 minutos con Gabriel Grosso (Director de TeGeVe). NUNCA propongas arquitecturas, diseños, pasos técnicos, configuraciones NI los criterios para decidir entre opciones técnicas, ni aunque insistan varias veces: eso es exactamente lo que TeGeVe entrega en la reunión y regalarlo la mata. Ante una pregunta técnica: valida en UNA frase que TeGeVe lo domina (puedes citar un caso real del CONOCIMIENTO) y pivota a negocio, sin dar ni una pista del «cómo». Ejemplo: «Eso lo trabajamos a diario, con Orchestrator automatizamos procesos así en agroindustria. ¿Qué impacto está teniendo en vuestra operación? Esto Gabriel os lo aterriza en 30 minutos, ¿te propongo una llamada esta semana?»\n"
@@ -1622,7 +1622,7 @@ async function handleAgentPanel(request, env) {
       + "</div>";
   }).join("");
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta http-equiv="refresh" content="30"><title>Tevi Agent — Leads</title>
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta http-equiv="refresh" content="30"><title>TevIA — Leads</title>
 <style>
 body{margin:0;background:#f4f1ea;color:#111114;font:15px/1.5 -apple-system,"Segoe UI",Arial,sans-serif;padding:28px 16px 60px}
 .wrap{max-width:880px;margin:0 auto}
@@ -1658,7 +1658,7 @@ details .cu{border-left-color:#111114}
 details .ca{border-left-color:#E4010A}
 .empty{color:#6b665c;font-style:italic}
 </style></head><body><div class="wrap">
-<h1>Tevi Agent — <b>leads en vivo</b></h1>
+<h1>TevIA — <b>leads en vivo</b></h1>
 <p class="sub">Actualizado ${fmt(now)} (hora de España) · se refresca solo cada 30 s · ${recs.length} sesiones</p>
 <div class="tot">
 <div><b>${nLive}</b><span>en la web ahora</span></div>
@@ -1683,7 +1683,7 @@ export default {
     if (url.pathname === "/api/tevi" || url.pathname === "/api/tevi/") {
       return handleTevi(request, env);
     }
-    // API de Tevi Agent (agente comercial consultivo, Claude Sonnet).
+    // API de TevIA (agente comercial consultivo, Claude Sonnet).
     if (url.pathname === "/api/tevi-agent" || url.pathname === "/api/tevi-agent/") {
       return handleTeviAgent(request, env, ctx);
     }
