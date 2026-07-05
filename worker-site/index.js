@@ -643,7 +643,7 @@ function newLead(id, lang, now) {
     summary: "", summaryUpTo: 0,       // resumen rodante + índice ya resumido
     datos: { nombre: "", empresa: "", cargo: "", email: "", telefono: "", ciudad: "", pais: "", sector: "" },
     report: null, turns: 0, emailed: false, emailedTurns: 0, cita: null,
-    alerted: false, alertedContact: false, geoOrg: "", page: "",
+    alerted: false, alertedContact: false, geoOrg: "", geoTz: "", page: "",
     followedUp: false, followedUpCita: false,
     score: 0, scoreMax: 0,               // termómetro comercial 0-100 (lo emite el modelo)
     ttsDay: "", ttsChars: 0,             // presupuesto diario de voz premium por sesión
@@ -742,6 +742,10 @@ async function handleTeviAgent(request, env, ctx) {
   const asOrg = String((request.cf && request.cf.asOrganization) || "").trim();
   const ISP_RE = /telef[oó]nica|movistar|vodafone|orange|masm[oó]vil|digi|jazztel|euskaltel|yoigo|lowi|pepephone|adamo|avatel|finetwork|claro|telecom|telmex|tigo|entel|personal|comcast|verizon|at&t|t-mobile|telekom|bouygues|sfr|iliad|free|proximus|swisscom|telia|kpn|bt group|sky|virgin|liberty|charter|cox|spectrum|residential|wireless|mobile|broadband|communications|cable|cloudflare|google|amazon|aws|microsoft|azure|apple|icloud|akamai|fastly|ovh|hetzner|digitalocean|linode|vultr|oracle|m247|datacamp|vpn|hosting|server|proxy/i;
   if (asOrg && !ISP_RE.test(asOrg)) rec.geoOrg = asOrg;
+  // Zona horaria IANA del visitante (la da Cloudflare, p. ej. "America/Argentina/Buenos_Aires").
+  // Sirve para mostrarle la hora de la cita en SU horario, no solo en el de España.
+  const cfTz = String((request.cf && request.cf.timezone) || "").trim();
+  if (cfTz && cfTz.includes("/")) rec.geoTz = cfTz;
   // Página del sitio en la que está la persona (la envía el cliente).
   const pageNow = String(body.page || "").slice(0, 300);
   if (pageNow) rec.page = pageNow;
@@ -1024,6 +1028,9 @@ async function generateReport(env, rec, now) {
 
 // ---- Envío del lead por email (la conversación completa + el informe) ----
 const LEAD_TO_DEFAULT = "ggrosso@tegeve.es";
+// Sala fija de Microsoft Teams de Gabriel: TODAS las invitaciones usan este enlace.
+// Cal.com solo se usa para ver disponibilidad; la reunión SIEMPRE es por Teams.
+const TEAMS_MEETING_URL = "https://teams.microsoft.com/meet/212263511802975?p=OuYW0OREHQwdjzO2ez";
 const ESC = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const REPORT_LABELS = {
   nombre: "Nombre", empresa: "Empresa", cargo: "Cargo", email: "Email", telefono: "Teléfono",
@@ -1180,8 +1187,10 @@ function buildIcs(summary, nombre, email, fecha, hora, sessionId, meetUrl) {
     "DTEND;TZID=Europe/Madrid:" + icsLocal(end),
     "SUMMARY:" + icsEsc(summary),
     "LOCATION:" + icsEsc(meetUrl),
-    "DESCRIPTION:" + icsEsc("Videollamada: " + meetUrl),
+    "DESCRIPTION:" + icsEsc("Videollamada por Microsoft Teams (45 min).\nUnirse: " + meetUrl),
     "URL:" + meetUrl,
+    "X-MICROSOFT-SKYPETEAMSMEETINGURL:" + meetUrl,
+    "X-MICROSOFT-ONLINEMEETINGCONFLINK:" + meetUrl,
     "ORGANIZER;CN=Gabriel Grosso:mailto:ggrosso@tegeve.es",
     "ATTENDEE;CN=" + icsEsc(nombre || "Invitado") + ";ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:" + email,
     "ATTENDEE;CN=Gabriel Grosso;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:ggrosso@tegeve.es",
@@ -1217,6 +1226,41 @@ function resolveDate(raw) {
   return addDaysISO(t.y, t.m, t.d, 2); // por defecto, hoy + 2 días
 }
 
+// --- Conversión hora-de-pared de Madrid → instante real (UTC) ---
+// Necesario para poder mostrar la cita también en la zona horaria del visitante:
+// el .ics ya se ajusta solo (lleva TZID=Europe/Madrid), pero el CUERPO del correo
+// lo lee una persona y, si está en Argentina o EE. UU., verá su hora local.
+function _tzOffsetMs(instant, timeZone) {
+  const p = new Intl.DateTimeFormat("en-US", {
+    timeZone, hour12: false, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(instant);
+  const g = (t) => +(p.find((x) => x.type === t) || {}).value;
+  let hh = g("hour"); if (hh === 24) hh = 0; // Intl puede emitir «24» a medianoche
+  const asUTC = Date.UTC(g("year"), g("month") - 1, g("day"), hh, g("minute"), g("second"));
+  return asUTC - instant.getTime();
+}
+function zonedWallToUtc(Y, M, D, h, mi, timeZone) {
+  const guess = Date.UTC(Y, M - 1, D, h, mi);
+  let off = _tzOffsetMs(new Date(guess), timeZone);
+  off = _tzOffsetMs(new Date(guess - off), timeZone); // 2ª pasada: bordes de horario de verano
+  return new Date(guess - off);
+}
+function fmtInZone(instant, timeZone, endInstant) {
+  const dOpt = { timeZone, weekday: "long", day: "numeric", month: "long", year: "numeric" };
+  const tOpt = { timeZone, hour: "2-digit", minute: "2-digit", hour12: false };
+  const fecha = new Intl.DateTimeFormat("es-ES", dOpt).format(instant);
+  const hora = new Intl.DateTimeFormat("es-ES", tOpt).format(instant);
+  const horaFin = endInstant ? new Intl.DateTimeFormat("es-ES", tOpt).format(endInstant) : "";
+  let tzAbbr = "";
+  try {
+    const p = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "short", hour: "2-digit" }).formatToParts(instant);
+    tzAbbr = (p.find((x) => x.type === "timeZoneName") || {}).value || "";
+  } catch (e) {}
+  return { fecha, hora, horaFin, tzAbbr };
+}
+const _cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
 // Manda la invitación (a Gabriel y a la persona). Una sola vez por sesión.
 async function sendCita(env, rec, cita) {
   if (rec.cita && rec.cita.sent) return;
@@ -1227,12 +1271,42 @@ async function sendCita(env, rec, cita) {
   let hora = cita.hora;
   if (!/^\d{1,2}:\d{2}$/.test(hora || "")) hora = "10:00";
   const summary = "Reunión con " + (nombre ? nombre + " y TeGeVe" : "TeGeVe");
-  // Enlace de videollamada: sala fija de Gabriel (MEETING_URL) o una sala Jitsi única por reunión.
-  const meetUrl = env.MEETING_URL || ("https://meet.jit.si/TeGeVe-" + String(rec.id).replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) + "-" + Date.now().toString(36));
+  // La reunión SIEMPRE es por Microsoft Teams (sala fija de Gabriel).
+  const meetUrl = TEAMS_MEETING_URL;
   const ics = buildIcs(summary, nombre, email, fecha, hora, rec.id, meetUrl);
   const to = env.LEAD_EMAIL || LEAD_TO_DEFAULT;
-  const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#111"><p>Invitación de reunión:</p><h2 style="color:#E4010A;margin:4px 0">${ESC(summary)}</h2><p>${ESC(fecha)} · ${ESC(hora)} (hora de España) · 45 min.</p><p>Videollamada: <a href="${ESC(meetUrl)}">${ESC(meetUrl)}</a></p><p>Adjuntamos la cita (<b>reunion.ics</b>) para añadirla al calendario.</p></div>`;
-  const text = summary + "\n" + fecha + " " + hora + " (hora de España) · 45 min\nVideollamada: " + meetUrl + "\nCita adjunta: reunion.ics";
+
+  // Fecha/hora en hora de España + equivalente en la zona horaria del visitante.
+  const [Y, M, D] = fecha.split("-").map(Number);
+  const [h, mi] = hora.split(":").map(Number);
+  const startUtc = zonedWallToUtc(Y, M, D, h, mi, "Europe/Madrid");
+  const endUtc = new Date(startUtc.getTime() + 45 * 60000);
+  const es = fmtInZone(startUtc, "Europe/Madrid", endUtc);
+  const esFechaCap = _cap(es.fecha);
+  const esHoras = es.hora + "–" + es.horaFin + " (hora de España" + (es.tzAbbr ? ", " + es.tzAbbr : "") + ") · 45 min";
+  let locLine = "";
+  if (rec.geoTz && rec.geoTz !== "Europe/Madrid") {
+    try {
+      const loc = fmtInZone(startUtc, rec.geoTz, endUtc);
+      const zname = rec.geoTz.split("/").pop().replace(/_/g, " ");
+      const sameDay = loc.fecha === es.fecha;
+      locLine = "En tu zona horaria (" + zname + (loc.tzAbbr ? ", " + loc.tzAbbr : "") + "): "
+        + (sameDay ? "" : _cap(loc.fecha) + " · ") + loc.hora + "–" + loc.horaFin;
+    } catch (e) {}
+  }
+
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;line-height:1.55">`
+    + `<p style="margin:0 0 2px">Invitación de reunión:</p>`
+    + `<h2 style="color:#E4010A;margin:4px 0 10px">${ESC(summary)}</h2>`
+    + `<p style="margin:0 0 4px"><b>${ESC(esFechaCap)}</b></p>`
+    + `<p style="margin:0 0 4px">${ESC(esHoras)}</p>`
+    + (locLine ? `<p style="margin:0 0 4px;color:#555">${ESC(locLine)}</p>` : "")
+    + `<p style="margin:12px 0 4px">Videollamada (Microsoft Teams):<br><a href="${ESC(meetUrl)}" style="color:#E4010A">Unirse a la reunión de Teams</a></p>`
+    + `<p style="margin:12px 0 0;color:#555">Adjuntamos la cita (<b>reunion.ics</b>) para añadirla a tu calendario; se ajusta automáticamente a tu zona horaria.</p>`
+    + `</div>`;
+  const text = summary + "\n" + esFechaCap + "\n" + esHoras + "\n"
+    + (locLine ? locLine + "\n" : "")
+    + "Videollamada (Microsoft Teams): " + meetUrl + "\nCita adjunta: reunion.ics";
   try {
     if (env.RESEND_API_KEY) {
       const r = await fetch("https://api.resend.com/emails", {
@@ -1465,6 +1539,8 @@ async function handleLiveToken(request, env) {
   let rec = (await loadLead(env, sessionId)) || newLead(sessionId, lang, now);
   const geoCountry = ((request.cf && request.cf.country) || "").toUpperCase();
   if (geoCountry && geoCountry !== "XX" && geoCountry !== "T1") rec.geoCountry = geoCountry;
+  const cfTz = String((request.cf && request.cf.timezone) || "").trim();
+  if (cfTz && cfTz.includes("/")) rec.geoTz = cfTz;
   rec.updatedAt = now;
   await saveLead(env, sessionId, rec);
   const model = env.GEMINI_LIVE_MODEL || GEMINI_LIVE_DEFAULT;
