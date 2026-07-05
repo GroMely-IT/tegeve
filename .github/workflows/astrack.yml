@@ -1,0 +1,907 @@
+# ============================================================
+# PLANTILLA para el repo de UN PROYECTO de Astrack (repo propio,
+# privado si quiere, incluso de otra cuenta de GitHub).
+# Instalala como .github/workflows/astrack.yml — guía completa en
+# docs/CONECTAR-REPO.md del repo de Astrack.
+#
+# Qué hace: cuando Astrack aprueba la ejecución de un ticket de ESTE
+# proyecto, el agente asignado trabaja AQUÍ (en el git de este repo):
+#   · astrack-ticket       → rama ticket/<ID>, desarrolla, preview opcional
+#   · astrack-deploy-prod  → (firma única humana) integra a main y publica
+#
+# El agente recibe su contexto EN EL MOMENTO de ejecutar:
+#   1º su CV (quién es y su objetivo) → getMyContext()
+#   2º el propósito de ESTE proyecto (de qué se trata lo que modifica)
+#   3º sus instrucciones específicas en este proyecto + el ticket
+# Todo eso vive en Astrack (lo editás en la app) — acá no se hardcodea.
+#
+# SECRETS de este repo (Settings → Secrets and variables → Actions):
+#   CLAUDE_CODE_OAUTH_TOKEN     ← claude setup-token (o ANTHROPIC_API_KEY)
+#   ASTRO_API_KEY, ASTRO_PROJECT_ID, ASTRO_ORG_ID  ← de Astrack
+#   ASTRO_AGENT_PASSWORD_<AGENTE>  ← una por agente habilitado (CLAUDIA, …)
+#   FIREBASE_SERVICE_ACCOUNT    ← OPCIONAL (solo si publica a Firebase)
+# VARIABLES del repo (Settings → … → Variables):
+#   FIREBASE_PROJECT            ← OPCIONAL: id del proyecto de Firebase Hosting.
+#                                 Habilita el PREVIEW por ticket (canal aislado,
+#                                 igual a prod) que el tester abre antes de aprobar.
+#   ASTRO_KIT_SOURCE            ← OPCIONAL (owner/repo de donde refrescar el
+#                                 kit; default gagrosso/pillbot-claude)
+# ============================================================
+name: Astrack · agente en este proyecto
+
+on:
+  repository_dispatch:
+    types: [astrack-ticket, astrack-plan, astrack-review, astrack-deploy-prod, astrack-healthcheck]
+
+concurrency:
+  group: astrack-${{ github.event.action }}-${{ github.event.client_payload.ticketId || github.event.client_payload.pingToken }}
+  cancel-in-progress: false
+
+jobs:
+  # ── Prueba de conexión del wizard: le pega de vuelta a Astrack ──
+  # Si este job corre y el ping llega, el circuito Astrack→GitHub→workflow
+  # →Firebase está 100% conectado (el dispatch ya probó token+repo+Actions).
+  healthcheck:
+    if: github.event.action == 'astrack-healthcheck'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping de vuelta a Astrack
+        run: |
+          curl -fsS -X POST "${{ github.event.client_payload.pingUrl }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"t\":\"${{ github.event.client_payload.pingToken }}\",\"runUrl\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+
+  # ── El agente trabaja el ticket en su rama (+ preview si hay Firebase) ──
+  trabajar:
+    if: github.event.action == 'astrack-ticket'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: agent-run-${{ github.event.client_payload.project }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      ASTRO_API_KEY: ${{ secrets.ASTRO_API_KEY }}
+      ASTRO_PROJECT_ID: ${{ secrets.ASTRO_PROJECT_ID }}
+      ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
+      ASTRO_PROJECT: ${{ github.event.client_payload.project }}
+      AGENT_ID: ${{ github.event.client_payload.agentId }}
+      # passwords de los agentes habilitados en ESTE repo (mapeo estático)
+      P_CLAUDIA: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+      P_GEMMA: ${{ secrets.ASTRO_AGENT_PASSWORD_GEMMA }}
+      P_DIANA: ${{ secrets.ASTRO_AGENT_PASSWORD_DIANA }}
+      P_OLIVIA: ${{ secrets.ASTRO_AGENT_PASSWORD_OLIVIA }}
+      P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
+      P_SAMI: ${{ secrets.ASTRO_AGENT_PASSWORD_SAMI }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Credenciales del agente asignado
+        run: |
+          case "$AGENT_ID" in
+            claudia) PASS="$P_CLAUDIA" ;;
+            gemma)   PASS="$P_GEMMA" ;;
+            diana)   PASS="$P_DIANA" ;;
+            olivia)  PASS="$P_OLIVIA" ;;
+            arturo)  PASS="$P_ARTURO" ;;
+            sami)    PASS="$P_SAMI" ;;
+            *) PASS="" ;;
+          esac
+          if [ -z "$PASS" ]; then
+            echo "::error::No hay password para '$AGENT_ID' en este repo (secret ASTRO_AGENT_PASSWORD_$(echo $AGENT_ID | tr a-z A-Z))."
+            exit 1
+          fi
+          {
+            echo "ASTRO_AGENT_ID=$AGENT_ID"
+            echo "ASTRO_AGENT_EMAIL=$AGENT_ID@$ASTRO_ORG_ID.agents.astrack.dev"
+            echo "ASTRO_AGENT_PASSWORD=$PASS"
+          } >> "$GITHUB_ENV"
+
+      # El KIT llega al momento de la ejecución: se refresca desde la fuente
+      # canónica (último contrato de Astrack); si la red falla, usa la copia
+      # local del repo si existe.
+      - name: Preparar el kit de Astrack
+        env:
+          KIT_SOURCE: ${{ vars.ASTRO_KIT_SOURCE || 'gagrosso/pillbot-claude' }}
+          KIT_TOKEN: ${{ secrets.ASTRO_KIT_TOKEN }}
+        run: |
+          mkdir -p agent-kit
+          AUTH=""
+          [ -n "$KIT_TOKEN" ] && AUTH="Authorization: Bearer $KIT_TOKEN"
+          ok=1
+          for f in astro-agent.mjs astro-report.mjs SPEC.md; do
+            curl -sfL ${AUTH:+-H "$AUTH"} \
+              "https://raw.githubusercontent.com/$KIT_SOURCE/main/agent-kit/$f" \
+              -o "agent-kit/$f.fresh" || { ok=0; break; }
+          done
+          if [ "$ok" = "1" ]; then
+            for f in astro-agent.mjs astro-report.mjs SPEC.md; do mv "agent-kit/$f.fresh" "agent-kit/$f"; done
+            echo "kit refrescado desde $KIT_SOURCE"
+          elif [ -f agent-kit/astro-agent.mjs ]; then
+            rm -f agent-kit/*.fresh
+            echo "::warning::No pude refrescar el kit — uso la copia local del repo."
+          else
+            echo "::error::Sin kit: ni descarga ni copia local. Configurá ASTRO_KIT_SOURCE/ASTRO_KIT_TOKEN o commiteá agent-kit/ a este repo."
+            exit 1
+          fi
+
+      - name: Preparar rama del ticket
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          git config user.name "$AGENT_ID (Astrack)"
+          git config user.email "$AGENT_ID@astrack.dev"
+          if git fetch origin "ticket/$TICKET_ID" 2>/dev/null; then
+            git checkout -B "ticket/$TICKET_ID" "origin/ticket/$TICKET_ID"
+            echo "Rama existente — continúo sobre el intento anterior"
+          else
+            git checkout -B "ticket/$TICKET_ID"
+          fi
+
+      - uses: anthropics/claude-code-action@v1
+        timeout-minutes: 45
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--allowedTools Bash,Read,Edit,Write,Glob,Grep"
+          prompt: |
+            Sos ${{ github.event.client_payload.agentId }}, agente de la software
+            factory Astrack. Te asignaron el ticket
+            ${{ github.event.client_payload.ticketId }}
+            ("${{ github.event.client_payload.title }}") del proyecto
+            "${{ github.event.client_payload.project }}" — ESTE repo es el código
+            de ese proyecto.
+
+            Usá agent-kit/astro-agent.mjs con las variables ASTRO_* del entorno
+            (tu guía completa está en agent-kit/SPEC.md).
+
+            EN ESTE ORDEN, antes de tocar nada:
+            1. getMyContext('${{ github.event.client_payload.project }}') — te
+               devuelve (a) tu CV: quién sos y tu OBJETIVO como agente,
+               (b) el PROPÓSITO de este proyecto: de qué se trata lo que vas a
+               modificar, y (c) tus instrucciones específicas acá. Respetalo.
+            2. getTicket() — el pedido concreto. Si tiene imágenes, guardalas
+               con saveAttachment() y miralas. Si hay notas que empiezan con
+               "❌", tu intento anterior falló: ese motivo es tu PRIORIDAD. Si el
+               ticket trae ticket.rejection.correction (el triage del rechazo que
+               redactó Pola: qué se esperaba realmente y qué cambiar), esa es la
+               corrección accionable del último rechazo — aplicala ANTES que nada.
+            3. Avisá que arrancás: comment(id, '👩‍💻 Empiezo con este ticket').
+            4. Identificá el STACK REAL de ESTE repo antes de codear: mirá los
+               archivos (pom.xml / build.gradle → Java + Maven/Gradle; package.json
+               → Node; requirements.txt / pyproject.toml → Python; go.mod, Gemfile,
+               composer.json, *.csproj, Cargo.toml…), su framework, versión y
+               convenciones (estructura de carpetas, estilo, tests existentes) y
+               seguí ESA línea — NO asumas un lenguaje por tu perfil. Compilá y
+               testeá con las herramientas del stack del repo (mvn/gradle, npm,
+               pytest…) y que pase antes de pushear.
+            5. EL CONTRATO Plan→Build (E4): el getTicket() del paso 2 te devolvió los
+               ARTEFACTOS que dejaron los planners en G1 — construí CONTRA ellos, no
+               contra tu interpretación de la prosa:
+               · ticket.acceptanceCriteria — la definición de TERMINADO. Cada criterio
+                 (texto, o {id,statement,expected}) debe quedar satisfecho por tu código:
+                 es tu checklist.
+               · ticket.uiSpec — tokens, medidas, estados y responsive: implementá tal cual.
+               · ticket.planSpec — qué construir y por qué (alcance y límites).
+               · ticket.adr — decisiones de arquitectura ya tomadas: respetalas.
+               Si un criterio es ambiguo o choca con el código real, dejalo en un
+               comment() y resolvé por lo más conservador. Si NO hay artefactos
+               (ticket viejo sin plan), trabajá contra la descripción.
+
+            Después desarrollá EN ESTE repo. Ya estás parado en la rama
+            "ticket/${{ github.event.client_payload.ticketId }}": commiteá ahí
+            y pusheá ESA rama (git push -u origin HEAD). NO pushees a main ni
+            publiques: la integración la hace el pipeline cuando un humano aprueba.
+
+            Protocolo de cierre: addNote() con qué hiciste, archivos, el hash
+            corto del commit y cómo probarlo → tu REPORTE para el humano con
+            submitReport('${{ github.event.client_payload.ticketId }}', {
+              kind: 'build',
+              summary: 'qué construiste, en lenguaje de PRODUCTO (una línea)',
+              // Mapeá CADA acceptance criterion del ticket a su evidencia:
+              //   'AC1 ✅ <statement> → <archivo:función / cómo se verifica>'.
+              //   Sin cubrir: 'AC# ⚠️ <statement> → pendiente: <motivo>'. Usá el .id
+              //   del criterio si lo trae; si es texto plano, numerá AC1, AC2…
+              // Después 1-3 decisiones/cambios clave y cómo probarlo.
+              findings: ['AC1 ✅ … → …', 'AC2 ✅ … → …', 'decisión clave', 'cómo probarlo']  // 3-8
+            }) → setState('en-test'). La cuadrilla de revisión se dispara sola al
+            pasar a En test; NO reasignes a un tester humano. Nunca apruebes
+            tickets: eso es de humanos.
+
+      # Claude puede terminar con is_error=true SIN hacer fallar el job (sale
+      # con código 0). Lo detectamos acá y reportamos el motivo real al ticket
+      # (token inválido/vencido, límite de sesión, etc.) en vez de un genérico.
+      - name: Verificar resultado de Claude
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          LOG=/home/runner/work/_temp/claude-execution-output.json
+          [ -f "$LOG" ] || exit 0
+          if [ "$(jq -r '[.. | objects | select(.type=="result")] | last | .is_error' "$LOG" 2>/dev/null)" = "true" ]; then
+            MOTIVO=$(jq -r '[.. | objects | select(.type=="result")] | last | .result // ""' "$LOG" 2>/dev/null | tr "\n" " " | head -c 200)
+            [ -z "$MOTIVO" ] && MOTIVO="Claude terminó con error sin mensaje visible — casi siempre el CLAUDE_CODE_OAUTH_TOKEN del repo es inválido/venció, o tu cuenta llegó al límite de sesión"
+            echo "::error::Claude falló: $MOTIVO"
+            node agent-kit/astro-report.mjs run-failed "$TICKET_ID" "Claude no pudo ejecutar — $MOTIVO" || true
+          fi
+
+      - name: Reportar métricas del run
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          LOG=/home/runner/work/_temp/claude-execution-output.json
+          COST=$(jq -r '.. | .total_cost_usd? // empty' "$LOG" 2>/dev/null | head -1)
+          TURNS=$(jq -r '.. | .num_turns? // empty' "$LOG" 2>/dev/null | head -1)
+          MS=$(jq -r '.. | .duration_ms? // empty' "$LOG" 2>/dev/null | head -1)
+          # tokens: último objeto usage del stream (input+output+cache). Best-effort → 0 si falta.
+          TOKENS=$(jq -rs '(([.[] | .. | objects | select(.type=="result") | .usage] | last) // ([.[] | .. | objects | select(has("usage")) | .usage] | last)) | ((.input_tokens // 0)+(.output_tokens // 0)+(.cache_creation_input_tokens // 0)+(.cache_read_input_tokens // 0)) // 0' "$LOG" 2>/dev/null | head -1)
+          # líneas NUEVAS (solo adiciones, sin binarios ni lockfiles/dist/generados)
+          # vs main → señal del estimado humano. Adiciones (no borrados): borrar es
+          # barato; el estimado refleja código producido, no churn.
+          git fetch origin main --depth=50 2>/dev/null || true
+          LOC=$(git diff --numstat origin/main...HEAD 2>/dev/null | awk '$1!="-" && $3!~/(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|\.lock$|(^|\/)dist\/|(^|\/)build\/|node_modules\/|\.min\.|\.map$|\.snap$)/ {a+=$1} END {print a+0}')
+          node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "${LOC:-0}" || true
+
+      - name: Reportar archivos del run
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          git fetch origin main >/dev/null 2>&1 || true
+          FILES=$(git diff --name-only origin/main...HEAD | paste -sd, -)
+          SHA=$(git rev-parse HEAD)   # commit exacto que se revisa/firma (SHA-gate del deploy, E0/T0.4)
+          node agent-kit/astro-report.mjs files "$TICKET_ID" "ticket/$TICKET_ID" "$FILES" "$SHA" \
+            || echo "::warning::No pude reportar los archivos — no se registran los archivos tocados."
+
+      # ── Build · QA · preview, AGNÓSTICOS al lenguaje ─────────────────────
+      # El stack lo define el proyecto en Astrack (project.stack/commands/deploy
+      # → llegan por client_payload). Si no vino nada, se AUTODETECTA por los
+      # archivos del repo. Para un repo Node con package.json el comportamiento
+      # es idéntico al anterior (npm ci + build + lint + preview Firebase).
+      - name: Detectar stack del proyecto
+        id: stack
+        env:
+          P_LANG: ${{ github.event.client_payload.stack.lang }}
+          P_VER: ${{ github.event.client_payload.stack.version }}
+          P_DIST: ${{ github.event.client_payload.stack.dist }}
+          P_BUILD: ${{ github.event.client_payload.stack.build }}
+          P_TEST: ${{ github.event.client_payload.stack.test }}
+          P_DEPLOY_KIND: ${{ github.event.client_payload.stack.deployKind }}
+          P_DEPLOY_PROD: ${{ github.event.client_payload.stack.deployProd }}
+          P_DEPLOY_PREVIEW: ${{ github.event.client_payload.stack.deployPreview }}
+        run: |
+          LANG="$P_LANG"
+          if [ -z "$LANG" ]; then
+            if [ -f pom.xml ]; then LANG=java
+            elif [ -f build.gradle ] || [ -f build.gradle.kts ] || [ -f settings.gradle ] || [ -f settings.gradle.kts ]; then LANG=java
+            elif [ -f package.json ]; then LANG=node
+            elif [ -f requirements.txt ] || [ -f pyproject.toml ]; then LANG=python
+            else LANG=none; fi
+          fi
+          VER="$P_VER"; DIST="$P_DIST"; BUILD="$P_BUILD"; TEST="$P_TEST"
+          case "$LANG" in
+            java)
+              [ -z "$VER" ] && VER=21
+              [ -z "$DIST" ] && DIST=temurin
+              [ -z "$BUILD" ] && { if [ -f pom.xml ]; then BUILD="mvn -B -ntp verify"; else BUILD="chmod +x ./gradlew 2>/dev/null || true; ./gradlew build"; fi; } ;;
+            node)
+              [ -z "$VER" ] && VER=20
+              [ -z "$BUILD" ] && BUILD="npm ci && npm run build --if-present"
+              # QA solo si el repo tiene script lint (igual que antes: sin lint, sin nota)
+              if [ -z "$TEST" ] && [ -f package.json ] && node -e "process.exit(require('./package.json').scripts?.lint?0:1)" 2>/dev/null; then TEST="npm run lint"; fi ;;
+            python)
+              [ -z "$VER" ] && VER=3.12
+              [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ." ;;
+          esac
+          KIND="$P_DEPLOY_KIND"
+          if [ -z "$KIND" ]; then if [ -f firebase.json ]; then KIND=firebase-hosting; else KIND=none; fi; fi
+          {
+            echo "lang=$LANG"; echo "version=$VER"; echo "distribution=$DIST"
+            echo "build=$BUILD"; echo "qa=$TEST"
+            echo "deploy_kind=$KIND"
+            echo "deploy_prod_cmd=$P_DEPLOY_PROD"; echo "deploy_preview_cmd=$P_DEPLOY_PREVIEW"
+          } >> "$GITHUB_OUTPUT"
+          echo "Stack: $LANG · build: ${BUILD:-—} · qa: ${TEST:-—} · deploy: $KIND"
+
+      - uses: actions/setup-node@v4
+        if: steps.stack.outputs.lang == 'node'
+        with:
+          node-version: ${{ steps.stack.outputs.version || '20' }}
+      - uses: actions/setup-java@v4
+        if: steps.stack.outputs.lang == 'java'
+        with:
+          distribution: ${{ steps.stack.outputs.distribution || 'temurin' }}
+          java-version: ${{ steps.stack.outputs.version || '21' }}
+      - uses: actions/setup-python@v5
+        if: steps.stack.outputs.lang == 'python'
+        with:
+          python-version: ${{ steps.stack.outputs.version || '3.12' }}
+
+      - name: Build del proyecto (compuerta)
+        if: steps.stack.outputs.build != ''
+        env:
+          BUILD_CMD: ${{ steps.stack.outputs.build }}
+        run: |
+          echo "▶ build: $BUILD_CMD"
+          bash -c "$BUILD_CMD"
+
+      - name: QA automática
+        if: steps.stack.outputs.qa != ''
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          QA_CMD: ${{ steps.stack.outputs.qa }}
+        run: |
+          echo "▶ qa: $QA_CMD"
+          if bash -c "$QA_CMD"; then node agent-kit/astro-report.mjs qa "$TICKET_ID" ok || true
+          else node agent-kit/astro-report.mjs qa "$TICKET_ID" failed "QA del proyecto con errores (ver el run)" || true; fi
+
+      # Seguridad (Charly, determinista): secret-scan del DIFF como COMPUERTA. Atrapa
+      # secretos en el código NUEVO sin importar qué modelo lo escribió — vale más para un
+      # CISO que un review cross-model LLM, y no necesita credencial de 2º proveedor.
+      # Resiliente: si gitleaks no instala/corre, NO bloquea (warn, fail-open en tooling);
+      # si encuentra un secreto en el diff, falla → T5.1 (build-failed) rebota el ticket.
+      # Falsos positivos: el proyecto puede agregar un .gitleaks.toml con su allowlist.
+      - name: Seguridad — secret-scan del diff (compuerta)
+        env:
+          GITLEAKS_VERSION: "8.21.2"
+        run: |
+          git fetch origin main --depth=50 >/dev/null 2>&1 || true
+          BASE=$(git merge-base origin/main HEAD 2>/dev/null || echo "")
+          [ -z "$BASE" ] && { echo "::warning::sin base contra main — secret-scan omitido (no bloquea)."; exit 0; }
+          URL="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL "$URL" -o /tmp/gl.tgz || { echo "::warning::no pude bajar gitleaks $GITLEAKS_VERSION — secret-scan omitido."; exit 0; }
+          tar -xzf /tmp/gl.tgz -C /tmp gitleaks 2>/dev/null || { echo "::warning::no pude extraer gitleaks — omitido."; exit 0; }
+          echo "▶ gitleaks sobre el diff ${BASE}..HEAD"
+          if /tmp/gitleaks detect --source . --log-opts="${BASE}..HEAD" --redact --no-banner --exit-code 1; then
+            echo "✓ sin secretos en el diff del ticket"
+          else
+            echo "::error::gitleaks detectó un secreto en el diff — NO se publica. Sacalo del código y ROTÁ la credencial; usá un secret manager."
+            exit 1
+          fi
+
+      # Preview por ticket, según el target de deploy del proyecto
+      - name: Publicar preview
+        id: preview
+        if: steps.stack.outputs.deploy_kind == 'firebase-hosting' || (steps.stack.outputs.deploy_kind == 'custom-cmd' && steps.stack.outputs.deploy_preview_cmd != '')
+        env:
+          DEPLOY_KIND: ${{ steps.stack.outputs.deploy_kind }}
+          PREVIEW_CMD: ${{ steps.stack.outputs.deploy_preview_cmd }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          if [ "$DEPLOY_KIND" = "firebase-hosting" ]; then
+            if [ -z "$FIREBASE_SA" ] || [ -z "$FIREBASE_PROJECT" ]; then
+              echo "Sin FIREBASE_SERVICE_ACCOUNT/FIREBASE_PROJECT — este proyecto no publica preview."
+              exit 0
+            fi
+            printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+            CH="ticket-$(printf '%s' "$TICKET_ID" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')"
+            npx -y firebase-tools@latest hosting:channel:deploy "$CH" \
+              --project "$FIREBASE_PROJECT" --expires 30d --json > "$RUNNER_TEMP/preview.json" || true
+            URL=$(jq -r '.. | .url? // empty' "$RUNNER_TEMP/preview.json" 2>/dev/null | head -1)
+            [ -n "$URL" ] && node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
+          else
+            # custom-cmd: el comando de preview opcionalmente imprime la URL en su última línea
+            URL=$(bash -c "$PREVIEW_CMD" | tail -1)
+            [ -n "$URL" ] && node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
+          fi
+
+      # Compuerta de la suite (E5/T5.1): si CUALQUIER paso del pipeline falla (build del
+      # proyecto, etc.) tras la entrega, build-failed baja el ticket de en-test a pendiente
+      # — un build/suite rojo NO queda esperando revisión humana. Si el agente murió antes
+      # de entregar (no llegó a en-test), build-failed solo deja la nota (no rebota).
+      - name: Compuerta — build rojo vuelve a desarrollo
+        if: failure()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          LOG=/home/runner/work/_temp/claude-execution-output.json
+          MOTIVO=$(jq -r '.. | .result? // empty' "$LOG" 2>/dev/null | tail -1 | tr '\n' ' ' | head -c 220)
+          [ -z "$MOTIVO" ] && MOTIVO="el build/suite del proyecto o el run terminó con error (ver el log de Actions)"
+          node agent-kit/astro-report.mjs build-failed "$TICKET_ID" "$MOTIVO" || true
+
+      - name: Liberar la cola
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          for i in 1 2 3; do
+            node agent-kit/astro-report.mjs queue-done "$TICKET_ID" && exit 0
+            echo "queue-done intento $i falló — reintento en 10s"; sleep 10
+          done
+          echo "::error::queue-done falló 3 veces — la reconciliación (15') va a liberar la cola."
+          exit 1
+
+  # ── Etapa de PLAN (FASE 2): los planners casteados (matrix) producen los
+  #    artefactos ANTES de Build — acceptanceCriteria/uiSpec/planSpec/adr — para
+  #    que Claudia codee contra un contrato. Read-only: NO editan código; leen el
+  #    repo (main) y dejan su trabajo con submitPlanWork. El backend (onPlanArtifact)
+  #    detecta cuando están todos → plan.stage='awaiting-g1' (compuerta G1). ──
+  planificar:
+    if: github.event.action == 'astrack-plan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        planner: ${{ fromJSON(github.event.client_payload.planners) }}
+    concurrency:
+      group: plan-${{ github.event.client_payload.ticketId }}-${{ matrix.planner }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ASTRO_API_KEY: ${{ secrets.ASTRO_API_KEY }}
+      ASTRO_PROJECT_ID: ${{ secrets.ASTRO_PROJECT_ID }}
+      ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
+      ASTRO_PROJECT: ${{ github.event.client_payload.project }}
+      AGENT_ID: ${{ matrix.planner }}
+      # passwords de los planners (mapeo estático; el secret debe existir en el repo)
+      P_POLA: ${{ secrets.ASTRO_AGENT_PASSWORD_POLA }}
+      P_GEMMA: ${{ secrets.ASTRO_AGENT_PASSWORD_GEMMA }}
+      P_DIANA: ${{ secrets.ASTRO_AGENT_PASSWORD_DIANA }}
+      P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Credenciales del planner
+        run: |
+          case "$AGENT_ID" in
+            pola)   PASS="$P_POLA" ;;
+            gemma)  PASS="$P_GEMMA" ;;
+            diana)  PASS="$P_DIANA" ;;
+            arturo) PASS="$P_ARTURO" ;;
+            *) PASS="" ;;
+          esac
+          if [ -z "$PASS" ]; then
+            echo "::error::No hay password para el planner '$AGENT_ID' (secret ASTRO_AGENT_PASSWORD_$(echo $AGENT_ID | tr a-z A-Z))."
+            exit 1
+          fi
+          {
+            echo "ASTRO_AGENT_ID=$AGENT_ID"
+            echo "ASTRO_AGENT_EMAIL=$AGENT_ID@$ASTRO_ORG_ID.agents.astrack.dev"
+            echo "ASTRO_AGENT_PASSWORD=$PASS"
+          } >> "$GITHUB_ENV"
+
+      - name: Preparar el kit de Astrack
+        env:
+          KIT_SOURCE: ${{ vars.ASTRO_KIT_SOURCE || 'gagrosso/pillbot-claude' }}
+          KIT_TOKEN: ${{ secrets.ASTRO_KIT_TOKEN }}
+        run: |
+          mkdir -p agent-kit
+          AUTH=""
+          [ -n "$KIT_TOKEN" ] && AUTH="Authorization: Bearer $KIT_TOKEN"
+          ok=1
+          for f in astro-agent.mjs astro-report.mjs SPEC.md; do
+            curl -sfL ${AUTH:+-H "$AUTH"} \
+              "https://raw.githubusercontent.com/$KIT_SOURCE/main/agent-kit/$f" \
+              -o "agent-kit/$f.fresh" || { ok=0; break; }
+          done
+          if [ "$ok" = "1" ]; then
+            for f in astro-agent.mjs astro-report.mjs SPEC.md; do mv "agent-kit/$f.fresh" "agent-kit/$f"; done
+          elif [ ! -f agent-kit/astro-agent.mjs ]; then
+            echo "::error::Sin kit: ni descarga ni copia local."; exit 1
+          fi
+
+      - uses: anthropics/claude-code-action@v1
+        timeout-minutes: 20
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # read-only: el planner NO edita código (sin Edit/Write); deja artefactos
+          claude_args: "--allowedTools Bash,Read,Glob,Grep"
+          prompt: |
+            Sos ${{ matrix.planner }}, agente de PLANIFICACIÓN de la software factory
+            Astrack, en la etapa de Plan del ticket ${{ github.event.client_payload.ticketId }}
+            ("${{ github.event.client_payload.title }}") del proyecto
+            "${{ github.event.client_payload.project }}". ESTE repo es el código del proyecto (rama main).
+
+            REGLA DE ORO: planificás, NO codeás. NO edites ni escribas código (no
+            tenés Edit/Write). Producís ARTEFACTOS que Claudia leerá para codear
+            contra un CONTRATO claro. Usás agent-kit/astro-agent.mjs (guía en SPEC.md).
+
+            Pasos:
+            1. getMyContext('${{ github.event.client_payload.project }}') y
+               getTicket('${{ github.event.client_payload.ticketId }}') — entendé el pedido.
+            2. Explorá el repo (Grep/Glob/Read) para fundamentar tu trabajo en el código real.
+            3. Producí SEGÚN TU ROL y dejalo con
+               submitPlanWork('${{ github.event.client_payload.ticketId }}', {...}):
+               · pola (PO): acceptanceCriteria (criterios verificables, sin ambigüedad)
+                 + planSpec (qué construir y por qué, en lenguaje claro).
+               · gemma (UX research): planSpec (problema → evidencia → solución → métrica + fuentes).
+               · diana (UI): uiSpec (tokens, medidas, 5 estados, responsive — implementable sin preguntar).
+               · arturo (arquitecto): adr [{id,title,decision,rationale}] si es estructural;
+                 si no, un adr corto que diga que no hay decisión de arquitectura.
+            4. NO toques código. Tu output principal es submitPlanWork.
+            5. Dejá tu REPORTE para el humano (se muestra como tarjeta en el ticket):
+               submitReport('${{ github.event.client_payload.ticketId }}', {
+                 kind: 'plan',
+                 summary: 'UNA línea en lenguaje de PRODUCTO de lo que definiste',
+                 findings: ['punto clave 1', 'punto clave 2']  // 3-6, lo más importante
+               }).
+
+      - name: Reportar métricas del run
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          LOG=/home/runner/work/_temp/claude-execution-output.json
+          COST=$(jq -r '.. | .total_cost_usd? // empty' "$LOG" 2>/dev/null | head -1)
+          TURNS=$(jq -r '.. | .num_turns? // empty' "$LOG" 2>/dev/null | head -1)
+          MS=$(jq -r '.. | .duration_ms? // empty' "$LOG" 2>/dev/null | head -1)
+          TOKENS=$(jq -rs '(([.[] | .. | objects | select(.type=="result") | .usage] | last) // ([.[] | .. | objects | select(has("usage")) | .usage] | last)) | ((.input_tokens // 0)+(.output_tokens // 0)+(.cache_creation_input_tokens // 0)+(.cache_read_input_tokens // 0)) // 0' "$LOG" 2>/dev/null | head -1)
+          node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "0" || true
+
+  # ── La CUADRILLA de revisión (FASE 1, writer≠reviewer): cada revisor casteado
+  #    (matrix) evalúa el diff de la rama del ticket con CONTEXTO FRESCO y deja su
+  #    veredicto en reviews/{agentId}. Read-only: NO edita código. El backend
+  #    (onReviewWritten) sintetiza y, si alguien bloquea, rebota a desarrollo. ──
+  revisar:
+    if: github.event.action == 'astrack-review'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        reviewer: ${{ fromJSON(github.event.client_payload.reviewers) }}
+    concurrency:
+      group: review-${{ github.event.client_payload.ticketId }}-${{ matrix.reviewer }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ASTRO_API_KEY: ${{ secrets.ASTRO_API_KEY }}
+      ASTRO_PROJECT_ID: ${{ secrets.ASTRO_PROJECT_ID }}
+      ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
+      ASTRO_PROJECT: ${{ github.event.client_payload.project }}
+      AGENT_ID: ${{ matrix.reviewer }}
+      # passwords de los revisores (mapeo estático; el secret debe existir en el repo)
+      P_OLIVIA: ${{ secrets.ASTRO_AGENT_PASSWORD_OLIVIA }}
+      P_CHARLY: ${{ secrets.ASTRO_AGENT_PASSWORD_CHARLY }}
+      P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Credenciales del revisor
+        run: |
+          case "$AGENT_ID" in
+            olivia) PASS="$P_OLIVIA" ;;
+            charly) PASS="$P_CHARLY" ;;
+            arturo) PASS="$P_ARTURO" ;;
+            *) PASS="" ;;
+          esac
+          if [ -z "$PASS" ]; then
+            echo "::error::No hay password para el revisor '$AGENT_ID' (secret ASTRO_AGENT_PASSWORD_$(echo $AGENT_ID | tr a-z A-Z))."
+            exit 1
+          fi
+          {
+            echo "ASTRO_AGENT_ID=$AGENT_ID"
+            echo "ASTRO_AGENT_EMAIL=$AGENT_ID@$ASTRO_ORG_ID.agents.astrack.dev"
+            echo "ASTRO_AGENT_PASSWORD=$PASS"
+          } >> "$GITHUB_ENV"
+
+      - name: Preparar el kit de Astrack
+        env:
+          KIT_SOURCE: ${{ vars.ASTRO_KIT_SOURCE || 'gagrosso/pillbot-claude' }}
+          KIT_TOKEN: ${{ secrets.ASTRO_KIT_TOKEN }}
+        run: |
+          mkdir -p agent-kit
+          AUTH=""
+          [ -n "$KIT_TOKEN" ] && AUTH="Authorization: Bearer $KIT_TOKEN"
+          ok=1
+          for f in astro-agent.mjs astro-report.mjs SPEC.md; do
+            curl -sfL ${AUTH:+-H "$AUTH"} \
+              "https://raw.githubusercontent.com/$KIT_SOURCE/main/agent-kit/$f" \
+              -o "agent-kit/$f.fresh" || { ok=0; break; }
+          done
+          if [ "$ok" = "1" ]; then
+            for f in astro-agent.mjs astro-report.mjs SPEC.md; do mv "agent-kit/$f.fresh" "agent-kit/$f"; done
+          elif [ ! -f agent-kit/astro-agent.mjs ]; then
+            echo "::error::Sin kit: ni descarga ni copia local."; exit 1
+          fi
+
+      - name: Traer la rama del ticket + diff vs main
+        env:
+          BRANCH: ${{ github.event.client_payload.branch }}
+        run: |
+          git fetch origin main "$BRANCH" 2>/dev/null || true
+          git checkout -B "$BRANCH" "origin/$BRANCH" 2>/dev/null || git checkout "$BRANCH" 2>/dev/null || true
+          BASE=$(git merge-base origin/main HEAD 2>/dev/null || echo origin/main)
+          git diff "$BASE"...HEAD > _review_diff.patch || true
+          echo "Diff de $(wc -l < _review_diff.patch) líneas en _review_diff.patch"
+
+      - uses: anthropics/claude-code-action@v1
+        timeout-minutes: 20
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # read-only: el revisor NO edita código (sin Edit/Write)
+          claude_args: "--allowedTools Bash,Read,Glob,Grep"
+          prompt: |
+            Sos ${{ matrix.reviewer }}, REVISOR de la software factory Astrack, en
+            la cuadrilla de revisión del ticket ${{ github.event.client_payload.ticketId }}
+            ("${{ github.event.client_payload.title }}") del proyecto
+            "${{ github.event.client_payload.project }}".
+
+            REGLA DE ORO: sos revisor, NO autor. NO edites ni escribas código (no
+            tenés Edit/Write). Tu trabajo es JUZGAR el cambio con contexto fresco
+            y dejar tu veredicto. Usás agent-kit/astro-agent.mjs (guía en SPEC.md).
+
+            Pasos:
+            1. getMyContext('${{ github.event.client_payload.project }}') y
+               getTicket('${{ github.event.client_payload.ticketId }}') — entendé
+               qué se pidió y sus criterios de aceptación.
+            2. Leé el diff de la entrega en ./_review_diff.patch (con Read) y
+               explorá el repo (Grep/Glob/Read) lo que haga falta.
+            3. Revisá SEGÚN TU ROL:
+               · olivia (QA): ¿cumple los criterios de aceptación? bordes sin cubrir,
+                 falta de tests, regresiones probables.
+               · charly (DevSecOps/CISO): superficie de ataque, authz, secretos,
+                 dependencias nuevas, reglas Firestore. Crítico/alto = BLOQUEANTE.
+               · arturo (arquitecto): contratos, archivos centrales, deuda. Bloqueá
+                 solo lo estructural, no lo cosmético.
+            4. Dejá tu veredicto con
+               submitReview('${{ github.event.client_payload.ticketId }}', {
+                 verdict: 'pass' | 'block',
+                 severity: 'critica' | 'alta' | 'media' | 'baja' | '',
+                 summary: 'UNA línea en lenguaje de PRODUCTO (la lee un humano no técnico)',
+                 findings: ['hallazgo concreto 1', 'hallazgo 2']
+               }).
+               Usá 'block' SOLO si hay algo crítico/alto o un criterio de aceptación
+               sin cumplir; si está bien, 'pass'. Pase lo que pase, NO toques código.
+
+      - name: Reportar métricas del run
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          LOG=/home/runner/work/_temp/claude-execution-output.json
+          COST=$(jq -r '.. | .total_cost_usd? // empty' "$LOG" 2>/dev/null | head -1)
+          TURNS=$(jq -r '.. | .num_turns? // empty' "$LOG" 2>/dev/null | head -1)
+          MS=$(jq -r '.. | .duration_ms? // empty' "$LOG" 2>/dev/null | head -1)
+          TOKENS=$(jq -rs '(([.[] | .. | objects | select(.type=="result") | .usage] | last) // ([.[] | .. | objects | select(has("usage")) | .usage] | last)) | ((.input_tokens // 0)+(.output_tokens // 0)+(.cache_creation_input_tokens // 0)+(.cache_read_input_tokens // 0)) // 0' "$LOG" 2>/dev/null | head -1)
+          node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "0" || true
+
+  # ── Producción: integra SOLO este ticket a main (firma única humana) ──
+  deploy-prod:
+    if: github.event.action == 'astrack-deploy-prod'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45  # margen para el build de prod (ej. mvn verify con tests de integración)
+    concurrency:
+      group: deploy-prod-${{ github.event.client_payload.project }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    env:
+      ASTRO_API_KEY: ${{ secrets.ASTRO_API_KEY }}
+      ASTRO_PROJECT_ID: ${{ secrets.ASTRO_PROJECT_ID }}
+      ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
+      ASTRO_PROJECT: ${{ github.event.client_payload.project }}
+      AGENT_ID: ${{ github.event.client_payload.agentId }}
+      P_CLAUDIA: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+      P_GEMMA: ${{ secrets.ASTRO_AGENT_PASSWORD_GEMMA }}
+      P_DIANA: ${{ secrets.ASTRO_AGENT_PASSWORD_DIANA }}
+      P_OLIVIA: ${{ secrets.ASTRO_AGENT_PASSWORD_OLIVIA }}
+      P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
+      P_SAMI: ${{ secrets.ASTRO_AGENT_PASSWORD_SAMI }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, ref: main }
+      - name: Credenciales del agente
+        run: |
+          case "$AGENT_ID" in
+            claudia) PASS="$P_CLAUDIA" ;;
+            gemma)   PASS="$P_GEMMA" ;;
+            diana)   PASS="$P_DIANA" ;;
+            olivia)  PASS="$P_OLIVIA" ;;
+            arturo)  PASS="$P_ARTURO" ;;
+            sami)    PASS="$P_SAMI" ;;
+            *) PASS="" ;;
+          esac
+          [ -z "$PASS" ] && { echo "::error::Sin password para '$AGENT_ID'."; exit 1; }
+          {
+            echo "ASTRO_AGENT_ID=$AGENT_ID"
+            echo "ASTRO_AGENT_EMAIL=$AGENT_ID@$ASTRO_ORG_ID.agents.astrack.dev"
+            echo "ASTRO_AGENT_PASSWORD=$PASS"
+          } >> "$GITHUB_ENV"
+      - name: Preparar el kit de Astrack
+        env:
+          KIT_SOURCE: ${{ vars.ASTRO_KIT_SOURCE || 'gagrosso/pillbot-claude' }}
+          KIT_TOKEN: ${{ secrets.ASTRO_KIT_TOKEN }}
+        run: |
+          mkdir -p agent-kit
+          AUTH=""
+          [ -n "$KIT_TOKEN" ] && AUTH="Authorization: Bearer $KIT_TOKEN"
+          ok=1
+          for f in astro-agent.mjs astro-report.mjs; do
+            curl -sfL ${AUTH:+-H "$AUTH"} \
+              "https://raw.githubusercontent.com/$KIT_SOURCE/main/agent-kit/$f" \
+              -o "agent-kit/$f.fresh" || { ok=0; break; }
+          done
+          if [ "$ok" = "1" ]; then
+            for f in astro-agent.mjs astro-report.mjs; do mv "agent-kit/$f.fresh" "agent-kit/$f"; done
+          elif [ ! -f agent-kit/astro-agent.mjs ]; then
+            echo "::error::Sin kit disponible."; exit 1
+          fi
+      - name: Integrar la rama del ticket a main
+        id: merge
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          REVIEWED_SHA: ${{ github.event.client_payload.reviewedSha }}
+        run: |
+          git config user.name "Astrack Deploy"
+          git config user.email "deploy@astrack.dev"
+          if ! git fetch origin "ticket/$TICKET_ID"; then
+            if git log origin/main --oneline -200 | grep -qE "${TICKET_ID}([^0-9]|$)"; then
+              echo "::notice::$TICKET_ID ya está en main (deploy previo) — idempotente."
+              echo "already=1" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::No existe la rama ticket/$TICKET_ID."
+            exit 1
+          fi
+          # SHA-GATE (E0/T0.4, hallazgo #3 TOCTOU): se publica EL COMMIT FIRMADO, no el tip
+          # vivo. Si entre la revisión/firma y el deploy alguien pusheó commits nuevos a la
+          # rama, abortamos. Backward-compat: sin reviewedSha (tickets viejos) usa el tip.
+          REF="origin/ticket/$TICKET_ID"
+          if [ -n "$REVIEWED_SHA" ]; then
+            TIP=$(git rev-parse "origin/ticket/$TICKET_ID")
+            if [ "$REVIEWED_SHA" != "$TIP" ]; then
+              echo "::error::El tip de ticket/$TICKET_ID ($TIP) ≠ el commit firmado ($REVIEWED_SHA). Se publica SOLO lo firmado: abortando. Volvé a aprobar la entrega para firmar el commit nuevo."
+              exit 1
+            fi
+            REF="$REVIEWED_SHA"
+          fi
+          git checkout -B "_integrar" "$REF"
+          if ! git rebase origin/main; then
+            git rebase --abort || true
+            echo "::error::Conflicto al rebasear ticket/$TICKET_ID sobre main."
+            exit 1
+          fi
+          git checkout main
+          if ! git merge --no-ff -m "deploy: integra $TICKET_ID a producción (firma única)" "_integrar"; then
+            git merge --abort || true
+            echo "::error::Conflicto al integrar ticket/$TICKET_ID con main."
+            exit 1
+          fi
+          git push origin main
+      # Build previo al deploy, AGNÓSTICO al lenguaje (mismo criterio que en
+      # 'trabajar': stack del proyecto vía client_payload, o autodetección).
+      - name: Detectar stack del proyecto
+        id: stack
+        if: steps.merge.outputs.already != '1'
+        env:
+          P_LANG: ${{ github.event.client_payload.stack.lang }}
+          P_VER: ${{ github.event.client_payload.stack.version }}
+          P_DIST: ${{ github.event.client_payload.stack.dist }}
+          P_BUILD: ${{ github.event.client_payload.stack.build }}
+          P_DEPLOY_KIND: ${{ github.event.client_payload.stack.deployKind }}
+          P_DEPLOY_PROD: ${{ github.event.client_payload.stack.deployProd }}
+        run: |
+          LANG="$P_LANG"
+          if [ -z "$LANG" ]; then
+            if [ -f pom.xml ]; then LANG=java
+            elif [ -f build.gradle ] || [ -f build.gradle.kts ] || [ -f settings.gradle ] || [ -f settings.gradle.kts ]; then LANG=java
+            elif [ -f package.json ]; then LANG=node
+            elif [ -f requirements.txt ] || [ -f pyproject.toml ]; then LANG=python
+            else LANG=none; fi
+          fi
+          VER="$P_VER"; DIST="$P_DIST"; BUILD="$P_BUILD"
+          case "$LANG" in
+            java)
+              [ -z "$VER" ] && VER=21
+              [ -z "$DIST" ] && DIST=temurin
+              [ -z "$BUILD" ] && { if [ -f pom.xml ]; then BUILD="mvn -B -ntp verify"; else BUILD="chmod +x ./gradlew 2>/dev/null || true; ./gradlew build"; fi; } ;;
+            node)
+              [ -z "$VER" ] && VER=20
+              [ -z "$BUILD" ] && BUILD="npm ci && npm run build --if-present" ;;
+            python)
+              [ -z "$VER" ] && VER=3.12
+              [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ." ;;
+          esac
+          KIND="$P_DEPLOY_KIND"
+          if [ -z "$KIND" ]; then if [ -f firebase.json ]; then KIND=firebase-hosting; else KIND=none; fi; fi
+          {
+            echo "lang=$LANG"; echo "version=$VER"; echo "distribution=$DIST"; echo "build=$BUILD"
+            echo "deploy_kind=$KIND"; echo "deploy_prod_cmd=$P_DEPLOY_PROD"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.merge.outputs.already != '1' && steps.stack.outputs.lang == 'node'
+        with:
+          node-version: ${{ steps.stack.outputs.version || '20' }}
+      - uses: actions/setup-java@v4
+        if: steps.merge.outputs.already != '1' && steps.stack.outputs.lang == 'java'
+        with:
+          distribution: ${{ steps.stack.outputs.distribution || 'temurin' }}
+          java-version: ${{ steps.stack.outputs.version || '21' }}
+      - uses: actions/setup-python@v5
+        if: steps.merge.outputs.already != '1' && steps.stack.outputs.lang == 'python'
+        with:
+          python-version: ${{ steps.stack.outputs.version || '3.12' }}
+      - name: Build
+        if: steps.merge.outputs.already != '1' && steps.stack.outputs.build != ''
+        env:
+          BUILD_CMD: ${{ steps.stack.outputs.build }}
+        run: bash -c "$BUILD_CMD"
+
+      # El deploy a prod lo hace ESTE workflow (no otro): el push a main que
+      # hace el merge usa el token del runner, y GitHub no dispara otros
+      # workflows con ese token. La publicación depende del target del proyecto
+      # (deploy.kind): firebase-hosting, custom-cmd, o none ("producción" = el
+      # merge a main). Default: Firebase si hay firebase.json; si no, merge.
+      - name: Deploy a producción
+        id: deploy
+        if: steps.merge.outputs.already != '1'
+        env:
+          DEPLOY_KIND: ${{ steps.stack.outputs.deploy_kind }}
+          DEPLOY_CMD: ${{ steps.stack.outputs.deploy_prod_cmd }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+        run: |
+          case "$DEPLOY_KIND" in
+            firebase-hosting)
+              if [ -z "$FIREBASE_SA" ] || [ -z "$FIREBASE_PROJECT" ]; then
+                echo "Sin Firebase configurado — el deploy 'a producción' de este repo es el merge a main."
+                exit 0
+              fi
+              printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
+              export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+              npx -y firebase-tools@latest deploy --only hosting --project "$FIREBASE_PROJECT" --non-interactive ;;
+            custom-cmd)
+              if [ -z "$DEPLOY_CMD" ]; then
+                echo "deploy.kind=custom-cmd sin comando — 'producción' es el merge a main."
+                exit 0
+              fi
+              echo "▶ deploy: $DEPLOY_CMD"
+              bash -c "$DEPLOY_CMD" ;;
+            *)
+              echo "Sin deploy configurado (kind=${DEPLOY_KIND:-none}) — 'producción' es el merge a main." ;;
+          esac
+      - name: Borrar la rama del ticket
+        if: success() && steps.merge.outputs.already != '1'
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: git push origin --delete "ticket/$TICKET_ID" || true
+      # Con el ticket en producción, su preview ya no se necesita: borrar el canal
+      # libera cuota de Firebase Hosting (el sitio tope ~50 canales; si no se limpian
+      # se llena y NINGÚN ticket nuevo puede publicar preview). No bloquea el deploy.
+      - name: Borrar el canal de preview del ticket
+        if: success() && steps.merge.outputs.already != '1' && steps.stack.outputs.deploy_kind == 'firebase-hosting'
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+        run: |
+          [ -z "$FIREBASE_SA" ] || [ -z "$FIREBASE_PROJECT" ] && exit 0
+          printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          CH="ticket-$(printf '%s' "$TICKET_ID" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')"
+          npx -y firebase-tools@latest hosting:channel:delete "$CH" \
+            --project "$FIREBASE_PROJECT" --force \
+            || echo "::warning::No se pudo borrar el canal $CH (quizá ya no existía)."
+      - name: Registrar publicación en el ticket
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ALREADY: ${{ steps.merge.outputs.already }}
+          MERGE_RESULT: ${{ steps.merge.outcome }}
+          DEPLOY_RESULT: ${{ steps.deploy.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$ALREADY" = "1" ]; then STATUS=live;
+          elif [ "$MERGE_RESULT" != "success" ]; then STATUS=conflict;
+          elif [ "$DEPLOY_RESULT" = "success" ] || [ "$DEPLOY_RESULT" = "skipped" ]; then STATUS=live;
+          else STATUS=failed; fi
+          node agent-kit/astro-report.mjs prod "$TICKET_ID" "$STATUS" "$RUN_URL"
