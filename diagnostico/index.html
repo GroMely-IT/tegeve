@@ -101,7 +101,7 @@
       <h1 class="h2" style="color:#fff;margin:16px auto 18px;max-width:22ch">45 minutos para saber qué hacer con tu tecnología crítica.</h1>
       <p class="lede" style="margin:0 auto 30px;max-width:60ch">Una sesión con un consultor senior de TeGeVe, sin coste y sin compromiso. Pones tu reto sobre la mesa —SAP, JD Edwards, legacy, IA o datos—, separamos lo urgente de lo importante y sales con un plan claro. No es una demo comercial: es criterio senior aplicado a tu caso.</p>
       <div class="hero-ctas" style="justify-content:center">
-        <a href="../contacto/" class="btn btn-primary btn-tgv">Reservar mi diagnóstico <span class="btn-arrow">→</span></a>
+        <a href="../contacto/" class="btn btn-primary btn-tgv" onclick="if(window.Cal){event.preventDefault();Cal('modal',{calLink:'gabrielgrosso/reunion-45-minutos',config:{layout:'month_view'}});}">Reservar mi diagnóstico <span class="btn-arrow">→</span></a>
         <button type="button" class="btn btn-outline agent-open-link">Hablar con TevIA ahora</button>
       </div>
     </div>
@@ -184,7 +184,7 @@
       <h2 class="h2" style="color:#fff;margin:14px 0 16px" id="reserva">Reserva tu diagnóstico de 45 minutos.</h2>
       <p class="lede" style="margin:0 auto 26px;max-width:52ch">Déjanos tu reto y coordinamos la sesión con un consultor senior. Sin coste, sin compromiso, sin formularios eternos.</p>
       <div class="hero-ctas" style="justify-content:center">
-        <a href="../contacto/" class="btn btn-primary btn-tgv">Reservar con un consultor <span class="btn-arrow">→</span></a>
+        <a href="../contacto/" class="btn btn-primary btn-tgv" onclick="if(window.Cal){event.preventDefault();Cal('modal',{calLink:'gabrielgrosso/reunion-45-minutos',config:{layout:'month_view'}});}">Reservar con un consultor <span class="btn-arrow">→</span></a>
         <button type="button" class="btn btn-outline agent-open-link">Empezar con TevIA</button>
       </div>
     </div>
@@ -250,5 +250,12 @@
   <script src="https://astrack.dev/plugin/astrack-feedback.js"
           data-org="tegeve-b79cfo" data-project="sitio-tegeve"
           data-key="afk_nRZWbAUzTRMM0dSegmjujtlEcPRgbNiX" defer></script>
+<!-- Cal.com embed: los botones «Reservar» abren el calendario en un popup sobre
+     la web (reserva real con la disponibilidad de Gabriel). -->
+<script type="text/javascript">
+  (function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if (typeof namespace === "string") { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ["initNamespace", namespace]); } else p(cal, ar); return; } p(cal, ar); }; })(window, "https://app.cal.com/embed/embed.js", "init");
+  Cal("init", { origin: "https://cal.com" });
+  Cal("ui", { hideEventTypeDetails: false, layout: "month_view" });
+</script>
 </body>
 </html>
