@@ -37,6 +37,10 @@ concurrency:
   group: astrack-${{ github.event.action }}-${{ github.event.client_payload.ticketId || github.event.client_payload.pingToken }}
   cancel-in-progress: false
 
+# Mínimo privilegio del GITHUB_TOKEN (los jobs que pushean declaran su propio contents: write).
+permissions:
+  contents: read
+
 jobs:
   # ── Prueba de conexión del wizard: le pega de vuelta a Astrack ──
   # Si este job corre y el ping llega, el circuito Astrack→GitHub→workflow
