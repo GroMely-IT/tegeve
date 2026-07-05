@@ -706,9 +706,9 @@ function buildWindow(rec) {
 // consulta por SQL. Nunca rompe la conversación si el binding no está.
 function trackFunnel(env, event, rec, note) {
   try {
-    if (!env || !env.TEVIA_FUNNEL) return;
+    if (!env || !env.Analytics_Engine) return;
     rec = rec || {};
-    env.TEVIA_FUNNEL.writeDataPoint({
+    env.Analytics_Engine.writeDataPoint({
       indexes: [String(event).slice(0, 32)],
       blobs: [String(event), rec.lang || "", rec.geoCountry || "", (rec.page || "").slice(0, 120), rec.status || "", String(note || "")],
       doubles: [rec.score || 0, rec.turns || 0, Math.round((rec.durationMs || 0) / 1000)],
@@ -1594,6 +1594,92 @@ async function handleAgentTts(request, env, ctx) {
   return new Response(null, { status: 204, headers: h }); // el cliente cae a la voz del navegador
 }
 
+// ── EMBUDO DE CONVERSIÓN de TevIA (Analytics Engine) ──
+// GET /api/tevi-agent/funnel?key=AGENT_ADMIN_KEY[&days=30]
+// Consulta la SQL API de Analytics Engine con un token de SOLO LECTURA que el
+// dueño pone como secreto CF_ANALYTICS_TOKEN (el worker nunca lo expone).
+const AE_ACCOUNT = "ce9b5d2ae3ea5b2c3378ff2d2b2c7954";
+async function aeQuery(env, sql) {
+  const r = await fetch("https://api.cloudflare.com/client/v4/accounts/" + AE_ACCOUNT + "/analytics_engine/sql", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + env.CF_ANALYTICS_TOKEN, "Content-Type": "text/plain" },
+    body: sql,
+  });
+  const t = await r.text();
+  if (!r.ok) throw new Error("HTTP " + r.status + ": " + t.slice(0, 300));
+  let j = null; try { j = JSON.parse(t); } catch (e) {}
+  return (j && j.data) || [];
+}
+function aeNum(rows, k, v) { const row = rows.find((x) => String(x[k]) === v); return row ? Math.round(Number(row.n) || 0) : 0; }
+function aePct(a, b) { return b > 0 ? Math.round((a / b) * 100) : 0; }
+async function handleAgentFunnel(request, env) {
+  const url = new URL(request.url);
+  const key = url.searchParams.get("key") || "";
+  if (!env.AGENT_ADMIN_KEY || key !== env.AGENT_ADMIN_KEY) return new Response("Not found", { status: 404 });
+  const H = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" };
+  if (!env.CF_ANALYTICS_TOKEN) return new Response(funnelSetupPage(), { status: 200, headers: H });
+  const days = Math.min(365, Math.max(1, parseInt(url.searchParams.get("days") || "30", 10)));
+  const D = "timestamp >= NOW() - INTERVAL '" + days + "' DAY";
+  try {
+    const byEvent = await aeQuery(env, "SELECT blob1 AS event, sum(_sample_interval) AS n FROM Analytics_Event WHERE " + D + " GROUP BY blob1");
+    const byOutcome = await aeQuery(env, "SELECT blob6 AS outcome, sum(_sample_interval) AS n FROM Analytics_Event WHERE blob1='end' AND " + D + " GROUP BY blob6");
+    const byPage = await aeQuery(env, "SELECT blob4 AS page, sum(_sample_interval) AS n FROM Analytics_Event WHERE blob1='first_msg' AND " + D + " GROUP BY blob4 ORDER BY n DESC LIMIT 10");
+    const byCountry = await aeQuery(env, "SELECT blob3 AS country, sum(_sample_interval) AS n FROM Analytics_Event WHERE blob1='first_msg' AND " + D + " GROUP BY blob3 ORDER BY n DESC LIMIT 10");
+    return new Response(funnelPage(byEvent, byOutcome, byPage, byCountry, days, key), { status: 200, headers: H });
+  } catch (e) {
+    return new Response("<pre style='font:14px/1.5 ui-monospace,monospace;padding:26px;color:#111'>No he podido leer Analytics Engine:\n\n" + ESC(String((e && e.message) || e)) + "\n\nComprueba que el secreto CF_ANALYTICS_TOKEN existe y que el token tiene el permiso «Account Analytics · Read».</pre>", { status: 200, headers: H });
+  }
+}
+function funnelPage(byEvent, byOutcome, byPage, byCountry, days, key) {
+  const g = (e) => aeNum(byEvent, "event", e);
+  const first = g("first_msg"), email = g("email"), hot = g("hot"), cita = g("cita"), open = g("open");
+  const base = Math.max(first, 1);
+  const stages = [
+    { k: "Conversaciones", n: first, sub: "personas que escribieron a TevIA" },
+    { k: "Email captado", n: email, sub: aePct(email, first) + "% de las conversaciones" },
+    { k: "Urgencia alta", n: hot, sub: "termómetro ≥ 75/100" },
+    { k: "Reunión agendada", n: cita, sub: aePct(cita, first) + "% de conv. · " + aePct(cita, email) + "% de los emails" },
+  ];
+  const bar = (s) => '<div class="st"><div class="st-h"><span class="st-k">' + ESC(s.k) + '</span><span class="st-n">' + s.n + '</span></div><div class="st-bar"><i style="width:' + Math.max(2, Math.round((s.n / base) * 100)) + '%"></i></div><div class="st-sub">' + ESC(s.sub) + "</div></div>";
+  const oc = (o) => aeNum(byOutcome, "outcome", o);
+  const tbl = (rows) => rows.length ? "<table>" + rows.map((r) => '<tr><td>' + ESC(String(Object.values(r)[0] || "(vacío)")) + '</td><td class="r">' + Math.round(Number(r.n) || 0) + "</td></tr>").join("") + "</table>" : '<p class="muted">Sin datos aún.</p>';
+  const per = [7, 30, 90].map((d) => '<a class="' + (d === days ? "on" : "") + '" href="?key=' + encodeURIComponent(key) + "&days=" + d + '">' + d + " días</a>").join("");
+  return "<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex,nofollow\"><title>TevIA · Embudo</title><style>"
+    + "*{box-sizing:border-box}body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f4f2ee;color:#111114}"
+    + "header{background:#111114;color:#fff;padding:20px 26px}header h1{margin:0;font-size:1.1rem}header .sub{opacity:.7;font-size:.85rem;margin-top:3px}"
+    + ".wrap{max-width:900px;margin:0 auto;padding:26px}"
+    + ".period a{display:inline-block;margin-right:8px;padding:5px 12px;border:1px solid #dcd8cf;background:#fff;color:#5f5b53;text-decoration:none;font-size:.85rem}.period a.on{background:#E4010A;border-color:#E4010A;color:#fff}"
+    + ".card{background:#fff;border:1px solid #e4e0d8;padding:22px 24px;margin:16px 0}.card h2{margin:0 0 14px;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:#8a857c}"
+    + ".st{margin:14px 0}.st-h{display:flex;justify-content:space-between;align-items:baseline}.st-k{font-weight:600}.st-n{font-weight:800;font-size:1.3rem}"
+    + ".st-bar{height:12px;background:#efece6;margin:6px 0 4px}.st-bar i{display:block;height:100%;background:#E4010A}.st-sub{font-size:.8rem;color:#8a857c}"
+    + ".kpi{display:flex;gap:26px;flex-wrap:wrap}.kpi .n{font-size:1.6rem;font-weight:800}.kpi .l{font-size:.78rem;color:#8a857c}"
+    + ".grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}"
+    + "table{width:100%;border-collapse:collapse}td{padding:6px 4px;border-bottom:1px solid #efece6;font-size:.9rem}td.r{text-align:right;font-weight:700}.muted{color:#8a857c;font-size:.88rem}"
+    + "@media(max-width:640px){.grid2{grid-template-columns:1fr}}</style></head><body>"
+    + "<header><h1>TevIA · Embudo de conversión</h1><div class=\"sub\">Últimos " + days + " días · Analytics Engine</div></header>"
+    + "<div class=\"wrap\"><div class=\"period\">" + per + "</div>"
+    + "<div class=\"card\"><h2>Embudo</h2>" + stages.map(bar).join("") + "</div>"
+    + "<div class=\"card\"><h2>Desenlace de las sesiones</h2><div class=\"kpi\">"
+    + "<div><div class=\"n\">" + oc("cita") + "</div><div class=\"l\">Con cita</div></div>"
+    + "<div><div class=\"n\">" + oc("contacto") + "</div><div class=\"l\">Con contacto (sin cita)</div></div>"
+    + "<div><div class=\"n\">" + oc("abandono") + "</div><div class=\"l\">Abandono</div></div>"
+    + "<div><div class=\"n\">" + open + "</div><div class=\"l\">Aperturas proactivas</div></div>"
+    + "</div></div>"
+    + "<div class=\"grid2\"><div class=\"card\"><h2>Por página (conversaciones)</h2>" + tbl(byPage) + "</div><div class=\"card\"><h2>Por país (conversaciones)</h2>" + tbl(byCountry) + "</div></div>"
+    + "<p class=\"muted\">Los datos tardan 1-2 minutos en aparecer. Con poco tráfico verás ceros hasta que lleguen visitas reales.</p>"
+    + "</div></body></html>";
+}
+function funnelSetupPage() {
+  return "<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex,nofollow\"><title>TevIA · Embudo (configurar)</title><style>body{margin:0;font:15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f4f2ee;color:#111114}.wrap{max-width:720px;margin:0 auto;padding:40px 26px}h1{font-size:1.3rem}code{background:#eae7e0;padding:2px 6px;border-radius:0;font-size:.9em}ol{line-height:1.9}</style></head><body><div class=\"wrap\">"
+    + "<h1>Falta un paso: el token de solo lectura</h1>"
+    + "<p>Los datos ya se están recogiendo. Para <b>leerlos</b> aquí hace falta un token de solo lectura (así el panel puede consultar Analytics Engine sin exponer nada).</p>"
+    + "<ol><li>Cloudflare → <b>My Profile → API Tokens → Create Token → Create Custom Token</b>.</li>"
+    + "<li>Permiso: <b>Account · Account Analytics · Read</b>. Acota a tu cuenta.</li>"
+    + "<li>Créalo y copia el token.</li>"
+    + "<li>En tu terminal, en el repo: <code>npx wrangler secret put CF_ANALYTICS_TOKEN</code> y pega el token cuando lo pida.</li></ol>"
+    + "<p>Recarga esta página y verás el embudo.</p></div></body></html>";
+}
+
 // Dashboard de leads EN VIVO (HTML servido por el worker, mismo secreto que /leads).
 // GET /api/tevi-agent/panel?key=AGENT_ADMIN_KEY — se refresca solo cada 30 s.
 async function handleAgentPanel(request, env) {
@@ -1718,6 +1804,9 @@ export default {
     }
     if (url.pathname === "/api/tevi-agent/panel" || url.pathname === "/api/tevi-agent/panel/") {
       return handleAgentPanel(request, env);
+    }
+    if (url.pathname === "/api/tevi-agent/funnel" || url.pathname === "/api/tevi-agent/funnel/") {
+      return handleAgentFunnel(request, env);
     }
     if (url.pathname === "/api/tevi-agent/tts") {
       return handleAgentTts(request, env, ctx);
