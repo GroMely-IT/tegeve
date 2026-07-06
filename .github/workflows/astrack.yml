@@ -836,7 +836,13 @@ jobs:
               [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ." ;;
           esac
           KIND="$P_DEPLOY_KIND"
-          if [ -z "$KIND" ]; then if [ -f firebase.json ]; then KIND=firebase-hosting; else KIND=none; fi; fi
+          # Misma autodetección que en 'trabajar' (E9): firebase.json → Firebase;
+          # wrangler.* → Cloudflare Workers; si no, none (producción = el merge a main).
+          if [ -z "$KIND" ]; then
+            if [ -f firebase.json ]; then KIND=firebase-hosting
+            elif [ -f wrangler.toml ] || [ -f wrangler.jsonc ] || [ -f wrangler.json ]; then KIND=cloudflare-workers
+            else KIND=none; fi
+          fi
           {
             echo "lang=$LANG"; echo "version=$VER"; echo "distribution=$DIST"; echo "build=$BUILD"
             echo "deploy_kind=$KIND"; echo "deploy_prod_cmd=$P_DEPLOY_PROD"
@@ -874,6 +880,8 @@ jobs:
           DEPLOY_CMD: ${{ steps.stack.outputs.deploy_prod_cmd }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           case "$DEPLOY_KIND" in
             firebase-hosting)
@@ -884,6 +892,16 @@ jobs:
               printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
               export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
               npx -y firebase-tools@latest deploy --only hosting --project "$FIREBASE_PROJECT" --non-interactive ;;
+            cloudflare-workers)
+              # Publicación REAL a producción (el dominio/ruta en vivo del Worker) — a
+              # diferencia de la preview de 'trabajar' (wrangler versions upload, inactiva),
+              # 'wrangler deploy' promueve la versión al tráfico de producción. wrangler lee
+              # CLOUDFLARE_API_TOKEN/ACCOUNT_ID del entorno (sin login interactivo en CI).
+              if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+                echo "Sin CLOUDFLARE_API_TOKEN — el deploy 'a producción' de este repo es el merge a main (cargá el secret CLOUDFLARE_API_TOKEN en el repo)."
+                exit 0
+              fi
+              npx -y wrangler@latest deploy ;;
             custom-cmd)
               if [ -z "$DEPLOY_CMD" ]; then
                 echo "deploy.kind=custom-cmd sin comando — 'producción' es el merge a main."
