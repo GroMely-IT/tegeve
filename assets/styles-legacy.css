@@ -734,3 +734,11 @@ footer{background:var(--ink-900);color:var(--t2d);padding:58px 0 40px}
 .video-label{position:absolute;left:18px;right:18px;bottom:15px;z-index:2;color:#fff;font-weight:700;font-size:1.02rem;letter-spacing:-.01em;text-align:left;text-shadow:0 2px 12px rgba(0,0,0,.55)}
 .video-iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:18px;display:block;background:#000}
 @media(prefers-reduced-motion:reduce){.video-play{animation:none}}
+
+/* Botón de Feedback de Astrack en la cabecera: mismo círculo que .nav-li,
+   ícono/gradiente igual al FAB del widget en móvil. Fijo en el header
+   (fuera de .nav-links) para que NUNCA quede oculto tras el burger. */
+.nav-feedback{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 14px rgba(79,70,229,.32);transition:transform .18s,box-shadow .18s;flex:none}
+.nav-feedback svg{width:18px;height:18px;pointer-events:none;display:block}
+.nav-feedback:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(79,70,229,.42)}
+.nav-feedback:focus-visible{outline:2px solid #6366f1;outline-offset:2px}

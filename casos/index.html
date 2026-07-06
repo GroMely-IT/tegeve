@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Roboto:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/styles.css?v=52">
+<link rel="stylesheet" href="../assets/styles.css?v=53">
 <link rel="stylesheet" href="../assets/tgv.css?v=55">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[
@@ -90,6 +90,7 @@
       <a class="nav-li" href="https://www.linkedin.com/company/tegeve/" target="_blank" rel="noopener noreferrer" aria-label="TeGeVe en LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zm1.78 13.02H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.22.79 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></a>
       <a href="../contacto/" class="nav-cta">Contáctanos</a>
     </div>
+    <button type="button" class="nav-feedback" id="astrackFeedbackBtn" title="Enviar ticket a Astrack" aria-label="Enviar ticket a Astrack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
   </div>
 </nav>
 <main id="contenido">
@@ -399,7 +400,8 @@
 <script src="../assets/tevi-agent.js?v=91" defer></script>
   <!-- Astrack Feedback Plugin (estándar de la factory) → crea tickets en TeGeVe · Sitio TeGeVe -->
   <script src="https://astrack.dev/plugin/astrack-feedback.js"
-          data-org="tegeve-b79cfo" data-project="sitio-tegeve"
+          data-org="tegeve-b79cfo" data-project="sitio-tegeve" data-fab="false"
           data-key="afk_nRZWbAUzTRMM0dSegmjujtlEcPRgbNiX" defer></script>
+  <script>document.getElementById('astrackFeedbackBtn')?.addEventListener('click', function () { window.AstrackFeedback && window.AstrackFeedback.open(); });</script>
 </body>
 </html>
