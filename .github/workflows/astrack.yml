@@ -303,7 +303,14 @@ jobs:
               [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ." ;;
           esac
           KIND="$P_DEPLOY_KIND"
-          if [ -z "$KIND" ]; then if [ -f firebase.json ]; then KIND=firebase-hosting; else KIND=none; fi; fi
+          # Autodetección del target de deploy si el proyecto no lo fijó: el sistema mira
+          # el repo y decide DÓNDE hacer el ambiente de prueba. firebase.json → Firebase;
+          # wrangler.* → Cloudflare Workers; si no, none (la "producción" es el merge a main).
+          if [ -z "$KIND" ]; then
+            if [ -f firebase.json ]; then KIND=firebase-hosting
+            elif [ -f wrangler.toml ] || [ -f wrangler.jsonc ] || [ -f wrangler.json ]; then KIND=cloudflare-workers
+            else KIND=none; fi
+          fi
           {
             echo "lang=$LANG"; echo "version=$VER"; echo "distribution=$DIST"
             echo "build=$BUILD"; echo "qa=$TEST"
@@ -371,12 +378,14 @@ jobs:
       # Preview por ticket, según el target de deploy del proyecto
       - name: Publicar preview
         id: preview
-        if: steps.stack.outputs.deploy_kind == 'firebase-hosting' || (steps.stack.outputs.deploy_kind == 'custom-cmd' && steps.stack.outputs.deploy_preview_cmd != '')
+        if: steps.stack.outputs.deploy_kind == 'firebase-hosting' || steps.stack.outputs.deploy_kind == 'cloudflare-workers' || (steps.stack.outputs.deploy_kind == 'custom-cmd' && steps.stack.outputs.deploy_preview_cmd != '')
         env:
           DEPLOY_KIND: ${{ steps.stack.outputs.deploy_kind }}
           PREVIEW_CMD: ${{ steps.stack.outputs.deploy_preview_cmd }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
         run: |
           if [ "$DEPLOY_KIND" = "firebase-hosting" ]; then
@@ -391,6 +400,18 @@ jobs:
               --project "$FIREBASE_PROJECT" --expires 30d --json > "$RUNNER_TEMP/preview.json" || true
             URL=$(jq -r '.. | .url? // empty' "$RUNNER_TEMP/preview.json" 2>/dev/null | head -1)
             [ -n "$URL" ] && node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
+          elif [ "$DEPLOY_KIND" = "cloudflare-workers" ]; then
+            # Preview en Cloudflare: sube una VERSIÓN nueva (NO toca producción) y toma su
+            # "Version Preview URL". wrangler lee CLOUDFLARE_API_TOKEN/ACCOUNT_ID del entorno.
+            if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+              echo "Sin CLOUDFLARE_API_TOKEN — este proyecto Cloudflare no publica preview (cargá el secret CLOUDFLARE_API_TOKEN en el repo)."
+              exit 0
+            fi
+            npx -y wrangler@latest versions upload > "$RUNNER_TEMP/wr.out" 2>&1 || true
+            URL=$(grep -i 'Version Preview URL' "$RUNNER_TEMP/wr.out" | grep -oE 'https://[^[:space:]]+' | tail -1)
+            [ -z "$URL" ] && URL=$(grep -oiE 'https://[a-z0-9._-]+\.workers\.dev' "$RUNNER_TEMP/wr.out" | tail -1)
+            if [ -n "$URL" ]; then node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
+            else echo "::warning::no obtuve la Version Preview URL de wrangler — revisá el CLOUDFLARE_API_TOKEN y el account_id (en wrangler.jsonc o el secret CLOUDFLARE_ACCOUNT_ID)."; fi
           else
             # custom-cmd: el comando de preview opcionalmente imprime la URL en su última línea
             URL=$(bash -c "$PREVIEW_CMD" | tail -1)
