@@ -275,3 +275,33 @@ body.tgv .case .case-client{display:flex;flex-wrap:wrap;align-items:center;gap:8
 body.tgv .case .case-client .client-logo{height:auto;max-height:52px;width:auto;margin:0}
 body.tgv .case .case-client .client-logo:only-child{max-width:100%}
 body.tgv .case .case-client .client-logo:not(:only-child){max-width:44%}
+
+/* ============================================================
+   ACABADO PREMIUM (home) — detalles de "gran firma": coherencia
+   de radios (nada de píldoras sueltas), franja de cifras sobria,
+   posicionamiento de autoridad y un único anillo de foco.
+   ============================================================ */
+/* Coherencia de radios: la insignia del hero, el eyebrow de las slides y la
+   barra/chips de TevIA usaban esquinas redondeadas (píldora) que rompían el
+   sistema de radios 0. Se cuadran para leer como el resto del informe. */
+body.tgv .hero-badge,body.tgv .hc-eyebrow,body.tgv .tv-bar,body.tgv .tv-chip{border-radius:0}
+body.tgv .hero-badge{background:transparent;border:1px solid var(--line);color:var(--t2);letter-spacing:.04em;font-weight:600}
+body.tgv .hero-badge .dot{background:var(--red)}
+
+/* Franja de cifras: número Montserrat 700 (no 800: más limpio en tabulares),
+   tracking -.02em, cifras tabulares y de altura uniforme; el signo "+" susurra. */
+body.tgv .stat .num{font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums lining-nums}
+body.tgv .num-sg{font-size:.52em;font-weight:600;letter-spacing:0;vertical-align:baseline;margin-right:.03em;opacity:.7}
+body.tgv .stats-intro{max-width:72ch;margin:0 0 32px;color:var(--t2);font-size:clamp(1rem,1.4vw,1.12rem);line-height:1.6;font-weight:400}
+body.tgv .stat .lbl{max-width:24ch}
+
+/* Línea de reconocimientos bajo los pilares de autoridad (prueba de nivel). */
+body.tgv .authority-creds{margin:40px 0 0;padding-top:26px;border-top:1px solid var(--line);font-size:.82rem;letter-spacing:.03em;color:var(--t3);line-height:1.75;max-width:none}
+
+/* Un único anillo de foco visible en todo el sistema (teclado = calidad). */
+body.tgv a:focus-visible,body.tgv button:focus-visible,body.tgv summary:focus-visible,
+body.tgv .faq-q:focus-visible,body.tgv .hc-dot:focus-visible,body.tgv input:focus-visible,
+body.tgv textarea:focus-visible,body.tgv .tv-chip:focus-visible,body.tgv .tv-bar:focus-visible{
+  outline:2px solid var(--red); outline-offset:3px;
+}
+@media(max-width:760px){ body.tgv .stats-intro{font-size:1rem} }
