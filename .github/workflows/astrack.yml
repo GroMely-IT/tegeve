@@ -581,7 +581,7 @@ jobs:
       # Seguridad (Charly, determinista): secret-scan del DIFF como COMPUERTA. Atrapa
       # secretos en el código NUEVO sin importar qué modelo lo escribió — vale más para un
       # CISO que un review cross-model LLM, y no necesita credencial de 2º proveedor.
-      # Resiliente: si gitleaks no instala/corre, NO bloquea (warn, fail-open en tooling);
+      # Fail-CLOSED también en el tooling: si gitleaks no se puede instalar, se frena;
       # si encuentra un secreto en el diff, falla → T5.1 (build-failed) rebota el ticket.
       # Falsos positivos: el proyecto puede agregar un .gitleaks.toml con su allowlist.
       - name: Seguridad — secret-scan del diff (compuerta)
@@ -592,8 +592,20 @@ jobs:
           BASE=$(git merge-base origin/main HEAD 2>/dev/null || echo "")
           [ -z "$BASE" ] && { echo "::warning::sin base contra main — secret-scan omitido (no bloquea)."; exit 0; }
           URL="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          curl -sSfL "$URL" -o /tmp/gl.tgz || { echo "::warning::no pude bajar gitleaks $GITLEAKS_VERSION — secret-scan omitido."; exit 0; }
-          tar -xzf /tmp/gl.tgz -C /tmp gitleaks 2>/dev/null || { echo "::warning::no pude extraer gitleaks — omitido."; exit 0; }
+          # Fail-CLOSED en el TOOLING: antes un `curl || exit 0` apagaba el ÚNICO
+          # secret-scan del pipeline ante cualquier blip de red, y nadie se enteraba.
+          # Un scan que NO CORRE es peor que un job que falla: da verde sin haber
+          # mirado. 3 intentos y, si no hay binario, se frena.
+          ok=0
+          for i in 1 2 3; do
+            if curl -sSfL --max-time 90 "$URL" -o /tmp/gl.tgz && tar -xzf /tmp/gl.tgz -C /tmp gitleaks 2>/dev/null; then ok=1; break; fi
+            echo "::warning::intento $i de instalar gitleaks falló — reintento…"
+            sleep $((i * 3))
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::no pude instalar gitleaks tras 3 intentos — NO se sigue sin secret-scan (fail-closed). Reintentá el run."
+            exit 1
+          fi
           echo "▶ gitleaks sobre el diff ${BASE}..HEAD"
           if /tmp/gitleaks detect --source . --log-opts="${BASE}..HEAD" --redact --no-banner --exit-code 1; then
             echo "✓ sin secretos en el diff del ticket"
@@ -1238,8 +1250,8 @@ jobs:
 
       # Secret-scan del árbol integrado. En 'trabajar' ya se escanea el diff del
       # ticket, pero el rebase de acá puede introducir contenido que ese scan nunca
-      # vio (resolución de conflictos). Fail-CLOSED ante hallazgo; fail-open solo si
-      # el tooling no se puede instalar (mismo criterio que en 'trabajar').
+      # vio (resolución de conflictos). Fail-CLOSED ante hallazgo Y ante tooling que
+      # no se puede instalar (mismo criterio que en 'trabajar').
       - name: Seguridad — secret-scan previo al push (compuerta)
         if: steps.merge.outputs.already != '1'
         env:
@@ -1248,8 +1260,20 @@ jobs:
           RANGE="origin/main..HEAD"
           git rev-parse origin/main >/dev/null 2>&1 || { echo "::warning::sin origin/main — secret-scan omitido (no bloquea)."; exit 0; }
           URL="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          curl -sSfL "$URL" -o /tmp/gl.tgz || { echo "::warning::no pude bajar gitleaks — secret-scan omitido."; exit 0; }
-          tar -xzf /tmp/gl.tgz -C /tmp gitleaks 2>/dev/null || { echo "::warning::no pude extraer gitleaks — omitido."; exit 0; }
+          # Fail-CLOSED en el TOOLING: antes un `curl || exit 0` apagaba el ÚNICO
+          # secret-scan del pipeline ante cualquier blip de red, y nadie se enteraba.
+          # Un scan que NO CORRE es peor que un job que falla: da verde sin haber
+          # mirado. 3 intentos y, si no hay binario, se frena.
+          ok=0
+          for i in 1 2 3; do
+            if curl -sSfL --max-time 90 "$URL" -o /tmp/gl.tgz && tar -xzf /tmp/gl.tgz -C /tmp gitleaks 2>/dev/null; then ok=1; break; fi
+            echo "::warning::intento $i de instalar gitleaks falló — reintento…"
+            sleep $((i * 3))
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::no pude instalar gitleaks tras 3 intentos — NO se sigue sin secret-scan (fail-closed). Reintentá el run."
+            exit 1
+          fi
           echo "▶ gitleaks sobre lo que está a punto de entrar a main ($RANGE)"
           if /tmp/gitleaks detect --source . --log-opts="$RANGE" --redact --no-banner --exit-code 1; then
             echo "✓ sin secretos en lo que se publica"
