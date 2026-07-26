@@ -37,6 +37,14 @@ concurrency:
   group: astrack-${{ github.event.action }}-${{ github.event.client_payload.ticketId || github.event.client_payload.pingToken }}
   cancel-in-progress: false
 
+# Con qué credencial corren los agentes → el kit lo reporta al panel de costos.
+# Estos workflows corren SIEMPRE con el token OAuth de la suscripción (cubierto por
+# el plan) → 'oauth'. Si algún día los reconfigurás para usar una API key propia
+# (facturás por token), poné 'apikey' acá y el panel los cuenta como plata real.
+# Refleja la credencial que el agente USA, no la mera presencia de un secret.
+env:
+  ASTRO_AUTH_MODE: oauth
+
 # Mínimo privilegio del GITHUB_TOKEN (los jobs que pushean declaran su propio contents: write).
 permissions:
   contents: read
@@ -67,42 +75,51 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      # R2.3c (fix review [blocker]): SIN esto el GITHUB_TOKEN del job devuelve 403
+      # garantizado en gh pr list/create/view — un bloque permissions: propio hace
+      # que TODO scope no listado quede en 'none' (no hereda el default del repo).
+      pull-requests: write
     env:
       ASTRO_API_KEY: ${{ secrets.ASTRO_API_KEY }}
       ASTRO_PROJECT_ID: ${{ secrets.ASTRO_PROJECT_ID }}
       ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
       ASTRO_PROJECT: ${{ github.event.client_payload.project }}
       AGENT_ID: ${{ github.event.client_payload.agentId }}
-      # passwords de los agentes habilitados en ESTE repo (mapeo estático)
-      P_CLAUDIA: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
-      P_GEMMA: ${{ secrets.ASTRO_AGENT_PASSWORD_GEMMA }}
-      P_DIANA: ${{ secrets.ASTRO_AGENT_PASSWORD_DIANA }}
-      P_OLIVIA: ${{ secrets.ASTRO_AGENT_PASSWORD_OLIVIA }}
-      P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
-      P_SAMI: ${{ secrets.ASTRO_AGENT_PASSWORD_SAMI }}
+      # R1.7: el password NO va al env del job (visible a TODO step, incl. el
+      # Bash del agente vía claude-code-action) — solo a los steps puntuales
+      # que lo necesitan, como env DE ESE STEP (secrets.ASTRO_AGENT_PASSWORD_
+      # CLAUDIA). Este job SOLO corre Claudia (BUILDER_AGENT invariante
+      # server-side, functions/index.js) — sin case multi-agente ni otras
+      # passwords acá [HAR-2].
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
+      # R2.8: trace-id visible en la corrida de Actions — correlaciona ESTE log con
+      # los de Cloud Logging (que llevan ticketId:cycle) filtrando por ticketId. El
+      # payload del dispatch (functions/dispatch.js fireTicketRun) no lleva `cycle`
+      # (los 10 campos top-level de repository_dispatch están acotados — R2.4 ya
+      # los usa todos), así que acá se estampa solo el ticketId; el cycle completo
+      # queda en el structured log del lado server (más preciso para debugging fino).
+      - name: Trace-id de la corrida
+        run: echo "::notice::[trace] ${{ github.event.client_payload.ticketId }}"
+
       - name: Credenciales del agente asignado
+        env:
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
-          case "$AGENT_ID" in
-            claudia) PASS="$P_CLAUDIA" ;;
-            gemma)   PASS="$P_GEMMA" ;;
-            diana)   PASS="$P_DIANA" ;;
-            olivia)  PASS="$P_OLIVIA" ;;
-            arturo)  PASS="$P_ARTURO" ;;
-            sami)    PASS="$P_SAMI" ;;
-            *) PASS="" ;;
-          esac
-          if [ -z "$PASS" ]; then
-            echo "::error::No hay password para '$AGENT_ID' en este repo (secret ASTRO_AGENT_PASSWORD_$(echo $AGENT_ID | tr a-z A-Z))."
+          if [ "$AGENT_ID" != "claudia" ]; then
+            echo "::error::Este job es exclusivo de Claudia (BUILDER_AGENT); agente recibido: '$AGENT_ID'."
             exit 1
           fi
+          if [ -z "$ASTRO_AGENT_PASSWORD" ]; then
+            echo "::error::Falta el secret ASTRO_AGENT_PASSWORD_CLAUDIA en este repo."
+            exit 1
+          fi
+          echo "::add-mask::$ASTRO_AGENT_PASSWORD"
           {
             echo "ASTRO_AGENT_ID=$AGENT_ID"
             echo "ASTRO_AGENT_EMAIL=$AGENT_ID@$ASTRO_ORG_ID.agents.astrack.dev"
-            echo "ASTRO_AGENT_PASSWORD=$PASS"
           } >> "$GITHUB_ENV"
 
       # El KIT llega al momento de la ejecución: se refresca desde la fuente
@@ -144,14 +161,126 @@ jobs:
             echo "Rama existente — continúo sobre el intento anterior"
           else
             git checkout -B "ticket/$TICKET_ID"
+            # R2.3c: commit vacío + push INMEDIATO — sin esto la rama es idéntica a
+            # main (0 commits de diferencia) y `gh pr create` (paso siguiente) no
+            # puede abrir el draft PR ("No commits between main and ticket/X").
+            git commit --allow-empty -m "chore: abre $TICKET_ID (draft PR desde el minuto 1 — R2.3c)"
+            git push -u origin "ticket/$TICKET_ID"
           fi
+
+      # R2.3c: draft PR ANTES de que el agente toque nada — con el checklist de
+      # acceptanceCriteria como body. Idempotente (busca por head branch antes de
+      # crear); best-effort (`|| true` en los puntos no críticos): si GitHub tiene
+      # un hipo, el build sigue — el draft PR es una mejora de UX, no una compuerta.
+      - name: Crear (o re-vincular) el draft PR
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          TICKET_TITLE: ${{ github.event.client_payload.title }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh pr list --head "ticket/$TICKET_ID" --state all --json number,url --jq '.[0]' 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            NUM=$(echo "$EXISTING" | jq -r '.number')
+            URL=$(echo "$EXISTING" | jq -r '.url')
+            echo "PR ya existe: #$NUM"
+          else
+            node agent-kit/astro-report.mjs checklist "$TICKET_ID" || true
+            CHECKLIST_FILE="$RUNNER_TEMP/checklist.md"
+            [ -f "$CHECKLIST_FILE" ] || echo '_(checklist no disponible)_' > "$CHECKLIST_FILE"
+            {
+              echo "🤖 Draft abierto automáticamente por Astrack — $AGENT_ID va a trabajar este ticket."
+              echo ""
+              echo "## Criterios de aceptación"
+              cat "$CHECKLIST_FILE"
+            } > "$RUNNER_TEMP/pr-body.md"
+            URL=$(gh pr create --draft --title "$TICKET_ID — ${TICKET_TITLE:-sin título}" \
+              --body-file "$RUNNER_TEMP/pr-body.md" --head "ticket/$TICKET_ID" --base main || echo "")
+            NUM=$(gh pr view "ticket/$TICKET_ID" --json number --jq '.number' 2>/dev/null || echo "0")
+            echo "PR creado: #$NUM"
+          fi
+          [ -n "$URL" ] && node agent-kit/astro-report.mjs pr "$TICKET_ID" "$URL" "${NUM:-0}" || true
+
+      # SDD-2: specs versionados EN el repo — sync UNIDIRECCIONAL Firestore→git,
+      # ANTES de que el agente toque código (mismo timing que el draft PR de
+      # arriba). Firestore sigue siendo la fuente operativa (UI/gates/cuadrilla);
+      # esto es la copia durable auditable que queda en el PR para siempre.
+      # Idempotente: `git status --porcelain` detecta tanto archivos NUEVOS
+      # (primer run) como MODIFICADOS (reintento con datos distintos) — si el
+      # contenido generado es igual al ya commiteado, no hay diff y no commitea
+      # de más. Best-effort (`|| true`): nunca tumba el build.
+      - name: Escribir specs/ en la rama (SDD-2)
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+        run: |
+          node agent-kit/astro-report.mjs specs "$TICKET_ID" || true
+          if [ -n "$(git status --porcelain -- "specs/$TICKET_ID/" 2>/dev/null)" ]; then
+            git add "specs/$TICKET_ID/" || true
+            git commit -m "docs(specs): $TICKET_ID — spec/plan/decisiones desde Firestore (SDD-2)" || true
+            git push origin "ticket/$TICKET_ID" || true
+          fi
+
+      # ── R2.3a: progreso vivo del build (heartbeat + stuck detection) ──────
+      # El hook PostToolUse queda en .claude/settings.json del checkout —
+      # claude-code-action lo lee de ahí (cwd del repo cliente). CAVEAT: si el
+      # repo cliente YA trae su propio .claude/settings.json, esto lo PISA —
+      # v1 acepta el caveat (el reinstalador del kit deberá fusionar hooks a
+      # futuro, no a interpretación acá).
+      - name: Instalar hook de progreso
+        run: |
+          mkdir -p .claude
+          cat > .claude/settings.json <<'JSON'
+          { "hooks": { "PostToolUse": [ { "matcher": "*", "hooks": [ { "type": "command", "command": "jq -c '{t: (now|floor), tool: .tool_name, sig: ((.tool_input.command // .tool_input.file_path // .tool_input.description // \"\")|tostring|.[0:160])}' >> \"$RUNNER_TEMP/astro-progress.jsonl\" 2>/dev/null || true" } ] } ] } }
+          JSON
+
+      # Cada 120s: lee la ÚLTIMA fase del archivo de estado (lo apendan los
+      # hooks de arriba) y reporta el latido vía el kit. Stuck detection
+      # barata: si las últimas 5 firmas son (casi) idénticas, aborta el run
+      # con nota ⚙️ ANTES del wall-clock de 45' (loop que quema tokens sin
+      # avanzar). No bloquea el job: corre en background (nohup + disown) y
+      # este step termina de inmediato.
+      - name: Lanzar heartbeat en segundo plano
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+        run: |
+          : > "$RUNNER_TEMP/astro-progress.jsonl"
+          nohup bash -c '
+            TICKET="'"$TICKET_ID"'"
+            STATE="$RUNNER_TEMP/astro-progress.jsonl"
+            while true; do
+              sleep 120
+              FASE=$(tail -n 1 "$STATE" 2>/dev/null | jq -r ".tool // \"trabajando\"" 2>/dev/null || echo trabajando)
+              node agent-kit/astro-report.mjs heartbeat "$TICKET" "$FASE" 0 || true
+              # stuck: últimas 5 firmas casi idénticas → abortar
+              LAST5=$(tail -n 5 "$STATE" 2>/dev/null | jq -r ".sig" 2>/dev/null | sort -u | wc -l)
+              CNT=$(tail -n 5 "$STATE" 2>/dev/null | wc -l)
+              if [ "$CNT" -ge 5 ] && [ "$LAST5" -le 1 ]; then
+                node agent-kit/astro-report.mjs run-failed "$TICKET" "Loop detectado: 5+ acciones idénticas — run abortado por el watchdog (R2.3a)" || true
+                pkill -f "claude" 2>/dev/null || true
+                touch "$RUNNER_TEMP/astro-stuck"
+                exit 0
+              fi
+            done
+          ' >/dev/null 2>&1 &
+          echo $! > "$RUNNER_TEMP/astro-hb.pid"
+          disown || true
 
       - uses: anthropics/claude-code-action@v1
         timeout-minutes: 45
+        env:
+          # R1.7: password del agente ACTIVO, scopeado a ESTE step (nunca a
+          # GITHUB_ENV) — es el único step con Bash de agente en este job.
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: "--allowedTools Bash,Read,Edit,Write,Glob,Grep"
+          # R1.5: modelo/turnos por VARIABLE del repo (default sonnet — Claudia es
+          # la única con Edit/Write/push) para que Firestore los gobierne después;
+          # permission-mode explícito (capa gratis previa a los hooks PreToolUse
+          # de R4.3 — no reemplaza esos hooks, los antecede).
+          claude_args: "--model ${{ vars.ASTRO_MODEL_CLAUDIA || 'claude-sonnet-5' }} --max-turns ${{ vars.ASTRO_MAX_TURNS_CLAUDIA || '50' }} --permission-mode default --allowedTools Bash,Read,Edit,Write,Glob,Grep"
           prompt: |
             Sos ${{ github.event.client_payload.agentId }}, agente de la software
             factory Astrack. Te asignaron el ticket
@@ -216,6 +345,38 @@ jobs:
             pasar a En test; NO reasignes a un tester humano. Nunca apruebes
             tickets: eso es de humanos.
 
+      # CRÍTICO (R2.3a): matar el heartbeat ANTES de reportar métricas — si no,
+      # una carrera entre el último latido (usd preservado, potencialmente
+      # stale) y el write final de setRunMetrics podría pisar el costo real.
+      - name: Detener el heartbeat
+        if: always()
+        run: |
+          kill $(cat "$RUNNER_TEMP/astro-hb.pid") 2>/dev/null || true
+          # Segar un latido en vuelo (hijo node): cierra del todo la carrera
+          # latido-tardío-pisa-costo antes de que corra setRunMetrics.
+          pkill -f "astro-report.mjs heartbeat" 2>/dev/null || true
+
+      # R2.3c (a): archiva la transcripción COMPLETA del run como artifact de CI
+      # (retención default del repo — GitHub la conserva ~90 días) y linkea la
+      # corrida desde el ticket. `if: always()` — un run fallido es justo el que
+      # más se va a querer revisar después.
+      - name: Archivar la transcripción del run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcript-${{ github.event.client_payload.ticketId }}-${{ github.run_id }}
+          path: /home/runner/work/_temp/claude-execution-output.json
+          if-no-files-found: ignore
+          retention-days: 90
+      - name: Vincular la transcripción al ticket
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          node agent-kit/astro-report.mjs transcript "$TICKET_ID" "$RUN_URL" || true
+
       # Claude puede terminar con is_error=true SIN hacer fallar el job (sale
       # con código 0). Lo detectamos acá y reportamos el motivo real al ticket
       # (token inválido/vencido, límite de sesión, etc.) en vez de un genérico.
@@ -223,6 +384,7 @@ jobs:
         if: always()
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
           [ -f "$LOG" ] || exit 0
@@ -237,24 +399,43 @@ jobs:
         if: always()
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+          # R1.5: fallback si el log no trae el modelo del evento init (ver MODEL abajo).
+          MODEL_REQUESTED: ${{ vars.ASTRO_MODEL_CLAUDIA || 'claude-sonnet-5' }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
           COST=$(jq -r '.. | .total_cost_usd? // empty' "$LOG" 2>/dev/null | head -1)
           TURNS=$(jq -r '.. | .num_turns? // empty' "$LOG" 2>/dev/null | head -1)
           MS=$(jq -r '.. | .duration_ms? // empty' "$LOG" 2>/dev/null | head -1)
           # tokens: último objeto usage del stream (input+output+cache). Best-effort → 0 si falta.
-          TOKENS=$(jq -rs '(([.[] | .. | objects | select(.type=="result") | .usage] | last) // ([.[] | .. | objects | select(has("usage")) | .usage] | last)) | ((.input_tokens // 0)+(.output_tokens // 0)+(.cache_creation_input_tokens // 0)+(.cache_read_input_tokens // 0)) // 0' "$LOG" 2>/dev/null | head -1)
-          # líneas NUEVAS (solo adiciones, sin binarios ni lockfiles/dist/generados)
-          # vs main → señal del estimado humano. Adiciones (no borrados): borrar es
-          # barato; el estimado refleja código producido, no churn.
+          USAGE_SEL='(([.[] | .. | objects | select(.type=="result") | .usage] | last) // ([.[] | .. | objects | select(has("usage")) | .usage] | last))'
+          TOKENS=$(jq -rs "$USAGE_SEL | ((.input_tokens // 0)+(.output_tokens // 0)+(.cache_creation_input_tokens // 0)+(.cache_read_input_tokens // 0)) // 0" "$LOG" 2>/dev/null | head -1)
+          # R2.5: desglose de tokens (4 tipos) — mismo selector, un campo por vez.
+          IN=$(jq -rs "$USAGE_SEL | (.input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          OUT=$(jq -rs "$USAGE_SEL | (.output_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          CACHE_R=$(jq -rs "$USAGE_SEL | (.cache_read_input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          CACHE_W=$(jq -rs "$USAGE_SEL | (.cache_creation_input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          # líneas tocadas (adiciones+borrados, sin binarios ni lockfiles/dist/generados)
+          # vs main → señal del estimado humano (R2.5: adds+dels, no solo adiciones —
+          # borrar código también es trabajo real de revisar/probar).
           git fetch origin main --depth=50 2>/dev/null || true
-          LOC=$(git diff --numstat origin/main...HEAD 2>/dev/null | awk '$1!="-" && $3!~/(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|\.lock$|(^|\/)dist\/|(^|\/)build\/|node_modules\/|\.min\.|\.map$|\.snap$)/ {a+=$1} END {print a+0}')
-          node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "${LOC:-0}" || true
+          LOC=$(git diff --numstat origin/main...HEAD 2>/dev/null | awk '$1!="-" && $3!~/(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|\.lock$|(^|\/)dist\/|(^|\/)build\/|node_modules\/|\.min\.|\.map$|\.snap$)/ {a+=$1+$2} END {print a+0}')
+          # R1.5: modelo REALMENTE usado (evento init del transcript); si no está,
+          # cae al pedido vía --model (MODEL_REQUESTED) — nunca vacío.
+          MODEL=$(jq -r '.. | .model? // empty' "$LOG" 2>/dev/null | head -1)
+          [ -z "$MODEL" ] && MODEL="$MODEL_REQUESTED"
+          # R2.5 (AC4): fail-visible — si el reporte falla, nota ⚙️ (NO run-failed:
+          # marcaría todo el dispatch como fallido por un problema solo del reporte).
+          node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "${LOC:-0}" "$MODEL" "${IN:-0}" "${OUT:-0}" "${CACHE_R:-0}" "${CACHE_W:-0}" || {
+            echo "::warning::no se pudo registrar el costo del run"
+            node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ no se pudo registrar el costo del run (ver el log de este step)" || true
+          }
 
       - name: Reportar archivos del run
         if: always()
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
           git fetch origin main >/dev/null 2>&1 || true
           FILES=$(git diff --name-only origin/main...HEAD | paste -sd, -)
@@ -275,6 +456,7 @@ jobs:
           P_DIST: ${{ github.event.client_payload.stack.dist }}
           P_BUILD: ${{ github.event.client_payload.stack.build }}
           P_TEST: ${{ github.event.client_payload.stack.test }}
+          P_TEST_ENFORCE: ${{ github.event.client_payload.stack.testEnforcement }}
           P_DEPLOY_KIND: ${{ github.event.client_payload.stack.deployKind }}
           P_DEPLOY_PROD: ${{ github.event.client_payload.stack.deployProd }}
           P_DEPLOY_PREVIEW: ${{ github.event.client_payload.stack.deployPreview }}
@@ -288,19 +470,34 @@ jobs:
             else LANG=none; fi
           fi
           VER="$P_VER"; DIST="$P_DIST"; BUILD="$P_BUILD"; TEST="$P_TEST"
+          # DOS CARRILES, porque lint y suite NO son lo mismo:
+          #   LINT  → NOTA informativa. Nunca tumba el job (comportamiento histórico).
+          #   SUITE → COMPUERTA condicional. Con testEnforcement='enforce' un rojo hace
+          #           exit 1 → build-failed baja el ticket de en-test a pendiente, así
+          #           nadie firma G2 sobre una suite roja. Default 'report' = solo nota.
+          # Si el admin configuró commands.test, ESO es la suite (es su verificación
+          # real, no una nota al pie).
+          SUITE="$TEST"; LINT=""
+          ENFORCE="$P_TEST_ENFORCE"; [ "$ENFORCE" = "enforce" ] || ENFORCE=report
           case "$LANG" in
             java)
               [ -z "$VER" ] && VER=21
               [ -z "$DIST" ] && DIST=temurin
+              # OJO: `mvn verify` YA corre los tests DENTRO del step de build (que sí
+              # tumba el job). No autodetectamos suite acá o se pagarían dos veces.
               [ -z "$BUILD" ] && { if [ -f pom.xml ]; then BUILD="mvn -B -ntp verify"; else BUILD="chmod +x ./gradlew 2>/dev/null || true; ./gradlew build"; fi; } ;;
             node)
               [ -z "$VER" ] && VER=20
               [ -z "$BUILD" ] && BUILD="npm ci && npm run build --if-present"
-              # QA solo si el repo tiene script lint (igual que antes: sin lint, sin nota)
-              if [ -z "$TEST" ] && [ -f package.json ] && node -e "process.exit(require('./package.json').scripts?.lint?0:1)" 2>/dev/null; then TEST="npm run lint"; fi ;;
+              # lint como nota, solo si el repo tiene el script (igual que antes: sin lint, sin nota)
+              if [ -z "$TEST" ] && [ -f package.json ] && node -e "process.exit(require('./package.json').scripts?.lint?0:1)" 2>/dev/null; then LINT="npm run lint"; fi
+              # suite: solo si el repo TIENE script test. Sin tests no inventamos una compuerta.
+              if [ -z "$SUITE" ] && [ -f package.json ] && node -e "process.exit(require('./package.json').scripts?.test?0:1)" 2>/dev/null; then SUITE="npm test"; fi ;;
             python)
               [ -z "$VER" ] && VER=3.12
-              [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ." ;;
+              [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ."
+              # suite: pytest solo si el repo da señales de tenerlo configurado
+              if [ -z "$SUITE" ] && { [ -d tests ] || [ -d test ] || [ -f pytest.ini ] || [ -f tox.ini ] || grep -qs pytest pyproject.toml setup.cfg 2>/dev/null; }; then SUITE="python -m pytest -q"; fi ;;
           esac
           KIND="$P_DEPLOY_KIND"
           # Autodetección del target de deploy si el proyecto no lo fijó: el sistema mira
@@ -313,11 +510,11 @@ jobs:
           fi
           {
             echo "lang=$LANG"; echo "version=$VER"; echo "distribution=$DIST"
-            echo "build=$BUILD"; echo "qa=$TEST"
+            echo "build=$BUILD"; echo "qa=$LINT"; echo "suite=$SUITE"; echo "test_enforcement=$ENFORCE"
             echo "deploy_kind=$KIND"
             echo "deploy_prod_cmd=$P_DEPLOY_PROD"; echo "deploy_preview_cmd=$P_DEPLOY_PREVIEW"
           } >> "$GITHUB_OUTPUT"
-          echo "Stack: $LANG · build: ${BUILD:-—} · qa: ${TEST:-—} · deploy: $KIND"
+          echo "Stack: $LANG · build: ${BUILD:-—} · lint: ${LINT:-—} · suite: ${SUITE:-—} ($ENFORCE) · deploy: $KIND"
 
       - uses: actions/setup-node@v4
         if: steps.stack.outputs.lang == 'node'
@@ -341,15 +538,45 @@ jobs:
           echo "▶ build: $BUILD_CMD"
           bash -c "$BUILD_CMD"
 
-      - name: QA automática
+      # Lint: NOTA, nunca compuerta. El `|| true` y el if/else son deliberados acá —
+      # un lint sucio no debe frenar una entrega (es estilo, no corrección).
+      - name: Lint (nota, no bloquea)
         if: steps.stack.outputs.qa != ''
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
           QA_CMD: ${{ steps.stack.outputs.qa }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
-          echo "▶ qa: $QA_CMD"
+          echo "▶ lint: $QA_CMD"
           if bash -c "$QA_CMD"; then node agent-kit/astro-report.mjs qa "$TICKET_ID" ok || true
           else node agent-kit/astro-report.mjs qa "$TICKET_ID" failed "QA del proyecto con errores (ver el run)" || true; fi
+
+      # Suite de tests — COMPUERTA CONDICIONAL. Acá sí importa el exit code:
+      #   'report'  (default) → deja nota y sigue. Sirve para MEDIR la tasa de verde
+      #                         falso sin romperle el flujo a ningún proyecto.
+      #   'enforce'           → exit 1 → el step `if: failure()` de más abajo llama
+      #                         build-failed y el ticket baja de en-test a pendiente.
+      # Un legacy sin tests NUNCA arranca en 'enforce': se activa por proyecto cuando
+      # su suite es confiable (project.testEnforcement).
+      - name: Suite de tests (compuerta condicional)
+        if: steps.stack.outputs.suite != ''
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          SUITE_CMD: ${{ steps.stack.outputs.suite }}
+          ENFORCING: ${{ steps.stack.outputs.test_enforcement }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+        run: |
+          echo "▶ suite ($ENFORCING): $SUITE_CMD"
+          if bash -c "$SUITE_CMD"; then
+            node agent-kit/astro-report.mjs suite "$TICKET_ID" ok "$ENFORCING" "$SUITE_CMD" || true
+          else
+            node agent-kit/astro-report.mjs suite "$TICKET_ID" failed "$ENFORCING" "$SUITE_CMD" || true
+            if [ "$ENFORCING" = "enforce" ]; then
+              echo "::error::la suite de tests FALLÓ y este proyecto tiene testEnforcement='enforce' — el ticket vuelve a desarrollo."
+              exit 1
+            fi
+            echo "::warning::la suite de tests FALLÓ, pero este proyecto está en testEnforcement='report' — no bloquea. Pasalo a 'enforce' cuando la suite sea confiable."
+          fi
 
       # Seguridad (Charly, determinista): secret-scan del DIFF como COMPUERTA. Atrapa
       # secretos en el código NUEVO sin importar qué modelo lo escribió — vale más para un
@@ -387,10 +614,17 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
+          # Fail-visible (mismo criterio que build-failed/run-failed): si el preview
+          # no se publica — falta credencial, o el deploy no devolvió URL — el
+          # tester/dueño necesita SABER por qué no ve el botón en el drawer, no
+          # adivinarlo leyendo el log crudo de Actions. Cada nota usa `|| true`:
+          # nunca puede tumbar el job (best-effort, igual que el resto de este step).
           if [ "$DEPLOY_KIND" = "firebase-hosting" ]; then
             if [ -z "$FIREBASE_SA" ] || [ -z "$FIREBASE_PROJECT" ]; then
               echo "Sin FIREBASE_SERVICE_ACCOUNT/FIREBASE_PROJECT — este proyecto no publica preview."
+              node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ No se publicó preview — falta configurar FIREBASE_SERVICE_ACCOUNT y/o FIREBASE_PROJECT en este repo (Settings → Secrets and variables → Actions)." || true
               exit 0
             fi
             printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
@@ -399,23 +633,29 @@ jobs:
             npx -y firebase-tools@latest hosting:channel:deploy "$CH" \
               --project "$FIREBASE_PROJECT" --expires 30d --json > "$RUNNER_TEMP/preview.json" || true
             URL=$(jq -r '.. | .url? // empty' "$RUNNER_TEMP/preview.json" 2>/dev/null | head -1)
-            [ -n "$URL" ] && node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
+            if [ -n "$URL" ]; then node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
+            else node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ No se pudo publicar el preview de Firebase Hosting — revisá el log del run (\`firebase hosting:channel:deploy\`)." || true; fi
           elif [ "$DEPLOY_KIND" = "cloudflare-workers" ]; then
             # Preview en Cloudflare: sube una VERSIÓN nueva (NO toca producción) y toma su
             # "Version Preview URL". wrangler lee CLOUDFLARE_API_TOKEN/ACCOUNT_ID del entorno.
             if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
               echo "Sin CLOUDFLARE_API_TOKEN — este proyecto Cloudflare no publica preview (cargá el secret CLOUDFLARE_API_TOKEN en el repo)."
+              node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ No se publicó preview — falta configurar el secret CLOUDFLARE_API_TOKEN en este repo." || true
               exit 0
             fi
             npx -y wrangler@latest versions upload > "$RUNNER_TEMP/wr.out" 2>&1 || true
             URL=$(grep -i 'Version Preview URL' "$RUNNER_TEMP/wr.out" | grep -oE 'https://[^[:space:]]+' | tail -1)
             [ -z "$URL" ] && URL=$(grep -oiE 'https://[a-z0-9._-]+\.workers\.dev' "$RUNNER_TEMP/wr.out" | tail -1)
             if [ -n "$URL" ]; then node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
-            else echo "::warning::no obtuve la Version Preview URL de wrangler — revisá el CLOUDFLARE_API_TOKEN y el account_id (en wrangler.jsonc o el secret CLOUDFLARE_ACCOUNT_ID)."; fi
+            else
+              echo "::warning::no obtuve la Version Preview URL de wrangler — revisá el CLOUDFLARE_API_TOKEN y el account_id (en wrangler.jsonc o el secret CLOUDFLARE_ACCOUNT_ID)."
+              node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ No se pudo obtener la URL de preview de Cloudflare — revisá CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID y el log del run." || true
+            fi
           else
             # custom-cmd: el comando de preview opcionalmente imprime la URL en su última línea
             URL=$(bash -c "$PREVIEW_CMD" | tail -1)
-            [ -n "$URL" ] && node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
+            if [ -n "$URL" ]; then node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
+            else node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ El comando de preview configurado no devolvió una URL — revisá previewCmd en la configuración del proyecto." || true; fi
           fi
 
       # Compuerta de la suite (E5/T5.1): si CUALQUIER paso del pipeline falla (build del
@@ -426,6 +666,7 @@ jobs:
         if: failure()
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
           MOTIVO=$(jq -r '.. | .result? // empty' "$LOG" 2>/dev/null | tail -1 | tr '\n' ' ' | head -c 220)
@@ -436,6 +677,7 @@ jobs:
         if: always()
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
           for i in 1 2 3; do
             node agent-kit/astro-report.mjs queue-done "$TICKET_ID" && exit 0
@@ -469,16 +711,20 @@ jobs:
       ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
       ASTRO_PROJECT: ${{ github.event.client_payload.project }}
       AGENT_ID: ${{ matrix.planner }}
-      # passwords de los planners (mapeo estático; el secret debe existir en el repo)
-      P_POLA: ${{ secrets.ASTRO_AGENT_PASSWORD_POLA }}
-      P_GEMMA: ${{ secrets.ASTRO_AGENT_PASSWORD_GEMMA }}
-      P_DIANA: ${{ secrets.ASTRO_AGENT_PASSWORD_DIANA }}
-      P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
+      # R1.7: passwords fuera del env del job (ver 'trabajar' arriba) — el
+      # subconjunto de rol vive solo en el step "Credenciales del planner"
+      # (validación) y, para el activo, en el step que corre astro-agent.
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
       - name: Credenciales del planner
+        env:
+          # subconjunto SOLO de este step (no del job) — planners habilitados.
+          P_POLA: ${{ secrets.ASTRO_AGENT_PASSWORD_POLA }}
+          P_GEMMA: ${{ secrets.ASTRO_AGENT_PASSWORD_GEMMA }}
+          P_DIANA: ${{ secrets.ASTRO_AGENT_PASSWORD_DIANA }}
+          P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
         run: |
           case "$AGENT_ID" in
             pola)   PASS="$P_POLA" ;;
@@ -491,11 +737,13 @@ jobs:
             echo "::error::No hay password para el planner '$AGENT_ID' (secret ASTRO_AGENT_PASSWORD_$(echo $AGENT_ID | tr a-z A-Z))."
             exit 1
           fi
+          echo "::add-mask::$PASS"
           {
             echo "ASTRO_AGENT_ID=$AGENT_ID"
             echo "ASTRO_AGENT_EMAIL=$AGENT_ID@$ASTRO_ORG_ID.agents.astrack.dev"
-            echo "ASTRO_AGENT_PASSWORD=$PASS"
           } >> "$GITHUB_ENV"
+          # El password NO va a GITHUB_ENV: queda local a este step (validación).
+          # El step que corre astro-agent lo vuelve a resolver como env propio.
 
       - name: Preparar el kit de Astrack
         env:
@@ -519,11 +767,18 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         timeout-minutes: 20
+        env:
+          # resuelto por matrix.planner (compile-time) — NUNCA por GITHUB_ENV ni
+          # GITHUB_OUTPUT; scopeado a ESTE step, solo el password del planner activo.
+          ASTRO_AGENT_PASSWORD: ${{ matrix.planner == 'pola' && secrets.ASTRO_AGENT_PASSWORD_POLA || matrix.planner == 'gemma' && secrets.ASTRO_AGENT_PASSWORD_GEMMA || matrix.planner == 'diana' && secrets.ASTRO_AGENT_PASSWORD_DIANA || matrix.planner == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # read-only: el planner NO edita código (sin Edit/Write); deja artefactos
-          claude_args: "--allowedTools Bash,Read,Glob,Grep"
+          # read-only: el planner NO edita código (sin Edit/Write); deja artefactos.
+          # R1.5: haiku por defecto (rol barato/rápido) vía VARIABLE del repo;
+          # --disallowedTools es cinturón extra sobre --allowedTools (ya sin
+          # Edit/Write/NotebookEdit) — capa gratis previa a los hooks de R4.3.
+          claude_args: "--model ${{ vars.ASTRO_MODEL_PLANNER || 'claude-haiku-4-5' }} --max-turns ${{ vars.ASTRO_MAX_TURNS_PLANNER || '15' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
           prompt: |
             Sos ${{ matrix.planner }}, agente de PLANIFICACIÓN de la software factory
             Astrack, en la etapa de Plan del ticket ${{ github.event.client_payload.ticketId }}
@@ -554,17 +809,50 @@ jobs:
                  findings: ['punto clave 1', 'punto clave 2']  // 3-6, lo más importante
                }).
 
+      # Claude puede terminar con is_error=true SIN hacer fallar el job (sale con
+      # código 0). Sin este chequeo el job queda VERDE aunque el planner no ejecutó
+      # (token de Claude inválido/vencido, límite de sesión) → el ticket no avanza y
+      # el dueño no sabe por qué (caso real NUOVASUI-10). Dejamos una nota ❌ VISIBLE
+      # con el motivo. La password del AGENTE ≠ el OAuth de Claude, así que
+      # astro-report puede autenticarse y escribir la nota aunque Claude no.
+      - name: Verificar resultado de Claude
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ matrix.planner == 'pola' && secrets.ASTRO_AGENT_PASSWORD_POLA || matrix.planner == 'gemma' && secrets.ASTRO_AGENT_PASSWORD_GEMMA || matrix.planner == 'diana' && secrets.ASTRO_AGENT_PASSWORD_DIANA || matrix.planner == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
+        run: |
+          LOG=/home/runner/work/_temp/claude-execution-output.json
+          [ -f "$LOG" ] || exit 0
+          if [ "$(jq -r '[.. | objects | select(.type=="result")] | last | .is_error' "$LOG" 2>/dev/null)" = "true" ]; then
+            MOTIVO=$(jq -r '[.. | objects | select(.type=="result")] | last | .result // ""' "$LOG" 2>/dev/null | tr "\n" " " | head -c 200)
+            [ -z "$MOTIVO" ] && MOTIVO="Claude terminó con error sin mensaje visible — casi siempre el CLAUDE_CODE_OAUTH_TOKEN del repo es inválido/venció, o tu cuenta llegó al límite de sesión"
+            echo "::error::Claude (planner) falló: $MOTIVO"
+            node agent-kit/astro-report.mjs run-failed "$TICKET_ID" "El planner no pudo ejecutar — $MOTIVO" || true
+          fi
+
       - name: Reportar métricas del run
         if: always()
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ matrix.planner == 'pola' && secrets.ASTRO_AGENT_PASSWORD_POLA || matrix.planner == 'gemma' && secrets.ASTRO_AGENT_PASSWORD_GEMMA || matrix.planner == 'diana' && secrets.ASTRO_AGENT_PASSWORD_DIANA || matrix.planner == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
+          MODEL_REQUESTED: ${{ vars.ASTRO_MODEL_PLANNER || 'claude-haiku-4-5' }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
           COST=$(jq -r '.. | .total_cost_usd? // empty' "$LOG" 2>/dev/null | head -1)
           TURNS=$(jq -r '.. | .num_turns? // empty' "$LOG" 2>/dev/null | head -1)
           MS=$(jq -r '.. | .duration_ms? // empty' "$LOG" 2>/dev/null | head -1)
-          TOKENS=$(jq -rs '(([.[] | .. | objects | select(.type=="result") | .usage] | last) // ([.[] | .. | objects | select(has("usage")) | .usage] | last)) | ((.input_tokens // 0)+(.output_tokens // 0)+(.cache_creation_input_tokens // 0)+(.cache_read_input_tokens // 0)) // 0' "$LOG" 2>/dev/null | head -1)
-          node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "0" || true
+          USAGE_SEL='(([.[] | .. | objects | select(.type=="result") | .usage] | last) // ([.[] | .. | objects | select(has("usage")) | .usage] | last))'
+          TOKENS=$(jq -rs "$USAGE_SEL | ((.input_tokens // 0)+(.output_tokens // 0)+(.cache_creation_input_tokens // 0)+(.cache_read_input_tokens // 0)) // 0" "$LOG" 2>/dev/null | head -1)
+          IN=$(jq -rs "$USAGE_SEL | (.input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          OUT=$(jq -rs "$USAGE_SEL | (.output_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          CACHE_R=$(jq -rs "$USAGE_SEL | (.cache_read_input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          CACHE_W=$(jq -rs "$USAGE_SEL | (.cache_creation_input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          MODEL=$(jq -r '.. | .model? // empty' "$LOG" 2>/dev/null | head -1)
+          [ -z "$MODEL" ] && MODEL="$MODEL_REQUESTED"
+          node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "0" "$MODEL" "${IN:-0}" "${OUT:-0}" "${CACHE_R:-0}" "${CACHE_W:-0}" || {
+            echo "::warning::no se pudo registrar el costo del run"
+            node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ no se pudo registrar el costo del run (ver el log de este step)" || true
+          }
 
   # ── La CUADRILLA de revisión (FASE 1, writer≠reviewer): cada revisor casteado
   #    (matrix) evalúa el diff de la rama del ticket con CONTEXTO FRESCO y deja su
@@ -584,21 +872,30 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      # R1.5: Charly consulta GHAS (code-scanning/dependabot/secret-scanning
+      # alerts) vía `gh api` en su prompt — sin esto el GITHUB_TOKEN del job
+      # devuelve 403 garantizado. Declarado a nivel job (aplica a los 3 del
+      # matrix; de más no molesta a olivia/arturo, read-only).
+      security-events: read
     env:
       ASTRO_API_KEY: ${{ secrets.ASTRO_API_KEY }}
       ASTRO_PROJECT_ID: ${{ secrets.ASTRO_PROJECT_ID }}
       ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
       ASTRO_PROJECT: ${{ github.event.client_payload.project }}
       AGENT_ID: ${{ matrix.reviewer }}
-      # passwords de los revisores (mapeo estático; el secret debe existir en el repo)
-      P_OLIVIA: ${{ secrets.ASTRO_AGENT_PASSWORD_OLIVIA }}
-      P_CHARLY: ${{ secrets.ASTRO_AGENT_PASSWORD_CHARLY }}
-      P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
+      # R1.7: passwords fuera del env del job (ver 'trabajar' arriba) — el
+      # subconjunto de rol vive solo en el step "Credenciales del revisor"
+      # (validación) y, para el activo, en el step que corre astro-agent.
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
       - name: Credenciales del revisor
+        env:
+          # subconjunto SOLO de este step (no del job) — revisores habilitados.
+          P_OLIVIA: ${{ secrets.ASTRO_AGENT_PASSWORD_OLIVIA }}
+          P_CHARLY: ${{ secrets.ASTRO_AGENT_PASSWORD_CHARLY }}
+          P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
         run: |
           case "$AGENT_ID" in
             olivia) PASS="$P_OLIVIA" ;;
@@ -610,11 +907,13 @@ jobs:
             echo "::error::No hay password para el revisor '$AGENT_ID' (secret ASTRO_AGENT_PASSWORD_$(echo $AGENT_ID | tr a-z A-Z))."
             exit 1
           fi
+          echo "::add-mask::$PASS"
           {
             echo "ASTRO_AGENT_ID=$AGENT_ID"
             echo "ASTRO_AGENT_EMAIL=$AGENT_ID@$ASTRO_ORG_ID.agents.astrack.dev"
-            echo "ASTRO_AGENT_PASSWORD=$PASS"
           } >> "$GITHUB_ENV"
+          # El password NO va a GITHUB_ENV: queda local a este step (validación).
+          # El step que corre astro-agent lo vuelve a resolver como env propio.
 
       - name: Preparar el kit de Astrack
         env:
@@ -648,11 +947,17 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         timeout-minutes: 20
+        env:
+          # resuelto por matrix.reviewer (compile-time) — NUNCA por GITHUB_ENV ni
+          # GITHUB_OUTPUT; scopeado a ESTE step, solo el password del revisor activo.
+          ASTRO_AGENT_PASSWORD: ${{ matrix.reviewer == 'olivia' && secrets.ASTRO_AGENT_PASSWORD_OLIVIA || matrix.reviewer == 'charly' && secrets.ASTRO_AGENT_PASSWORD_CHARLY || matrix.reviewer == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # read-only: el revisor NO edita código (sin Edit/Write)
-          claude_args: "--allowedTools Bash,Read,Glob,Grep"
+          # read-only: el revisor NO edita código (sin Edit/Write). R1.5: sonnet
+          # por defecto (default actual del action) vía VARIABLE del repo;
+          # --disallowedTools cinturón extra sobre --allowedTools.
+          claude_args: "--model ${{ vars.ASTRO_MODEL_REVIEWER || 'claude-sonnet-5' }} --max-turns ${{ vars.ASTRO_MAX_TURNS_REVIEWER || '20' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
           prompt: |
             Sos ${{ matrix.reviewer }}, REVISOR de la software factory Astrack, en
             la cuadrilla de revisión del ticket ${{ github.event.client_payload.ticketId }}
@@ -679,24 +984,54 @@ jobs:
             4. Dejá tu veredicto con
                submitReview('${{ github.event.client_payload.ticketId }}', {
                  verdict: 'pass' | 'block',
-                 severity: 'critica' | 'alta' | 'media' | 'baja' | '',
+                 severity: 'low' | 'medium' | 'high' | 'critical' | '',   // enum EN — el kit RECHAZA cualquier otro valor (y tras agotar reintentos degrada a 'critical')
                  summary: 'UNA línea en lenguaje de PRODUCTO (la lee un humano no técnico)',
                  findings: ['hallazgo concreto 1', 'hallazgo 2']
                }).
                Usá 'block' SOLO si hay algo crítico/alto o un criterio de aceptación
                sin cumplir; si está bien, 'pass'. Pase lo que pase, NO toques código.
 
+      # is_error=true sin fallar el job (ver el mismo chequeo en trabajar/planificar):
+      # sin esto, un revisor que no ejecutó (token de Claude caído) queda VERDE y su
+      # veredicto nunca llega → la cuadrilla espera para siempre. Dejamos nota ❌ visible.
+      - name: Verificar resultado de Claude
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ matrix.reviewer == 'olivia' && secrets.ASTRO_AGENT_PASSWORD_OLIVIA || matrix.reviewer == 'charly' && secrets.ASTRO_AGENT_PASSWORD_CHARLY || matrix.reviewer == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
+        run: |
+          LOG=/home/runner/work/_temp/claude-execution-output.json
+          [ -f "$LOG" ] || exit 0
+          if [ "$(jq -r '[.. | objects | select(.type=="result")] | last | .is_error' "$LOG" 2>/dev/null)" = "true" ]; then
+            MOTIVO=$(jq -r '[.. | objects | select(.type=="result")] | last | .result // ""' "$LOG" 2>/dev/null | tr "\n" " " | head -c 200)
+            [ -z "$MOTIVO" ] && MOTIVO="Claude terminó con error sin mensaje visible — casi siempre el CLAUDE_CODE_OAUTH_TOKEN del repo es inválido/venció, o tu cuenta llegó al límite de sesión"
+            echo "::error::Claude (revisor) falló: $MOTIVO"
+            node agent-kit/astro-report.mjs run-failed "$TICKET_ID" "El revisor no pudo ejecutar — $MOTIVO" || true
+          fi
+
       - name: Reportar métricas del run
         if: always()
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ matrix.reviewer == 'olivia' && secrets.ASTRO_AGENT_PASSWORD_OLIVIA || matrix.reviewer == 'charly' && secrets.ASTRO_AGENT_PASSWORD_CHARLY || matrix.reviewer == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
+          MODEL_REQUESTED: ${{ vars.ASTRO_MODEL_REVIEWER || 'claude-sonnet-5' }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
           COST=$(jq -r '.. | .total_cost_usd? // empty' "$LOG" 2>/dev/null | head -1)
           TURNS=$(jq -r '.. | .num_turns? // empty' "$LOG" 2>/dev/null | head -1)
           MS=$(jq -r '.. | .duration_ms? // empty' "$LOG" 2>/dev/null | head -1)
-          TOKENS=$(jq -rs '(([.[] | .. | objects | select(.type=="result") | .usage] | last) // ([.[] | .. | objects | select(has("usage")) | .usage] | last)) | ((.input_tokens // 0)+(.output_tokens // 0)+(.cache_creation_input_tokens // 0)+(.cache_read_input_tokens // 0)) // 0' "$LOG" 2>/dev/null | head -1)
-          node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "0" || true
+          USAGE_SEL='(([.[] | .. | objects | select(.type=="result") | .usage] | last) // ([.[] | .. | objects | select(has("usage")) | .usage] | last))'
+          TOKENS=$(jq -rs "$USAGE_SEL | ((.input_tokens // 0)+(.output_tokens // 0)+(.cache_creation_input_tokens // 0)+(.cache_read_input_tokens // 0)) // 0" "$LOG" 2>/dev/null | head -1)
+          IN=$(jq -rs "$USAGE_SEL | (.input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          OUT=$(jq -rs "$USAGE_SEL | (.output_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          CACHE_R=$(jq -rs "$USAGE_SEL | (.cache_read_input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          CACHE_W=$(jq -rs "$USAGE_SEL | (.cache_creation_input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
+          MODEL=$(jq -r '.. | .model? // empty' "$LOG" 2>/dev/null | head -1)
+          [ -z "$MODEL" ] && MODEL="$MODEL_REQUESTED"
+          node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "0" "$MODEL" "${IN:-0}" "${OUT:-0}" "${CACHE_R:-0}" "${CACHE_W:-0}" || {
+            echo "::warning::no se pudo registrar el costo del run"
+            node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ no se pudo registrar el costo del run (ver el log de este step)" || true
+          }
 
   # ── Producción: integra SOLO este ticket a main (firma única humana) ──
   deploy-prod:
@@ -714,31 +1049,25 @@ jobs:
       ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
       ASTRO_PROJECT: ${{ github.event.client_payload.project }}
       AGENT_ID: ${{ github.event.client_payload.agentId }}
-      P_CLAUDIA: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
-      P_GEMMA: ${{ secrets.ASTRO_AGENT_PASSWORD_GEMMA }}
-      P_DIANA: ${{ secrets.ASTRO_AGENT_PASSWORD_DIANA }}
-      P_OLIVIA: ${{ secrets.ASTRO_AGENT_PASSWORD_OLIVIA }}
-      P_ARTURO: ${{ secrets.ASTRO_AGENT_PASSWORD_ARTURO }}
-      P_SAMI: ${{ secrets.ASTRO_AGENT_PASSWORD_SAMI }}
+      # R1.7: sin passwords en el env del job (ver 'trabajar' arriba). deploy-prod
+      # también es Claudia-only (dispatch.agentId queda fijo en 'claudia' desde
+      # fireTicketRun) — sin case multi-agente ni otras passwords acá.
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0, ref: main }
       - name: Credenciales del agente
+        env:
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
-          case "$AGENT_ID" in
-            claudia) PASS="$P_CLAUDIA" ;;
-            gemma)   PASS="$P_GEMMA" ;;
-            diana)   PASS="$P_DIANA" ;;
-            olivia)  PASS="$P_OLIVIA" ;;
-            arturo)  PASS="$P_ARTURO" ;;
-            sami)    PASS="$P_SAMI" ;;
-            *) PASS="" ;;
-          esac
-          [ -z "$PASS" ] && { echo "::error::Sin password para '$AGENT_ID'."; exit 1; }
+          if [ "$AGENT_ID" != "claudia" ]; then
+            echo "::error::Este job es exclusivo de Claudia; agente recibido: '$AGENT_ID'."
+            exit 1
+          fi
+          [ -z "$ASTRO_AGENT_PASSWORD" ] && { echo "::error::Falta el secret ASTRO_AGENT_PASSWORD_CLAUDIA en este repo."; exit 1; }
+          echo "::add-mask::$ASTRO_AGENT_PASSWORD"
           {
             echo "ASTRO_AGENT_ID=$AGENT_ID"
             echo "ASTRO_AGENT_EMAIL=$AGENT_ID@$ASTRO_ORG_ID.agents.astrack.dev"
-            echo "ASTRO_AGENT_PASSWORD=$PASS"
           } >> "$GITHUB_ENV"
       - name: Preparar el kit de Astrack
         env:
@@ -759,7 +1088,13 @@ jobs:
           elif [ ! -f agent-kit/astro-agent.mjs ]; then
             echo "::error::Sin kit disponible."; exit 1
           fi
-      - name: Integrar la rama del ticket a main
+      # El merge se hace LOCAL y NO se pushea acá. El push vive más abajo, DESPUÉS de
+      # build + suite + secret-scan sobre el árbol ya integrado. Antes este step
+      # pusheaba a main y el Build corría después: si el rebase producía un main roto
+      # (conflicto semántico que git resuelve textualmente pero rompe la compilación),
+      # main quedaba roto y recién ahí se descubría. El camino a producción era el
+      # ÚNICO sin compuertas deterministas — justo el que más importa.
+      - name: Integrar la rama del ticket a main (LOCAL, sin push)
         id: merge
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
@@ -800,7 +1135,7 @@ jobs:
             echo "::error::Conflicto al integrar ticket/$TICKET_ID con main."
             exit 1
           fi
-          git push origin main
+          echo "✓ integrado en main LOCAL. El push va después de las compuertas (build/suite/secret-scan)."
       # Build previo al deploy, AGNÓSTICO al lenguaje (mismo criterio que en
       # 'trabajar': stack del proyecto vía client_payload, o autodetección).
       - name: Detectar stack del proyecto
@@ -811,6 +1146,8 @@ jobs:
           P_VER: ${{ github.event.client_payload.stack.version }}
           P_DIST: ${{ github.event.client_payload.stack.dist }}
           P_BUILD: ${{ github.event.client_payload.stack.build }}
+          P_TEST: ${{ github.event.client_payload.stack.test }}
+          P_TEST_ENFORCE: ${{ github.event.client_payload.stack.testEnforcement }}
           P_DEPLOY_KIND: ${{ github.event.client_payload.stack.deployKind }}
           P_DEPLOY_PROD: ${{ github.event.client_payload.stack.deployProd }}
         run: |
@@ -822,18 +1159,25 @@ jobs:
             elif [ -f requirements.txt ] || [ -f pyproject.toml ]; then LANG=python
             else LANG=none; fi
           fi
-          VER="$P_VER"; DIST="$P_DIST"; BUILD="$P_BUILD"
+          VER="$P_VER"; DIST="$P_DIST"; BUILD="$P_BUILD"; TEST="$P_TEST"
+          # Misma partición que en 'trabajar': acá SOLO nos interesa la suite (compuerta
+          # condicional), no el lint (que es nota y ya se dejó en la etapa de trabajo).
+          SUITE="$TEST"
+          ENFORCE="$P_TEST_ENFORCE"; [ "$ENFORCE" = "enforce" ] || ENFORCE=report
           case "$LANG" in
             java)
               [ -z "$VER" ] && VER=21
               [ -z "$DIST" ] && DIST=temurin
+              # `mvn verify` ya corre los tests dentro del build (que bloquea): no duplicar.
               [ -z "$BUILD" ] && { if [ -f pom.xml ]; then BUILD="mvn -B -ntp verify"; else BUILD="chmod +x ./gradlew 2>/dev/null || true; ./gradlew build"; fi; } ;;
             node)
               [ -z "$VER" ] && VER=20
-              [ -z "$BUILD" ] && BUILD="npm ci && npm run build --if-present" ;;
+              [ -z "$BUILD" ] && BUILD="npm ci && npm run build --if-present"
+              if [ -z "$SUITE" ] && [ -f package.json ] && node -e "process.exit(require('./package.json').scripts?.test?0:1)" 2>/dev/null; then SUITE="npm test"; fi ;;
             python)
               [ -z "$VER" ] && VER=3.12
-              [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ." ;;
+              [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ."
+              if [ -z "$SUITE" ] && { [ -d tests ] || [ -d test ] || [ -f pytest.ini ] || [ -f tox.ini ] || grep -qs pytest pyproject.toml setup.cfg 2>/dev/null; }; then SUITE="python -m pytest -q"; fi ;;
           esac
           KIND="$P_DEPLOY_KIND"
           # Misma autodetección que en 'trabajar' (E9): firebase.json → Firebase;
@@ -845,6 +1189,7 @@ jobs:
           fi
           {
             echo "lang=$LANG"; echo "version=$VER"; echo "distribution=$DIST"; echo "build=$BUILD"
+            echo "suite=$SUITE"; echo "test_enforcement=$ENFORCE"
             echo "deploy_kind=$KIND"; echo "deploy_prod_cmd=$P_DEPLOY_PROD"
           } >> "$GITHUB_OUTPUT"
 
@@ -861,11 +1206,75 @@ jobs:
         if: steps.merge.outputs.already != '1' && steps.stack.outputs.lang == 'python'
         with:
           python-version: ${{ steps.stack.outputs.version || '3.12' }}
-      - name: Build
+      # COMPUERTAS SOBRE EL ÁRBOL YA INTEGRADO (main local, todavía sin pushear).
+      # Verifican el RESULTADO del merge, no la rama del ticket: acá se atrapan los
+      # conflictos semánticos — main se movió, git resolvió el texto sin conflicto, y
+      # el código del ticket ya no funciona contra el main nuevo. Eso no lo puede ver
+      # la etapa de trabajo, que corrió antes y contra otro main.
+      - name: Build (compuerta previa al push)
         if: steps.merge.outputs.already != '1' && steps.stack.outputs.build != ''
         env:
           BUILD_CMD: ${{ steps.stack.outputs.build }}
         run: bash -c "$BUILD_CMD"
+
+      # Suite: respeta testEnforcement igual que en 'trabajar' — un proyecto con suite
+      # poco confiable no queda sin poder publicar por esto. Con 'enforce' un rojo
+      # aborta el job ANTES del push, así main nunca recibe algo que no pasa la suite.
+      - name: Suite de tests (compuerta previa al push)
+        if: steps.merge.outputs.already != '1' && steps.stack.outputs.suite != ''
+        env:
+          SUITE_CMD: ${{ steps.stack.outputs.suite }}
+          ENFORCING: ${{ steps.stack.outputs.test_enforcement }}
+        run: |
+          echo "▶ suite post-merge ($ENFORCING): $SUITE_CMD"
+          if bash -c "$SUITE_CMD"; then
+            echo "✓ la suite pasa sobre el árbol integrado"
+          elif [ "$ENFORCING" = "enforce" ]; then
+            echo "::error::la suite FALLÓ sobre el merge a main y el proyecto está en testEnforcement='enforce' — NO se publica. Puede ser un conflicto semántico: main se movió."
+            exit 1
+          else
+            echo "::warning::la suite FALLÓ sobre el merge a main, pero el proyecto está en testEnforcement='report' — se publica igual. Esto NO es verde."
+          fi
+
+      # Secret-scan del árbol integrado. En 'trabajar' ya se escanea el diff del
+      # ticket, pero el rebase de acá puede introducir contenido que ese scan nunca
+      # vio (resolución de conflictos). Fail-CLOSED ante hallazgo; fail-open solo si
+      # el tooling no se puede instalar (mismo criterio que en 'trabajar').
+      - name: Seguridad — secret-scan previo al push (compuerta)
+        if: steps.merge.outputs.already != '1'
+        env:
+          GITLEAKS_VERSION: "8.21.2"
+        run: |
+          RANGE="origin/main..HEAD"
+          git rev-parse origin/main >/dev/null 2>&1 || { echo "::warning::sin origin/main — secret-scan omitido (no bloquea)."; exit 0; }
+          URL="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL "$URL" -o /tmp/gl.tgz || { echo "::warning::no pude bajar gitleaks — secret-scan omitido."; exit 0; }
+          tar -xzf /tmp/gl.tgz -C /tmp gitleaks 2>/dev/null || { echo "::warning::no pude extraer gitleaks — omitido."; exit 0; }
+          echo "▶ gitleaks sobre lo que está a punto de entrar a main ($RANGE)"
+          if /tmp/gitleaks detect --source . --log-opts="$RANGE" --redact --no-banner --exit-code 1; then
+            echo "✓ sin secretos en lo que se publica"
+          else
+            echo "::error::gitleaks detectó un secreto en lo que iba a entrar a MAIN — NO se publica. Sacalo del código y ROTÁ la credencial."
+            exit 1
+          fi
+
+      # RECIÉN ACÁ se publica. Si cualquier compuerta de arriba falló, el job abortó y
+      # main quedó intacto: el ticket no se marca publicado y se puede reintentar.
+      - name: Publicar a main (push)
+        id: push
+        if: steps.merge.outputs.already != '1'
+        run: |
+          echo "▶ compuertas verdes — publicando a main"
+          if git push origin main; then
+            echo "✓ publicado a main"
+          else
+            # Mover el push después de las compuertas abre una ventana de minutos en la
+            # que main puede moverse. NO se re-rebasea acá A PROPÓSITO: eso publicaría un
+            # árbol que las compuertas nunca verificaron — exactamente el agujero que
+            # este cambio cierra. Fail-closed y reintento explícito.
+            echo "::error::El push a main fue rechazado: main se movió mientras corrían las compuertas. NO se re-integra automáticamente (publicaría código no verificado). Re-ejecutá el deploy del ticket: vuelve a integrar, verificar y publicar."
+            exit 1
+          fi
 
       # El deploy a prod lo hace ESTE workflow (no otro): el push a main que
       # hace el merge usa el token del runner, y GitHub no dispara otros
@@ -940,11 +1349,20 @@ jobs:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
           ALREADY: ${{ steps.merge.outputs.already }}
           MERGE_RESULT: ${{ steps.merge.outcome }}
+          PUSH_RESULT: ${{ steps.push.outcome }}
           DEPLOY_RESULT: ${{ steps.deploy.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
+          # OJO con el orden de las ramas: `DEPLOY_RESULT = skipped` significa "el
+          # proyecto no tiene target de deploy, producción ES el merge a main" —
+          # pero SOLO si el push salió bien. Desde que las compuertas van ANTES del
+          # push, una compuerta roja deja push=skipped Y deploy=skipped, y sin el
+          # chequeo de PUSH_RESULT el ticket se marcaría 'live' sin haber publicado
+          # NADA. Por eso el push se evalúa primero.
           if [ "$ALREADY" = "1" ]; then STATUS=live;
           elif [ "$MERGE_RESULT" != "success" ]; then STATUS=conflict;
+          elif [ "$PUSH_RESULT" != "success" ]; then STATUS=failed;
           elif [ "$DEPLOY_RESULT" = "success" ] || [ "$DEPLOY_RESULT" = "skipped" ]; then STATUS=live;
           else STATUS=failed; fi
           node agent-kit/astro-report.mjs prod "$TICKET_ID" "$STATUS" "$RUN_URL"
