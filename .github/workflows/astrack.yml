@@ -420,6 +420,10 @@ jobs:
           [ -f "$LOG" ] || exit 0
           if [ "$(jq -r '[.. | objects | select(.type=="result")] | last | .is_error' "$LOG" 2>/dev/null)" = "true" ]; then
             MOTIVO=$(jq -r '[.. | objects | select(.type=="result")] | last | .result // ""' "$LOG" 2>/dev/null | tr "\n" " " | head -c 200)
+            # TRIM antes del test: `.result` trae saltos de línea que el `tr "\n" " "`
+            # convierte en ESPACIOS, y `[ -z " " ]` es FALSO — el fallback nunca
+            # disparaba y el ticket quedaba con un error SIN causa (ASTRODEV-250).
+            MOTIVO=$(printf '%s' "$MOTIVO" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
             [ -z "$MOTIVO" ] && MOTIVO="Claude terminó con error sin mensaje visible — casi siempre el CLAUDE_CODE_OAUTH_TOKEN del repo es inválido/venció, o tu cuenta llegó al límite de sesión"
             echo "::error::Claude falló: $MOTIVO"
             node agent-kit/astro-report.mjs run-failed "$TICKET_ID" "Claude no pudo ejecutar — $MOTIVO" || true
@@ -901,6 +905,10 @@ jobs:
           [ -f "$LOG" ] || exit 0
           if [ "$(jq -r '[.. | objects | select(.type=="result")] | last | .is_error' "$LOG" 2>/dev/null)" = "true" ]; then
             MOTIVO=$(jq -r '[.. | objects | select(.type=="result")] | last | .result // ""' "$LOG" 2>/dev/null | tr "\n" " " | head -c 200)
+            # TRIM antes del test: `.result` trae saltos de línea que el `tr "\n" " "`
+            # convierte en ESPACIOS, y `[ -z " " ]` es FALSO — el fallback nunca
+            # disparaba y el ticket quedaba con un error SIN causa (ASTRODEV-250).
+            MOTIVO=$(printf '%s' "$MOTIVO" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
             [ -z "$MOTIVO" ] && MOTIVO="Claude terminó con error sin mensaje visible — casi siempre el CLAUDE_CODE_OAUTH_TOKEN del repo es inválido/venció, o tu cuenta llegó al límite de sesión"
             echo "::error::Claude (planner) falló: $MOTIVO"
             node agent-kit/astro-report.mjs run-failed "$TICKET_ID" "El planner no pudo ejecutar — $MOTIVO" || true
@@ -1080,6 +1088,10 @@ jobs:
           [ -f "$LOG" ] || exit 0
           if [ "$(jq -r '[.. | objects | select(.type=="result")] | last | .is_error' "$LOG" 2>/dev/null)" = "true" ]; then
             MOTIVO=$(jq -r '[.. | objects | select(.type=="result")] | last | .result // ""' "$LOG" 2>/dev/null | tr "\n" " " | head -c 200)
+            # TRIM antes del test: `.result` trae saltos de línea que el `tr "\n" " "`
+            # convierte en ESPACIOS, y `[ -z " " ]` es FALSO — el fallback nunca
+            # disparaba y el ticket quedaba con un error SIN causa (ASTRODEV-250).
+            MOTIVO=$(printf '%s' "$MOTIVO" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
             [ -z "$MOTIVO" ] && MOTIVO="Claude terminó con error sin mensaje visible — casi siempre el CLAUDE_CODE_OAUTH_TOKEN del repo es inválido/venció, o tu cuenta llegó al límite de sesión"
             echo "::error::Claude (revisor) falló: $MOTIVO"
             node agent-kit/astro-report.mjs run-failed "$TICKET_ID" "El revisor no pudo ejecutar — $MOTIVO" || true
