@@ -324,6 +324,15 @@ jobs:
                accionable del último rechazo humano — aplicala ANTES que nada.
                Las notas que empiezan con "❌" son el mismo hecho en prosa; el
                dato tipado de feedbackLog manda sobre el texto de la nota.
+            2c. ¿PODÉS HACERLO? Antes de escribir una línea, mirá si el trabajo
+               EXIGE modificar archivos bajo .github/workflows/. Si es así, PARÁ:
+               este job corre con `contents: write` y NO con `workflows: write`,
+               así que GitHub te RECHAZA el push y, como el runner es efímero,
+               todo tu trabajo se pierde. Es a propósito: un agente que puede
+               reescribir el workflow puede borrar las compuertas que lo revisan.
+               En ese caso, SIN codear: addNote() con el diff listo para
+               `git apply` + comment() explicando que requiere un humano. NO
+               intentes el push ni pases a en-test.
             3. Avisá que arrancás: comment(id, '👩‍💻 Empiezo con este ticket').
             4. Identificá el STACK REAL de ESTE repo antes de codear: mirá los
                archivos (pom.xml / build.gradle → Java + Maven/Gradle; package.json
@@ -414,6 +423,40 @@ jobs:
             [ -z "$MOTIVO" ] && MOTIVO="Claude terminó con error sin mensaje visible — casi siempre el CLAUDE_CODE_OAUTH_TOKEN del repo es inválido/venció, o tu cuenta llegó al límite de sesión"
             echo "::error::Claude falló: $MOTIVO"
             node agent-kit/astro-report.mjs run-failed "$TICKET_ID" "Claude no pudo ejecutar — $MOTIVO" || true
+          fi
+
+      # ¿QUEDÓ TRABAJO SIN PUBLICAR? El runner es EFÍMERO: un commit sin pushear
+      # se pierde entero. Caso real (NUOVASUI-15, 5 veces): el ticket pedía tocar
+      # .github/workflows/, GitHub rechaza ese push porque el job tiene
+      # `contents: write` y NO `workflows: write`, y el ticket solo decía "el run
+      # terminó sin entregar" — indistinguible de un fallo transitorio, así que
+      # se reintentó 5 veces creyendo que era pasajero. Este step no arregla nada:
+      # hace VISIBLE la diferencia entre "falló" y "no puede", de forma
+      # determinista (commits locales vs remoto), sin parsear el log del agente.
+      - name: Diagnóstico — trabajo que quedó sin pushear
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+        run: |
+          git fetch origin "ticket/$TICKET_ID" >/dev/null 2>&1 || true
+          if git rev-parse --verify "origin/ticket/$TICKET_ID" >/dev/null 2>&1; then
+            RANGE="origin/ticket/$TICKET_ID..HEAD"
+          else
+            RANGE="origin/main..HEAD"
+          fi
+          PEND=$(git rev-list --count "$RANGE" 2>/dev/null || echo 0)
+          [ "$PEND" = "0" ] && { echo "✓ no quedaron commits locales sin publicar"; exit 0; }
+          WF=$(git diff --name-only "$RANGE" 2>/dev/null | grep '^\.github/workflows/' | head -3 | tr '\n' ' ')
+          SHA=$(git rev-parse --short HEAD)
+          if [ -n "$WF" ]; then
+            echo "::error::$PEND commit(s) sin publicar y tocan $WF — falta el scope 'workflows'"
+            node agent-kit/astro-report.mjs run-failed "$TICKET_ID" \
+              "NO REINTENTAR: esto NO lo puede hacer un agente. El trabajo toca $WF y GitHub rechaza ese push porque el job tiene 'contents: write' pero NO 'workflows: write'. Los $PEND commit(s) ($SHA) se pierden con el runner. NO se soluciona dando el permiso: dejaría al agente reescribir sus propias compuertas. Aplicá el diff a mano (está en las notas) — los tickets que tocan CI los hace un humano." || true
+          else
+            echo "::warning::$PEND commit(s) locales sin pushear"
+            node agent-kit/astro-report.mjs run-failed "$TICKET_ID" \
+              "Quedaron $PEND commit(s) sin pushear ($SHA) y el runner es efímero, así que ese trabajo SE PERDIÓ. Revisá el log: el agente commiteó pero no llegó a 'git push -u origin HEAD'." || true
           fi
 
       - name: Reportar métricas del run
