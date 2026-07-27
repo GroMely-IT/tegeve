@@ -298,11 +298,32 @@ jobs:
                (b) el PROPÓSITO de este proyecto: de qué se trata lo que vas a
                modificar, y (c) tus instrucciones específicas acá. Respetalo.
             2. getTicket() — el pedido concreto. Si tiene imágenes, guardalas
-               con saveAttachment() y miralas. Si hay notas que empiezan con
-               "❌", tu intento anterior falló: ese motivo es tu PRIORIDAD. Si el
-               ticket trae ticket.rejection.correction (el triage del rechazo que
-               redactó Pola: qué se esperaba realmente y qué cambiar), esa es la
-               corrección accionable del último rechazo — aplicala ANTES que nada.
+               con saveAttachment() y miralas.
+            2b. ¿ES UN REINTENTO? Llamá reworkBrief(ticket) del kit: te devuelve
+               en texto plano TODO lo que te marcaron, del intento más reciente al
+               más viejo. Si devuelve '' es tu primera vez; si devuelve algo, ya
+               entregaste esto y te lo devolvieron. Es OBLIGATORIO tratarlo así
+               (el dato crudo está en ticket.feedbackLog):
+               · Cada entrada trae {source, cycle, by, items[]}. source
+                 'cuadrilla' = un revisor BLOQUEÓ tu entrega; source 'humano' =
+                 la persona la rechazó en la compuerta de test. Cada item trae
+                 {agentId, severity, summary, findings[]}: el hallazgo concreto.
+               · Empezá por la entrada de cycle MÁS ALTO (lo último que te
+                 marcaron) y resolvé TODOS sus items. Los ciclos anteriores
+                 siguen ahí para que no reintroduzcas algo que ya te habían
+                 marcado — leerlos es barato, que te rebote de nuevo no.
+               · NO vuelvas a entregar sin haber atacado cada item, o cambiado
+                 el enfoque con una razón explícita. Si crees que un hallazgo
+                 está equivocado, NO lo ignores en silencio: dejá un comment()
+                 argumentando por qué, y ahí sí seguí.
+               · En tu submitReport final agregá un finding por rebote resuelto:
+                 'rebote <agente>: <qué marcó> → <qué cambié>'. Es lo que mira
+                 el humano para decidir si esta vez sí.
+               Además: ticket.rejection.correction (el triage que redactó Pola:
+               qué se esperaba realmente y qué cambiar) es la corrección
+               accionable del último rechazo humano — aplicala ANTES que nada.
+               Las notas que empiezan con "❌" son el mismo hecho en prosa; el
+               dato tipado de feedbackLog manda sobre el texto de la nota.
             3. Avisá que arrancás: comment(id, '👩‍💻 Empiezo con este ticket').
             4. Identificá el STACK REAL de ESTE repo antes de codear: mirá los
                archivos (pom.xml / build.gradle → Java + Maven/Gradle; package.json
