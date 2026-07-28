@@ -153,12 +153,55 @@ jobs:
       - name: Preparar rama del ticket
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
           git config user.name "$AGENT_ID (Astrack)"
           git config user.email "$AGENT_ID@astrack.dev"
           if git fetch origin "ticket/$TICKET_ID" 2>/dev/null; then
             git checkout -B "ticket/$TICKET_ID" "origin/ticket/$TICKET_ID"
             echo "Rama existente — continúo sobre el intento anterior"
+            # PONER LA RAMA AL DÍA CON MAIN antes de que el agente toque nada.
+            #
+            # Sin esto, una rama de ticket queda congelada en el commit del que se
+            # cortó, PARA SIEMPRE: el reintento hace checkout de la rama vieja y
+            # vuelve a correr la suite contra esa foto. Si main estaba roto en ese
+            # instante —o si el rojo lo arregló otro ticket después— el reintento
+            # da EXACTAMENTE el mismo error, para siempre, y el humano reintenta
+            # creyendo que es transitorio.
+            #
+            # Caso real ASTRODEV-252: la rama se cortó de c54df3d, un commit que
+            # dejó main con la suite en rojo (un test que enumeraba las compuertas
+            # y no se actualizó al agregar 'rework'; lo arregló el commit siguiente).
+            # El trabajo del agente estaba COMPLETO y bien: rebasada sobre main da
+            # 159/159 verde. La compuerta de suite hizo bien su trabajo — lo que
+            # estaba mal era reintentar contra una base que ya no existe.
+            #
+            # Degrada seguro: si el rebase conflictúa, se aborta y se sigue con la
+            # rama tal cual (mejor un run sobre base vieja que ningún run), pero
+            # con una nota VISIBLE — un conflicto lo resuelve un humano, no un
+            # reintento.
+            git fetch origin main >/dev/null 2>&1 || true
+            BEHIND=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
+            if [ "$BEHIND" != "0" ]; then
+              BASE=$(git rev-parse HEAD)
+              if git rebase origin/main >/dev/null 2>&1; then
+                if git push --force-with-lease origin "ticket/$TICKET_ID" >/dev/null 2>&1; then
+                  echo "✓ rama puesta al día con main ($BEHIND commit(s))"
+                  node agent-kit/astro-report.mjs note "$TICKET_ID" \
+                    "🔄 La rama del ticket estaba $BEHIND commit(s) atrás de main y se puso al día antes de construir. Si el intento anterior falló por algo que main ya arregló, esto lo resuelve solo." || true
+                else
+                  # el remoto cambió bajo nuestros pies: volvemos a lo que había
+                  # para no dejar la rama local divergida del remoto.
+                  git reset --hard "$BASE"
+                  echo "⚠ no se pudo publicar el rebase — sigo sobre la rama tal cual"
+                fi
+              else
+                git rebase --abort >/dev/null 2>&1 || true
+                echo "⚠ conflicto al rebasar sobre main — sigo sobre la rama tal cual"
+                node agent-kit/astro-report.mjs note "$TICKET_ID" \
+                  "⚠️ La rama de este ticket está $BEHIND commit(s) atrás de main y CONFLICTÚA al ponerse al día. El run sigue sobre la base vieja, así que puede fallar por algo ya arreglado en main. Esto lo resuelve un humano (rebase manual), no un reintento." || true
+              fi
+            fi
           else
             git checkout -B "ticket/$TICKET_ID"
             # R2.3c: commit vacío + push INMEDIATO — sin esto la rama es idéntica a
