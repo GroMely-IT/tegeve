@@ -408,6 +408,26 @@ jobs:
                seguí ESA línea — NO asumas un lenguaje por tu perfil. Compilá y
                testeá con las herramientas del stack del repo (mvn/gradle, npm,
                pytest…) y que pase antes de pushear.
+            4b. CÓMO VERIFICAR SIN QUEMAR EL PRESUPUESTO DE TURNOS. Tenés un tope
+               de turnos y se agota antes de lo que creés: medido en ASTRODEV-260
+               (un panel colapsable, ticket chico), de 103 acciones sólo 12
+               escribieron código y el run murió en el tope SIN ENTREGAR NADA.
+               · NO levantes servidores de desarrollo — ni `npm run dev`, ni vite,
+                 ni `python -m http.server`, ni nada que quede escuchando un puerto.
+                 NO HAY NAVEGADOR en el runner: no vas a poder mirar la UI, y
+                 después gastás turnos cazando procesos zombie con ps/kill/pkill.
+                 En ese run se fueron 10 acciones sólo en levantar y matar servidores.
+               · SÍ corré lo que verifica de verdad y no necesita puerto: el build,
+                 el linter y la suite de tests del stack del repo.
+               · Si necesitás dependencias, instalalas UNA vez al principio (npm ci
+                 o el equivalente del stack) y no lo repitas.
+               · Si el instalador te tocó el lockfile (package-lock.json, poetry.lock,
+                 go.sum…) y el ticket NO cambia dependencias, revertilo en el momento
+                 en que lo notás, no al final: `git checkout -- <lockfile>`.
+               · El pipeline vuelve a correr build + lint + suite DESPUÉS de tu
+                 entrega, y la suite es COMPUERTA. Tu verificación existe para no
+                 entregar algo roto, no para reemplazar esa compuerta: no la
+                 dupliques "por las dudas".
             5. EL CONTRATO Plan→Build (E4): el getTicket() del paso 2 te devolvió los
                ARTEFACTOS que dejaron los planners en G1 — construí CONTRA ellos, no
                contra tu interpretación de la prosa:
