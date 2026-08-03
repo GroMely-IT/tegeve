@@ -971,7 +971,12 @@ jobs:
             # abajo (y cualquier `npm ci` posterior) corren sin él y fallan por algo
             # que no tiene nada que ver.
             [ -n "$HID" ] && mv "$RUNNER_TEMP/root-lock.json" package-lock.json
-            URL=$(jq -r '.. | .url? // empty' "$RUNNER_TEMP/preview.json" 2>/dev/null | head -1)
+            # MISMO recorte que abajo para el motivo, y por la MISMA razón: `--json`
+            # no garantiza stdout limpio (npm imprime "added N packages" antes), así
+            # que `jq` sobre el archivo entero devuelve vacío y el preview se reporta
+            # como fallido AUNQUE HAYA PUBLICADO. Pasó en GREGO-21: el canal quedó con
+            # release y sirviendo la app, y el ticket decía "no se pudo publicar".
+            URL=$(sed -n '/^{/,$p' "$RUNNER_TEMP/preview.json" 2>/dev/null | jq -r '.. | .url? // empty' 2>/dev/null | head -1)
             if [ -n "$URL" ]; then node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
             else
               echo "::group::Salida de firebase hosting:channel:deploy (falló)"
