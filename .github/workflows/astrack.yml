@@ -19,13 +19,25 @@
 #   CLAUDE_CODE_OAUTH_TOKEN     ← claude setup-token (o ANTHROPIC_API_KEY)
 #   ASTRO_API_KEY, ASTRO_PROJECT_ID, ASTRO_ORG_ID  ← de Astrack
 #   ASTRO_AGENT_PASSWORD_<AGENTE>  ← una por agente habilitado (CLAUDIA, …)
-#   FIREBASE_SERVICE_ACCOUNT    ← OPCIONAL (solo si publica a Firebase)
+#   FIREBASE_SERVICE_ACCOUNT    ← OPCIONAL y LEGADO: clave JSON de service account.
+#                                 Si está cargado MANDA sobre WIF (compatibilidad
+#                                 hacia atrás). Para publicar SIN claves, NO lo
+#                                 cargues y usá las variables GCP_* de abajo.
 # VARIABLES del repo (Settings → … → Variables):
 #   FIREBASE_PROJECT            ← OPCIONAL: id del proyecto de Firebase Hosting.
 #                                 Habilita el PREVIEW por ticket (canal aislado,
 #                                 igual a prod) que el tester abre antes de aprobar.
 #   ASTRO_KIT_SOURCE            ← OPCIONAL (owner/repo de donde refrescar el
-#                                 kit; default gagrosso/pillbot-claude)
+#                                 kit; default gagrosso/pillbot-claude). Si ese
+#                                 repo es PRIVADO hace falta el secret
+#                                 ASTRO_KIT_TOKEN, o commitear agent-kit/ en este
+#                                 repo (si no, el primer step corta con exit 1).
+#   GCP_WIF_PROVIDER            ← OPCIONAL, PUBLICAR SIN CLAVES (OIDC / Workload
+#                                 Identity Federation). Nombre COMPLETO del provider:
+#                                 projects/<NUMBER>/locations/global/workloadIdentityPools/<POOL>/providers/<PROVIDER>
+#                                 Se usa SOLO si NO hay FIREBASE_SERVICE_ACCOUNT.
+#   GCP_DEPLOY_SA               ← OPCIONAL: email de la service account a impersonar
+#                                 con WIF (ej. astrack-deploy@<proj>.iam.gserviceaccount.com)
 # ============================================================
 name: Astrack · agente en este proyecto
 
@@ -491,6 +503,11 @@ jobs:
           ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # El 3er argumento es el log del agente: de ahí sale el DIARIO del run
+          # que se guarda EN EL TICKET. Sin él, la única forma de ver cómo corrió
+          # es este RUN_URL — que devuelve 404 a todo el que no tenga acceso al
+          # repo privado (el cliente, el resto del equipo, cualquiera a quien se
+          # le muestre el producto). Best-effort: si el log no está, guarda el link.
           node agent-kit/astro-report.mjs transcript "$TICKET_ID" "$RUN_URL" /home/runner/work/_temp/claude-execution-output.json || true
 
       # Claude puede terminar con is_error=true SIN hacer fallar el job (sale
@@ -509,21 +526,29 @@ jobs:
             SUBTYPE=$(printf '%s' "$RES" | jq -r '.subtype // ""')
             TURNS=$(printf '%s' "$RES" | jq -r '.num_turns // 0')
             MOTIVO=$(printf '%s' "$RES" | jq -r '.result // ""' | tr "\n" " " | head -c 200)
+            # TRIM antes del test: `.result` suele venir con saltos de línea, y el
+            # `tr "\n" " "` de arriba los convierte en ESPACIOS. `[ -z " " ]` es
+            # FALSO, así que el fallback no disparaba y el ticket quedaba con
+            # "Claude no pudo ejecutar —   —": un error sin causa, imposible de
+            # diagnosticar (caso real ASTRODEV-250).
             MOTIVO=$(printf '%s' "$MOTIVO" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
             # `.result` viene NULL cuando el corte NO lo decidió el modelo (tope de
-            # turnos, aborto del runtime): ahí la causa exacta está en `.errors[]`.
+            # turnos, aborto del runtime). En esos casos la causa exacta está en
+            # `.errors[]` — p.ej. "Reached maximum number of turns (50)".
             if [ -z "$MOTIVO" ]; then
               MOTIVO=$(printf '%s' "$RES" | jq -r '(.errors // []) | join(" · ")' | tr "\n" " " | head -c 200)
               MOTIVO=$(printf '%s' "$MOTIVO" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
             fi
             # DIAGNÓSTICO POR SUBTIPO. Antes TODO error sin `.result` caía en el
             # mismo texto: "casi siempre el CLAUDE_CODE_OAUTH_TOKEN … venció". Con
-            # el tope de turnos eso es FALSO — el token está sano y el humano se va
-            # a revisar credenciales perfectas (casos reales ASTRODEV-247 y -251).
+            # el tope de turnos eso es SIMPLEMENTE FALSO — el token está perfecto y
+            # el humano se va a revisar credenciales sanas. Casos reales
+            # ASTRODEV-247 y ASTRODEV-251: 51 turnos, $2 gastados, diagnóstico que
+            # apuntaba al lugar equivocado. Un error que miente es peor que uno mudo.
             MAXT="${{ vars.ASTRO_MAX_TURNS_CLAUDIA || '50' }}"
             case "$SUBTYPE" in
               error_max_turns)
-                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales: el agente estaba trabajando bien y se cortó a mitad. Subí la variable de repo ASTRO_MAX_TURNS_CLAUDIA (hoy $MAXT) o partí el ticket en piezas más chicas; reintentar sin cambiar nada da lo mismo."
+                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales: el agente estaba trabajando bien y se cortó a mitad. El trabajo no entra en el tope. Dos salidas: subí la variable de repo ASTRO_MAX_TURNS_CLAUDIA (hoy $MAXT), o partí el ticket en piezas más chicas. Reintentar sin cambiar nada da el mismo resultado."
                 ;;
               error_during_execution)
                 [ -z "$MOTIVO" ] && MOTIVO="el runtime del agente abortó a mitad de la ejecución (sin mensaje del modelo) — revisá el log del run"
@@ -536,14 +561,20 @@ jobs:
             node agent-kit/astro-report.mjs run-failed "$TICKET_ID" "Claude no pudo ejecutar — $MOTIVO" || true
           fi
 
-      # ¿QUEDÓ TRABAJO SIN PUBLICAR? El runner es EFÍMERO: un commit sin pushear
-      # se pierde entero. Caso real (NUOVASUI-15, 5 veces): el ticket pedía tocar
-      # .github/workflows/, GitHub rechaza ese push porque el job tiene
-      # `contents: write` y NO `workflows: write`, y el ticket solo decía "el run
-      # terminó sin entregar" — indistinguible de un fallo transitorio, así que
-      # se reintentó 5 veces creyendo que era pasajero. Este step no arregla nada:
-      # hace VISIBLE la diferencia entre "falló" y "no puede", de forma
-      # determinista (commits locales vs remoto), sin parsear el log del agente.
+      # ¿QUEDÓ TRABAJO SIN PUBLICAR? El runner es EFÍMERO: un commit que no se
+      # pushea se pierde entero. El caso que motivó esto (NUOVASUI-15) se repitió
+      # CINCO veces: el ticket pedía tocar .github/workflows/, GitHub rechaza ese
+      # push porque el job declara `contents: write` y NO `workflows: write`, y el
+      # ticket solo decía "el run terminó sin entregar" — indistinguible de un
+      # fallo transitorio. El dueño reintentó 5 veces creyendo que era pasajero.
+      #
+      # Este step NO arregla nada: hace VISIBLE la diferencia entre "falló" y "no
+      # puede". Es determinista (compara commits locales contra el remoto), no
+      # depende de parsear el log del agente.
+      #
+      # Y NO se corrige dándole `workflows: write` al agente: sería dejar que el
+      # builder reescriba el pipeline que lo gatea (podría borrar las compuertas
+      # de build/suite/secret-scan). Que sea imposible es la propiedad, no el bug.
       - name: Diagnóstico — trabajo que quedó sin pushear
         if: always()
         env:
@@ -673,14 +704,39 @@ jobs:
               [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ."
               # suite: pytest solo si el repo da señales de tenerlo configurado
               if [ -z "$SUITE" ] && { [ -d tests ] || [ -d test ] || [ -f pytest.ini ] || [ -f tox.ini ] || grep -qs pytest pyproject.toml setup.cfg 2>/dev/null; }; then SUITE="python -m pytest -q"; fi ;;
+            # Stacks que el SERVIDOR ya acepta (functions/audit.js LANGS) y este workflow
+            # NO manejaba: sin case, BUILD quedaba vacío, el step de build se salteaba
+            # por su `if` y el repo atravesaba el pipeline entero SIN COMPILAR, en
+            # silencio. rust/ruby/php usan el toolchain preinstalado del runner
+            # ubuntu-latest; go y dotnet montan su setup-* abajo.
+            go)
+              [ -z "$VER" ] && VER=1.23
+              [ -z "$BUILD" ] && BUILD="go build ./... && go vet ./..."
+              if [ -z "$SUITE" ] && find . -name '*_test.go' -not -path '*/vendor/*' | head -1 | grep -q .; then SUITE="go test ./..."; fi ;;
+            rust)
+              [ -z "$BUILD" ] && BUILD="cargo build"
+              [ -z "$SUITE" ] && SUITE="cargo test" ;;
+            dotnet)
+              [ -z "$VER" ] && VER=8.0.x
+              [ -z "$BUILD" ] && BUILD="dotnet build --nologo"
+              if [ -z "$SUITE" ] && find . -name '*[Tt]est*.csproj' | head -1 | grep -q .; then SUITE="dotnet test --nologo"; fi ;;
+            ruby)
+              [ -z "$BUILD" ] && BUILD="bundle install --quiet"
+              if [ -z "$SUITE" ] && [ -d spec ]; then SUITE="bundle exec rspec"; fi ;;
+            php)
+              [ -z "$BUILD" ] && BUILD="composer install --no-interaction --no-progress"
+              if [ -z "$SUITE" ] && { [ -f phpunit.xml ] || [ -f phpunit.xml.dist ]; }; then SUITE="vendor/bin/phpunit"; fi ;;
           esac
           KIND="$P_DEPLOY_KIND"
           # Autodetección del target de deploy si el proyecto no lo fijó: el sistema mira
           # el repo y decide DÓNDE hacer el ambiente de prueba. firebase.json → Firebase;
-          # wrangler.* → Cloudflare Workers; si no, none (la "producción" es el merge a main).
+          # wrangler.* → Cloudflare Workers; .clasp.json → Google Apps Script (clasp);
+          # si no, none (la "producción" es el merge a main). Apps Script no tiene
+          # canal de preview aislado — el paso de preview simplemente no corre.
           if [ -z "$KIND" ]; then
             if [ -f firebase.json ]; then KIND=firebase-hosting
             elif [ -f wrangler.toml ] || [ -f wrangler.jsonc ] || [ -f wrangler.json ]; then KIND=cloudflare-workers
+            elif [ -f .clasp.json ]; then KIND=apps-script
             else KIND=none; fi
           fi
           {
@@ -704,6 +760,15 @@ jobs:
         if: steps.stack.outputs.lang == 'python'
         with:
           python-version: ${{ steps.stack.outputs.version || '3.12' }}
+      # go y dotnet necesitan su toolchain; rust, ruby y php ya vienen en ubuntu-latest.
+      - uses: actions/setup-go@v5
+        if: steps.stack.outputs.lang == 'go'
+        with:
+          go-version: ${{ steps.stack.outputs.version || '1.23' }}
+      - uses: actions/setup-dotnet@v4
+        if: steps.stack.outputs.lang == 'dotnet'
+        with:
+          dotnet-version: ${{ steps.stack.outputs.version || '8.0.x' }}
 
       - name: Build del proyecto (compuerta)
         if: steps.stack.outputs.build != ''
@@ -712,6 +777,20 @@ jobs:
         run: |
           echo "▶ build: $BUILD_CMD"
           bash -c "$BUILD_CMD"
+
+      # FAIL-VISIBLE: si no hay comando de build, la entrega pasó SIN compuerta técnica.
+      # Antes eso ocurría EN SILENCIO (el step de build tiene `if: build != ''`): un repo
+      # de un stack que el workflow no manejaba atravesaba el pipeline entero sin que
+      # nada lo compilara, y el humano firmaba G2 creyendo que algo lo había verificado.
+      - name: Aviso — la entrega no tuvo compuerta de build
+        if: steps.stack.outputs.build == ''
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          LANG_DET: ${{ steps.stack.outputs.lang }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+        run: |
+          echo "::warning::sin comando de build — esta entrega NO tuvo compuerta técnica."
+          node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ Esta entrega NO pasó por una compuerta de build: no se pudo determinar cómo compilar este repo (stack detectado: ${LANG_DET:-none}). Nadie verificó que el código compile. Configurá el comando de build del proyecto en Astrack para que la entrega tenga una compuerta real." || true
 
       # Lint: NOTA, nunca compuerta. El `|| true` y el if/else son deliberados acá —
       # un lint sucio no debe frenar una entrega (es estilo, no corrección).
@@ -789,6 +868,36 @@ jobs:
             exit 1
           fi
 
+      # ── Credencial de Firebase: clave JSON (legado) o WIF/OIDC (sin claves) ──
+      # El contexto `secrets` NO existe en el `if:` de un step (solo `vars`), así que
+      # el modo se resuelve en una sonda que escribe un output y los steps de abajo
+      # lo leen. PRECEDENCIA deliberada: si FIREBASE_SERVICE_ACCOUNT está cargado
+      # GANA — ningún repo ya conectado cambia de comportamiento por este bloque.
+      # ORDEN deliberado: va DESPUÉS del paso de Claude y del gitleaks, nunca antes.
+      # google-github-actions/auth escribe gha-creds-*.json en $GITHUB_WORKSPACE y el
+      # agente commitea con `git add`: autenticar antes podría dejar la credencial
+      # commiteada, y varios de estos repos son PÚBLICOS.
+      - name: Modo de credencial de Firebase
+        id: fbauth
+        if: steps.stack.outputs.deploy_kind == 'firebase-hosting'
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+        run: |
+          if [ -n "$FIREBASE_SA" ]; then MODE=sa
+          elif [ -n "$WIF_PROVIDER" ]; then MODE=wif
+          else MODE=none; fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Credencial de Firebase: $MODE"
+
+      - name: Autenticar a Google Cloud (OIDC, sin claves)
+        if: steps.fbauth.outputs.mode == 'wif'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.FIREBASE_PROJECT }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
       # Preview por ticket, según el target de deploy del proyecto
       - name: Publicar preview
         id: preview
@@ -796,8 +905,13 @@ jobs:
         env:
           DEPLOY_KIND: ${{ steps.stack.outputs.deploy_kind }}
           PREVIEW_CMD: ${{ steps.stack.outputs.deploy_preview_cmd }}
+          FB_MODE: ${{ steps.fbauth.outputs.mode }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          # hosting.source (Next/Angular/Vite) sigue detrás de un experimento del
+          # CLI: sin esto `deploy`/`hosting:channel:deploy` aborta con
+          # assertEnabled("webframeworks"). Es inocuo en proyectos sin frameworks.
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
@@ -809,19 +923,72 @@ jobs:
           # adivinarlo leyendo el log crudo de Actions. Cada nota usa `|| true`:
           # nunca puede tumbar el job (best-effort, igual que el resto de este step).
           if [ "$DEPLOY_KIND" = "firebase-hosting" ]; then
-            if [ -z "$FIREBASE_SA" ] || [ -z "$FIREBASE_PROJECT" ]; then
-              echo "Sin FIREBASE_SERVICE_ACCOUNT/FIREBASE_PROJECT — este proyecto no publica preview."
-              node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ No se publicó preview — falta configurar FIREBASE_SERVICE_ACCOUNT y/o FIREBASE_PROJECT en este repo (Settings → Secrets and variables → Actions)." || true
+            if [ "$FB_MODE" = "none" ] || [ -z "$FIREBASE_PROJECT" ]; then
+              echo "Sin credencial de Firebase ni FIREBASE_PROJECT — este proyecto no publica preview."
+              node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ No se publicó preview — falta la credencial de Firebase en este repo: o el secret FIREBASE_SERVICE_ACCOUNT, o (sin claves) las variables GCP_WIF_PROVIDER + GCP_DEPLOY_SA; y siempre la variable FIREBASE_PROJECT (Settings → Secrets and variables → Actions)." || true
               exit 0
             fi
-            printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
-            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+            if [ "$FB_MODE" = "sa" ]; then
+              printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
+              export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+            fi
+            # FB_MODE=wif → GOOGLE_APPLICATION_CREDENTIALS ya lo exportó
+            # google-github-actions/auth (un archivo external_account, sin claves).
+            # NO sobreescribirlo: firebase-tools resuelve ADC con GoogleAuth
+            # (src/requireAuth.ts) y acepta external_account.
             CH="ticket-$(printf '%s' "$TICKET_ID" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')"
-            npx -y firebase-tools@latest hosting:channel:deploy "$CH" \
-              --project "$FIREBASE_PROJECT" --expires 30d --json > "$RUNNER_TEMP/preview.json" || true
+            # ── Monorepo + hosting.source: hay que ESCONDER el lock de la raíz ──
+            # Con `hosting.source` (Next/Angular/Vite) firebase-tools arma un paquete
+            # aparte para el backend SSR y le COPIA el package-lock.json de la RAÍZ
+            # (frameworks/index.js: copyFile(getProjectPath("package-lock.json"), …)).
+            # En un monorepo con workspaces eso es incompatible: el package.json que
+            # genera trae la pila VIEJA de Firebase (firebase-admin ^11, functions ^6,
+            # y sharp 0.33.5 por transitividad) contra un lock que tiene la moderna
+            # → `npm ci` corta con EUSAGE en Cloud Build y el canal queda VACÍO.
+            # Medido en Grego: 20 paquetes en conflicto, no uno.
+            # La copia lleva `.catch(() => {})`: sin lock en la raíz no copia nada y el
+            # buildpack usa `npm install`. Costo honesto: las deps de RUNTIME del
+            # wrapper SSR se resuelven sin fijar. El build de la app NO se afecta —
+            # ese corrió antes, en el runner, con el lock puesto.
+            # Se activa SOLO en la combinación que falla, así que ningún repo que hoy
+            # publica bien cambia de comportamiento.
+            HID=""
+            if [ -f package-lock.json ] \
+               && jq -e '[(.hosting // empty) | if type=="array" then .[] else . end | select(has("source"))] | length > 0' firebase.json >/dev/null 2>&1 \
+               && grep -q '"workspaces"' package.json 2>/dev/null; then
+              mv package-lock.json "$RUNNER_TEMP/root-lock.json" && HID=1
+              echo "monorepo con hosting.source → escondo package-lock.json durante el deploy"
+            fi
+            # `--json` manda TODO a stdout, así que con `> archivo` el error se va al
+            # archivo y no al log: el step queda en verde por el `|| true` y la nota
+            # dice "revisá el log del run", donde no hay nada que revisar. Pasó de
+            # verdad — un canal creado y vacío, sin una sola línea que dijera por qué.
+            # Por eso stderr va aparte y, si no hay URL, se IMPRIMEN los dos.
+            npx -y firebase-tools@15.25.0 hosting:channel:deploy "$CH" \
+              --project "$FIREBASE_PROJECT" --expires 30d --json \
+              > "$RUNNER_TEMP/preview.json" 2> "$RUNNER_TEMP/preview.err" || true
+            # Restaurar SIEMPRE, pase lo que pase: si el lock no vuelve, los steps de
+            # abajo (y cualquier `npm ci` posterior) corren sin él y fallan por algo
+            # que no tiene nada que ver.
+            [ -n "$HID" ] && mv "$RUNNER_TEMP/root-lock.json" package-lock.json
             URL=$(jq -r '.. | .url? // empty' "$RUNNER_TEMP/preview.json" 2>/dev/null | head -1)
             if [ -n "$URL" ]; then node agent-kit/astro-report.mjs preview "$TICKET_ID" "$URL" || true
-            else node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ No se pudo publicar el preview de Firebase Hosting — revisá el log del run (\`firebase hosting:channel:deploy\`)." || true; fi
+            else
+              echo "::group::Salida de firebase hosting:channel:deploy (falló)"
+              echo "── stdout ──"; head -c 4000 "$RUNNER_TEMP/preview.json" 2>/dev/null || true
+              echo; echo "── stderr ──"; head -c 4000 "$RUNNER_TEMP/preview.err" 2>/dev/null || true
+              echo; echo "::endgroup::"
+              # El motivo, además de en el log, viaja a la nota: quien lee el ticket no
+              # siempre tiene abierto Actions, y "no se pudo" sin el porqué no es un dato.
+              # `--json` NO garantiza que stdout sea JSON puro: npm imprime sus
+              # warnings antes, así que `jq .` sobre el archivo entero falla y el
+              # motivo terminaba siendo "npm warn deprecated glob@…", que no explica
+              # nada. Se extrae el ÚLTIMO objeto JSON del archivo y recién ahí se lee
+              # .error; el stderr es el último recurso, no el primero.
+              MOTIVO=$(sed -n '/^{/,$p' "$RUNNER_TEMP/preview.json" 2>/dev/null | jq -r '.error // empty' 2>/dev/null | head -c 300)
+              [ -z "$MOTIVO" ] && MOTIVO=$(grep -viE 'npm warn|deprecated|packages are looking|run `npm fund`' "$RUNNER_TEMP/preview.err" 2>/dev/null | tr '\n' ' ' | head -c 300)
+              node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ No se pudo publicar el preview de Firebase Hosting. Motivo: ${MOTIVO:-sin salida del CLI}" || true
+            fi
           elif [ "$DEPLOY_KIND" = "cloudflare-workers" ]; then
             # Preview en Cloudflare: sube una VERSIÓN nueva (NO toca producción) y toma su
             # "Version Preview URL". wrangler lee CLOUDFLARE_API_TOKEN/ACCOUNT_ID del entorno.
@@ -974,11 +1141,28 @@ jobs:
 
             REGLA DE ORO: planificás, NO codeás. NO edites ni escribas código (no
             tenés Edit/Write). Producís ARTEFACTOS que Claudia leerá para codear
-            contra un CONTRATO claro. Usás agent-kit/astro-agent.mjs (guía en SPEC.md).
+            contra un CONTRATO claro.
+
+            CÓMO SE ENTREGA (leelo antes de empezar, es la causa #1 de trabajo
+            perdido): la ÚNICA entrega válida es la llamada submitPlanWork() del
+            kit. El manual está en agent-kit/SPEC.md — LEELO PRIMERO, tiene los
+            ejemplos exactos. Si terminás sin haber llamado submitPlanWork(), el
+            ticket queda TRABADO para siempre: el gate espera a que TODOS los
+            planners casteados entreguen, y tu trabajo se pierde entero aunque lo
+            hayas hecho bien.
+
+            OJO CON UN SEÑUELO DEL REPO: vas a ver archivos specs/<TICKET>/*.md
+            de tickets anteriores. NO son la forma de entregar: los escribe el
+            pipeline DESPUÉS, copiando lo que vos mandaste por submitPlanWork().
+            Escribir specs/<TICKET>/plan.md a mano NO entrega nada — es un
+            archivo suelto en un runner que se destruye al terminar el job.
+            (Le pasó a un planner real en GREGO-15: trabajó 41 turnos, escribió
+            los .md, y el ticket quedó trabado con cero artefactos.)
 
             Pasos:
             1. getMyContext('${{ github.event.client_payload.project }}') y
                getTicket('${{ github.event.client_payload.ticketId }}') — entendé el pedido.
+               Si no podés usar el kit, PARÁ y decilo: sin kit no hay entrega posible.
             2. Explorá el repo (Grep/Glob/Read) para fundamentar tu trabajo en el código real.
             3. Producí SEGÚN TU ROL y dejalo con
                submitPlanWork('${{ github.event.client_payload.ticketId }}', {...}):
@@ -988,7 +1172,8 @@ jobs:
                · diana (UI): uiSpec (tokens, medidas, 5 estados, responsive — implementable sin preguntar).
                · arturo (arquitecto): adr [{id,title,decision,rationale}] si es estructural;
                  si no, un adr corto que diga que no hay decisión de arquitectura.
-            4. NO toques código. Tu output principal es submitPlanWork.
+            4. NO toques código. Tu ÚNICO output que cuenta es submitPlanWork():
+               ni archivos, ni commits, ni el resumen final del run.
             5. Dejá tu REPORTE para el humano (se muestra como tarjeta en el ticket):
                submitReport('${{ github.event.client_payload.ticketId }}', {
                  kind: 'plan',
@@ -1016,20 +1201,16 @@ jobs:
             TURNS=$(printf '%s' "$RES" | jq -r '.num_turns // 0')
             MOTIVO=$(printf '%s' "$RES" | jq -r '.result // ""' | tr "\n" " " | head -c 200)
             MOTIVO=$(printf '%s' "$MOTIVO" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-            # `.result` viene NULL cuando el corte NO lo decidió el modelo (tope de
-            # turnos, aborto del runtime): ahí la causa exacta está en `.errors[]`.
             if [ -z "$MOTIVO" ]; then
               MOTIVO=$(printf '%s' "$RES" | jq -r '(.errors // []) | join(" · ")' | tr "\n" " " | head -c 200)
               MOTIVO=$(printf '%s' "$MOTIVO" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
             fi
-            # DIAGNÓSTICO POR SUBTIPO. Antes TODO error sin `.result` caía en el
-            # mismo texto: "casi siempre el CLAUDE_CODE_OAUTH_TOKEN … venció". Con
-            # el tope de turnos eso es FALSO — el token está sano y el humano se va
-            # a revisar credenciales perfectas (casos reales ASTRODEV-247 y -251).
+            # Mismo diagnóstico por subtipo que el job 'trabajar': el tope de turnos
+            # NO es un problema de credenciales y decir que sí manda a depurar mal.
             MAXT="${{ vars.ASTRO_MAX_TURNS_PLANNER || '15' }}"
             case "$SUBTYPE" in
               error_max_turns)
-                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales: el agente estaba trabajando bien y se cortó a mitad. Subí la variable de repo ASTRO_MAX_TURNS_PLANNER (hoy $MAXT) o partí el ticket en piezas más chicas; reintentar sin cambiar nada da lo mismo."
+                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales. Subí la variable de repo ASTRO_MAX_TURNS_PLANNER (hoy $MAXT) o achicá el alcance; reintentar sin cambiar nada da lo mismo."
                 ;;
               error_during_execution)
                 [ -z "$MOTIVO" ] && MOTIVO="el runtime del agente abortó a mitad de la ejecución (sin mensaje del modelo) — revisá el log del run"
@@ -1065,6 +1246,21 @@ jobs:
             echo "::warning::no se pudo registrar el costo del run"
             node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ no se pudo registrar el costo del run (ver el log de este step)" || true
           }
+
+      # Un planner puede terminar "success" (sin error, turnos gastados) y NO
+      # llamar submitPlanWork/submitReport: el plan queda trabado en 'planning'
+      # para siempre, porque onPlanArtifact exige que TODOS los casteados
+      # entreguen. Sin la transcripción no hay forma de saber por qué — pasó en
+      # el proyecto legis (GREGO-14, 17 turnos, cero artefactos). El job
+      # 'trabajar' ya la archivaba; este no.
+      - name: Archivar la transcripción del run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcript-plan-${{ github.event.client_payload.ticketId }}-${{ matrix.planner }}-${{ github.run_id }}
+          path: /home/runner/work/_temp/claude-execution-output.json
+          if-no-files-found: ignore
+          retention-days: 90
 
   # ── La CUADRILLA de revisión (FASE 1, writer≠reviewer): cada revisor casteado
   #    (matrix) evalúa el diff de la rama del ticket con CONTEXTO FRESCO y deja su
@@ -1220,20 +1416,16 @@ jobs:
             TURNS=$(printf '%s' "$RES" | jq -r '.num_turns // 0')
             MOTIVO=$(printf '%s' "$RES" | jq -r '.result // ""' | tr "\n" " " | head -c 200)
             MOTIVO=$(printf '%s' "$MOTIVO" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-            # `.result` viene NULL cuando el corte NO lo decidió el modelo (tope de
-            # turnos, aborto del runtime): ahí la causa exacta está en `.errors[]`.
             if [ -z "$MOTIVO" ]; then
               MOTIVO=$(printf '%s' "$RES" | jq -r '(.errors // []) | join(" · ")' | tr "\n" " " | head -c 200)
               MOTIVO=$(printf '%s' "$MOTIVO" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
             fi
-            # DIAGNÓSTICO POR SUBTIPO. Antes TODO error sin `.result` caía en el
-            # mismo texto: "casi siempre el CLAUDE_CODE_OAUTH_TOKEN … venció". Con
-            # el tope de turnos eso es FALSO — el token está sano y el humano se va
-            # a revisar credenciales perfectas (casos reales ASTRODEV-247 y -251).
+            # Mismo diagnóstico por subtipo que el job 'trabajar': el tope de turnos
+            # NO es un problema de credenciales y decir que sí manda a depurar mal.
             MAXT="${{ vars.ASTRO_MAX_TURNS_REVIEWER || '20' }}"
             case "$SUBTYPE" in
               error_max_turns)
-                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales: el agente estaba trabajando bien y se cortó a mitad. Subí la variable de repo ASTRO_MAX_TURNS_REVIEWER (hoy $MAXT) o partí el ticket en piezas más chicas; reintentar sin cambiar nada da lo mismo."
+                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales. Subí la variable de repo ASTRO_MAX_TURNS_REVIEWER (hoy $MAXT) o achicá el alcance; reintentar sin cambiar nada da lo mismo."
                 ;;
               error_during_execution)
                 [ -z "$MOTIVO" ] && MOTIVO="el runtime del agente abortó a mitad de la ejecución (sin mensaje del modelo) — revisá el log del run"
@@ -1270,6 +1462,19 @@ jobs:
             node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ no se pudo registrar el costo del run (ver el log de este step)" || true
           }
 
+      # Mismo agujero que tenía 'planificar' (GREGO-15): un revisor puede morir
+      # por límite de turnos o terminar sin entregar su veredicto, y la cuadrilla
+      # queda esperando para siempre (onReviewWritten exige que TODOS entreguen).
+      # Sin la transcripción no hay forma de saber en qué se le fueron los turnos.
+      - name: Archivar la transcripción del run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcript-review-${{ github.event.client_payload.ticketId }}-${{ matrix.reviewer }}-${{ github.run_id }}
+          path: /home/runner/work/_temp/claude-execution-output.json
+          if-no-files-found: ignore
+          retention-days: 90
+
   # ── Producción: integra SOLO este ticket a main (firma única humana) ──
   deploy-prod:
     if: github.event.action == 'astrack-deploy-prod'
@@ -1280,6 +1485,12 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
+      # WIF/OIDC: sin este scope el runner NO puede pedir su token de identidad y
+      # google-github-actions/auth muere con "Unable to get
+      # ACTIONS_ID_TOKEN_REQUEST_URL". Un bloque permissions: propio deja en 'none'
+      # todo scope no listado, así que hay que declararlo explícito (mismo motivo
+      # que el contents: write de acá al lado).
+      id-token: write
     env:
       ASTRO_API_KEY: ${{ secrets.ASTRO_API_KEY }}
       ASTRO_PROJECT_ID: ${{ secrets.ASTRO_PROJECT_ID }}
@@ -1415,13 +1626,37 @@ jobs:
               [ -z "$VER" ] && VER=3.12
               [ -z "$BUILD" ] && BUILD="python -m pip install -r requirements.txt 2>/dev/null || python -m pip install ."
               if [ -z "$SUITE" ] && { [ -d tests ] || [ -d test ] || [ -f pytest.ini ] || [ -f tox.ini ] || grep -qs pytest pyproject.toml setup.cfg 2>/dev/null; }; then SUITE="python -m pytest -q"; fi ;;
+            # Stacks que el SERVIDOR ya acepta (functions/audit.js LANGS) y este workflow
+            # NO manejaba: sin case, BUILD quedaba vacío, el step de build se salteaba
+            # por su `if` y el repo atravesaba el pipeline entero SIN COMPILAR, en
+            # silencio. rust/ruby/php usan el toolchain preinstalado del runner
+            # ubuntu-latest; go y dotnet montan su setup-* abajo.
+            go)
+              [ -z "$VER" ] && VER=1.23
+              [ -z "$BUILD" ] && BUILD="go build ./... && go vet ./..."
+              if [ -z "$SUITE" ] && find . -name '*_test.go' -not -path '*/vendor/*' | head -1 | grep -q .; then SUITE="go test ./..."; fi ;;
+            rust)
+              [ -z "$BUILD" ] && BUILD="cargo build"
+              [ -z "$SUITE" ] && SUITE="cargo test" ;;
+            dotnet)
+              [ -z "$VER" ] && VER=8.0.x
+              [ -z "$BUILD" ] && BUILD="dotnet build --nologo"
+              if [ -z "$SUITE" ] && find . -name '*[Tt]est*.csproj' | head -1 | grep -q .; then SUITE="dotnet test --nologo"; fi ;;
+            ruby)
+              [ -z "$BUILD" ] && BUILD="bundle install --quiet"
+              if [ -z "$SUITE" ] && [ -d spec ]; then SUITE="bundle exec rspec"; fi ;;
+            php)
+              [ -z "$BUILD" ] && BUILD="composer install --no-interaction --no-progress"
+              if [ -z "$SUITE" ] && { [ -f phpunit.xml ] || [ -f phpunit.xml.dist ]; }; then SUITE="vendor/bin/phpunit"; fi ;;
           esac
           KIND="$P_DEPLOY_KIND"
           # Misma autodetección que en 'trabajar' (E9): firebase.json → Firebase;
-          # wrangler.* → Cloudflare Workers; si no, none (producción = el merge a main).
+          # wrangler.* → Cloudflare Workers; .clasp.json → Google Apps Script (clasp);
+          # si no, none (producción = el merge a main).
           if [ -z "$KIND" ]; then
             if [ -f firebase.json ]; then KIND=firebase-hosting
             elif [ -f wrangler.toml ] || [ -f wrangler.jsonc ] || [ -f wrangler.json ]; then KIND=cloudflare-workers
+            elif [ -f .clasp.json ]; then KIND=apps-script
             else KIND=none; fi
           fi
           {
@@ -1443,6 +1678,14 @@ jobs:
         if: steps.merge.outputs.already != '1' && steps.stack.outputs.lang == 'python'
         with:
           python-version: ${{ steps.stack.outputs.version || '3.12' }}
+      - uses: actions/setup-go@v5
+        if: steps.merge.outputs.already != '1' && steps.stack.outputs.lang == 'go'
+        with:
+          go-version: ${{ steps.stack.outputs.version || '1.23' }}
+      - uses: actions/setup-dotnet@v4
+        if: steps.merge.outputs.already != '1' && steps.stack.outputs.lang == 'dotnet'
+        with:
+          dotnet-version: ${{ steps.stack.outputs.version || '8.0.x' }}
       # COMPUERTAS SOBRE EL ÁRBOL YA INTEGRADO (main local, todavía sin pushear).
       # Verifican el RESULTADO del merge, no la rama del ticket: acá se atrapan los
       # conflictos semánticos — main se movió, git resolvió el texto sin conflicto, y
@@ -1453,6 +1696,19 @@ jobs:
         env:
           BUILD_CMD: ${{ steps.stack.outputs.build }}
         run: bash -c "$BUILD_CMD"
+
+      # FAIL-VISIBLE en el camino a prod: publicar sin compilar es peor que en la etapa
+      # de trabajo, porque esto va a main. No bloquea (hay repos legítimos sin build —
+      # sitios estáticos, docs), pero queda escrito en el ticket.
+      - name: Aviso — se publica sin compuerta de build
+        if: steps.merge.outputs.already != '1' && steps.stack.outputs.build == ''
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          LANG_DET: ${{ steps.stack.outputs.lang }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+        run: |
+          echo "::warning::sin comando de build — se publica a main SIN compilar."
+          node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ Se publicó a producción SIN compuerta de build: no se pudo determinar cómo compilar este repo (stack detectado: ${LANG_DET:-none}). Configurá el comando de build del proyecto en Astrack." || true
 
       # Suite: respeta testEnforcement igual que en 'trabajar' — un proyecto con suite
       # poco confiable no queda sin poder publicar por esto. Con 'enforce' un rojo
@@ -1525,6 +1781,30 @@ jobs:
             exit 1
           fi
 
+      # Misma sonda + auth que en `trabajar` (ver el comentario largo de allá).
+      # Va DESPUÉS del push a main a propósito: así el gha-creds-*.json que escribe
+      # la action nunca puede entrar en un commit.
+      - name: Modo de credencial de Firebase
+        id: fbauth
+        if: steps.merge.outputs.already != '1' && steps.stack.outputs.deploy_kind == 'firebase-hosting'
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+        run: |
+          if [ -n "$FIREBASE_SA" ]; then MODE=sa
+          elif [ -n "$WIF_PROVIDER" ]; then MODE=wif
+          else MODE=none; fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Credencial de Firebase: $MODE"
+
+      - name: Autenticar a Google Cloud (OIDC, sin claves)
+        if: steps.fbauth.outputs.mode == 'wif'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.FIREBASE_PROJECT }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
       # El deploy a prod lo hace ESTE workflow (no otro): el push a main que
       # hace el merge usa el token del runner, y GitHub no dispara otros
       # workflows con ese token. La publicación depende del target del proyecto
@@ -1536,20 +1816,98 @@ jobs:
         env:
           DEPLOY_KIND: ${{ steps.stack.outputs.deploy_kind }}
           DEPLOY_CMD: ${{ steps.stack.outputs.deploy_prod_cmd }}
+          FB_MODE: ${{ steps.fbauth.outputs.mode }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+          CLASP_SCRIPT_ID: ${{ vars.CLASP_SCRIPT_ID }}
+          CLASP_DEPLOYMENT_ID: ${{ vars.CLASP_DEPLOYMENT_ID }}
         run: |
           case "$DEPLOY_KIND" in
-            firebase-hosting)
-              if [ -z "$FIREBASE_SA" ] || [ -z "$FIREBASE_PROJECT" ]; then
-                echo "Sin Firebase configurado — el deploy 'a producción' de este repo es el merge a main."
+            apps-script)
+              # Google Apps Script vía clasp. Dos particularidades que NO tienen
+              # los otros targets, aprendidas en el proyecto legis:
+              #
+              # 1) CLASP_SCRIPT_ID (variable del repo) puede sobreescribir el
+              #    scriptId del .clasp.json versionado. Un proyecto de Apps Script
+              #    suele pertenecer a un dominio de Workspace ajeno (un organismo,
+              #    un cliente): ahí publicar desde CI tocaría su sistema en vivo
+              #    sin su aprobación, y encima Google BLOQUEA crear versiones a
+              #    cuentas fuera de ese dominio ("Only users in the same domain as
+              #    the script owner may deploy this script"). El override permite
+              #    que el pipeline publique a una copia de desarrollo y que la
+              #    publicación en el dominio dueño siga siendo un acto humano.
+              #
+              # 2) push NO alcanza: `clasp push` actualiza el código HEAD pero la
+              #    URL /exec sigue sirviendo la versión anterior hasta que se
+              #    actualiza la IMPLEMENTACIÓN. `deploy -i <ID>` publica una
+              #    versión nueva en la MISMA implementación — crear una nueva
+              #    daría otra URL y rompería el link que ya usa la gente.
+              if [ -z "$CLASP_CREDENTIALS" ]; then
+                echo "Sin CLASP_CREDENTIALS — el deploy 'a producción' de este repo es el merge a main."
+                node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ Integrado a main, pero NO se publicó en Apps Script — falta el secret CLASP_CREDENTIALS (el contenido de un ~/.clasprc.json con permiso sobre el script). La app en vivo sigue con la versión anterior." || true
                 exit 0
               fi
-              printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
-              export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-              npx -y firebase-tools@latest deploy --only hosting --project "$FIREBASE_PROJECT" --non-interactive ;;
+              printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
+              if [ -n "$CLASP_SCRIPT_ID" ]; then
+                # jq preserva el resto del .clasp.json (rootDir, extensiones…).
+                # Solo se reescribe en el runner: el archivo del repo no cambia.
+                jq --arg id "$CLASP_SCRIPT_ID" '.scriptId = $id' .clasp.json > .clasp.json.tmp \
+                  && mv .clasp.json.tmp .clasp.json
+                echo "scriptId override → ${CLASP_SCRIPT_ID:0:12}…"
+              fi
+              npx -y @google/clasp@latest push --force
+              if [ -n "$CLASP_DEPLOYMENT_ID" ]; then
+                npx -y @google/clasp@latest deploy -i "$CLASP_DEPLOYMENT_ID" \
+                  --description "astrack ${TICKET_ID:-deploy}"
+                echo "✓ implementación $CLASP_DEPLOYMENT_ID actualizada (misma URL /exec)"
+              else
+                echo "::warning::Sin CLASP_DEPLOYMENT_ID — se pusheó el código pero la URL /exec sigue sirviendo la versión anterior."
+                node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ Se pusheó el código a Apps Script, pero SIN CLASP_DEPLOYMENT_ID la URL /exec sigue sirviendo la versión anterior. Cargá esa variable para que el deploy sea visible." || true
+              fi ;;
+            firebase-hosting)
+              if [ "$FB_MODE" = "none" ] || [ -z "$FIREBASE_PROJECT" ]; then
+                # FAIL-VISIBLE (simétrico con el preview de 'trabajar', que ya avisa
+                # en este mismo escenario). El camino a PRODUCCIÓN era el único que
+                # callaba: el step salía 0, el reporte lo leía como éxito y el ticket
+                # afirmaba "🚀 publicado en producción" sin que se hubiera publicado
+                # nada — el dueño iba a buscar el cambio a un sitio que nunca se
+                # actualizó. La nota NO cambia el estado del ticket (eso necesita un
+                # rediseño aparte): solo hace que el hecho sea legible.
+                echo "Sin Firebase configurado — el deploy 'a producción' de este repo es el merge a main."
+                node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ Integrado a main, pero NO se publicó en Firebase Hosting — falta la credencial de Firebase en este repo: o el secret FIREBASE_SERVICE_ACCOUNT, o (sin claves) las variables GCP_WIF_PROVIDER + GCP_DEPLOY_SA; y siempre la variable FIREBASE_PROJECT (Settings → Secrets and variables → Actions). El sitio en vivo sigue con la versión anterior." || true
+                exit 0
+              fi
+              if [ "$FB_MODE" = "sa" ]; then
+                printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
+                export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+              fi
+              # FB_MODE=wif → ADC ya apunta al external_account que escribió la action.
+              # Mismo motivo que en el preview de `trabajar` (ver el comentario largo
+              # allá): en un monorepo con hosting.source hay que esconder el lock de la
+              # raíz o el backend SSR muere con EUSAGE en Cloud Build. Acá DUELE más:
+              # el merge a main ya ocurrió, así que el ticket queda "publicado" con el
+              # sitio en vivo sin actualizar. Pasó en GREGO-19.
+              HID=""
+              if [ -f package-lock.json ] \
+                 && jq -e '[(.hosting // empty) | if type=="array" then .[] else . end | select(has("source"))] | length > 0' firebase.json >/dev/null 2>&1 \
+                 && grep -q '"workspaces"' package.json 2>/dev/null; then
+                mv package-lock.json "$RUNNER_TEMP/root-lock.json" && HID=1
+                echo "monorepo con hosting.source → escondo package-lock.json durante el deploy"
+              fi
+              # Versión PINNEADA a propósito: la 15.22.2 (2026-06-24) rompió el camino
+              # ADC/WIF con un "Failed to authenticate, have you run firebase login?"
+              # que enmascaraba un fallo contra sts.googleapis.com. Subir esta versión
+              # es una decisión explícita, no un efecto del reloj.
+              RC=0
+              npx -y firebase-tools@15.25.0 deploy --only hosting --project "$FIREBASE_PROJECT" --non-interactive || RC=$?
+              [ -n "$HID" ] && mv "$RUNNER_TEMP/root-lock.json" package-lock.json
+              exit $RC ;;
             cloudflare-workers)
               # Publicación REAL a producción (el dominio/ruta en vivo del Worker) — a
               # diferencia de la preview de 'trabajar' (wrangler versions upload, inactiva),
@@ -1557,6 +1915,7 @@ jobs:
               # CLOUDFLARE_API_TOKEN/ACCOUNT_ID del entorno (sin login interactivo en CI).
               if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
                 echo "Sin CLOUDFLARE_API_TOKEN — el deploy 'a producción' de este repo es el merge a main (cargá el secret CLOUDFLARE_API_TOKEN en el repo)."
+                node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ Integrado a main, pero NO se publicó en Cloudflare Workers — falta el secret CLOUDFLARE_API_TOKEN en este repo. Si el repo publica solo por Workers Builds (integración Git), ignorá este aviso." || true
                 exit 0
               fi
               npx -y wrangler@latest deploy ;;
@@ -1581,15 +1940,22 @@ jobs:
       - name: Borrar el canal de preview del ticket
         if: success() && steps.merge.outputs.already != '1' && steps.stack.outputs.deploy_kind == 'firebase-hosting'
         env:
+          FB_MODE: ${{ steps.fbauth.outputs.mode }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT: ${{ vars.FIREBASE_PROJECT }}
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
         run: |
-          [ -z "$FIREBASE_SA" ] || [ -z "$FIREBASE_PROJECT" ] && exit 0
-          printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
-          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          # Con WIF no hay FIREBASE_SA, así que la guarda vieja salía 0 sin borrar
+          # nada y el sitio se llenaba de canales hasta el tope (~50) — el ticket
+          # decía "publicado" y el preview viejo seguía vivo.
+          [ "$FB_MODE" = "none" ] || [ -z "$FIREBASE_PROJECT" ] && exit 0
+          if [ "$FB_MODE" = "sa" ]; then
+            printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          fi
           CH="ticket-$(printf '%s' "$TICKET_ID" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')"
-          npx -y firebase-tools@latest hosting:channel:delete "$CH" \
+          npx -y firebase-tools@15.25.0 hosting:channel:delete "$CH" \
             --project "$FIREBASE_PROJECT" --force \
             || echo "::warning::No se pudo borrar el canal $CH (quizá ya no existía)."
       - name: Registrar publicación en el ticket
