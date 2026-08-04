@@ -1150,11 +1150,38 @@ jobs:
 
             CÓMO SE ENTREGA (leelo antes de empezar, es la causa #1 de trabajo
             perdido): la ÚNICA entrega válida es la llamada submitPlanWork() del
-            kit. El manual está en agent-kit/SPEC.md — LEELO PRIMERO, tiene los
-            ejemplos exactos. Si terminás sin haber llamado submitPlanWork(), el
-            ticket queda TRABADO para siempre: el gate espera a que TODOS los
-            planners casteados entreguen, y tu trabajo se pierde entero aunque lo
-            hayas hecho bien.
+            kit. Si terminás sin haberla hecho, el ticket queda TRABADO: el gate
+            espera a que TODOS los planners casteados entreguen, y tu trabajo se
+            pierde entero aunque lo hayas hecho bien.
+
+            EL KIT NO SON HERRAMIENTAS: NO lo busques con ToolSearch ni esperes
+            un tool getTicket/submitPlanWork — no existen como tools y no van a
+            aparecer. Son funciones de un módulo de Node que invocás CON BASH,
+            que sí tenés. Este comando funciona tal cual, copialo:
+
+              node --input-type=module -e "
+              import { fromEnv } from './agent-kit/astro-agent.mjs';
+              const astro = fromEnv();   // sincrónico: lee las ASTRO_* del entorno
+              const t = await astro.getTicket('${{ github.event.client_payload.ticketId }}');
+              console.log(JSON.stringify(t, null, 2));
+              "
+
+            Y así entregás (mismo patrón, cambiando la última parte):
+
+              node --input-type=module -e "
+              import { fromEnv } from './agent-kit/astro-agent.mjs';
+              const astro = fromEnv();
+              await astro.submitPlanWork('${{ github.event.client_payload.ticketId }}', {
+                acceptanceCriteria: [{ id:'AC1', statement:'DADO … CUANDO … ENTONCES …', expected:'…' }],
+              });
+              console.log('entregado');
+              "
+
+            El manual completo con todas las funciones está en agent-kit/SPEC.md.
+            (Esto está acá porque un planner real buscó el kit con ToolSearch, no
+            lo encontró —porque no es un tool—, concluyó que no estaba disponible
+            y PREGUNTÓ si podía seguir sin él. Nadie contesta en un run: terminó
+            en 2 turnos sin entregar y el ticket se trabó 90 minutos. GREGO-23.)
 
             OJO CON UN SEÑUELO DEL REPO: vas a ver archivos specs/<TICKET>/*.md
             de tickets anteriores. NO son la forma de entregar: los escribe el
@@ -1167,7 +1194,11 @@ jobs:
             Pasos:
             1. getMyContext('${{ github.event.client_payload.project }}') y
                getTicket('${{ github.event.client_payload.ticketId }}') — entendé el pedido.
-               Si no podés usar el kit, PARÁ y decilo: sin kit no hay entrega posible.
+               Si el comando de arriba falla, LEÉ EL ERROR y arreglalo (ruta del
+               módulo, variables ASTRO_* del entorno): el kit ESTÁ en este repo,
+               en agent-kit/. No preguntes ni pidas permiso — nadie lee este run
+               mientras corre. Solo si el módulo realmente no existe, paralo y
+               decilo con el error textual.
             2. Explorá el repo (Grep/Glob/Read) para fundamentar tu trabajo en el código real.
             3. Producí SEGÚN TU ROL y dejalo con
                submitPlanWork('${{ github.event.client_payload.ticketId }}', {...}):
