@@ -27,11 +27,13 @@
 #   FIREBASE_PROJECT            ← OPCIONAL: id del proyecto de Firebase Hosting.
 #                                 Habilita el PREVIEW por ticket (canal aislado,
 #                                 igual a prod) que el tester abre antes de aprobar.
-#   ASTRO_KIT_SOURCE            ← OPCIONAL (owner/repo de donde refrescar el
-#                                 kit; default gagrosso/pillbot-claude). Si ese
-#                                 repo es PRIVADO hace falta el secret
-#                                 ASTRO_KIT_TOKEN, o commitear agent-kit/ en este
-#                                 repo (si no, el primer step corta con exit 1).
+#   ASTRO_KIT_VERSION           ← OPCIONAL: versión del kit a usar (default la
+#                                 fijada abajo). Las versiones son INMUTABLES y se
+#                                 verifican por sha256 contra su manifest, así que
+#                                 fijar una acá PINEA el contrato de este repo.
+#   ASTRO_KIT_BASE              ← OPCIONAL: raíz de las releases del kit
+#                                 (default https://astrack.dev/kit). Es pública:
+#                                 NO hace falta ningún token para bajar el kit.
 #   GCP_WIF_PROVIDER            ← OPCIONAL, PUBLICAR SIN CLAVES (OIDC / Workload
 #                                 Identity Federation). Nombre COMPLETO del provider:
 #                                 projects/<NUMBER>/locations/global/workloadIdentityPools/<POOL>/providers/<PROVIDER>
@@ -137,30 +139,57 @@ jobs:
       # El KIT llega al momento de la ejecución: se refresca desde la fuente
       # canónica (último contrato de Astrack); si la red falla, usa la copia
       # local del repo si existe.
+      # El kit llega de la RELEASE PUBLICADA de Astrack, no de un repo privado.
+      # Antes se bajaba de raw.githubusercontent.com/$ASTRO_KIT_SOURCE, que es
+      # PRIVADO: hacía falta ASTRO_KIT_TOKEN, y como NINGÚN repo cliente lo tenía
+      # cargado, la descarga fallaba SIEMPRE y todos caían en la copia vendorizada.
+      # Resultado medido el 2026-08-04: tres versiones distintas del kit conviviendo
+      # en los repos conectados, y cada arreglo había que propagarlo a mano — con el
+      # olvido garantizado de alguno.
+      #
+      # El hosting de Astrack es público y las versiones son INMUTABLES
+      # (scripts/release-kit.mjs aborta si intentás republicar un semver con otro
+      # contenido), así que no hace falta credencial ninguna.
+      #
+      # POR QUÉ SE VERIFICA EL CHECKSUM Y NO ALCANZA EL EXIT CODE DE CURL:
+      # Firebase Hosting sirve el index.html de la SPA con **HTTP 200** para
+      # cualquier ruta que no exista. Un typo en la versión no da 404: da 200 con
+      # una página HTML, y `node` la ejecutaría como si fuera el kit. El manifest
+      # es la única autoridad real. (Me pasó a mí diagnosticando: pedí
+      # astrack.dev/agent-kit/*.mjs, recibí 200 en los tres y di por hecho que el
+      # kit estaba publicado. Eran 1716 bytes de HTML.)
       - name: Preparar el kit de Astrack
         env:
-          KIT_SOURCE: ${{ vars.ASTRO_KIT_SOURCE || 'gagrosso/pillbot-claude' }}
-          KIT_TOKEN: ${{ secrets.ASTRO_KIT_TOKEN }}
+          KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.1.0' }}
         run: |
           mkdir -p agent-kit
-          AUTH=""
-          [ -n "$KIT_TOKEN" ] && AUTH="Authorization: Bearer $KIT_TOKEN"
+          TMP="$(mktemp -d)"
           ok=1
-          for f in astro-agent.mjs astro-report.mjs SPEC.md; do
-            curl -sfL ${AUTH:+-H "$AUTH"} \
-              "https://raw.githubusercontent.com/$KIT_SOURCE/main/agent-kit/$f" \
-              -o "agent-kit/$f.fresh" || { ok=0; break; }
+          for f in manifest.txt astro-agent.mjs astro-report.mjs SPEC.md; do
+            curl -sfL --retry 3 --retry-delay 2 "$KIT_BASE/$KIT_VERSION/$f" -o "$TMP/$f" || { ok=0; break; }
           done
-          if [ "$ok" = "1" ]; then
-            for f in astro-agent.mjs astro-report.mjs SPEC.md; do mv "agent-kit/$f.fresh" "agent-kit/$f"; done
-            echo "kit refrescado desde $KIT_SOURCE"
+          # El checksum manda: si la versión no existe, acá caen 4 copias del
+          # index.html de la SPA.
+          #
+          # NO alcanza con el exit code de `sha256sum -c`: sobre un archivo SIN
+          # líneas válidas avisa "N lines are improperly formatted" por stderr y
+          # sale **0**, porque cero checksums fallaron. Verdadero por vacío. Con
+          # `>/dev/null 2>&1` eso es indistinguible de un kit verificado — probado
+          # contra el hosting real con una versión inexistente: los 4 archivos
+          # dieron 200 (HTML) y la comprobación pasó.
+          # Por eso se cuentan las verificaciones REALES: tienen que ser 3 OK.
+          VERIF=$(cd "$TMP" && sha256sum -c manifest.txt 2>/dev/null | grep -c ': OK$' || true)
+          if [ "$ok" = "1" ] && [ "$VERIF" = "3" ]; then
+            for f in astro-agent.mjs astro-report.mjs SPEC.md; do cp "$TMP/$f" "agent-kit/$f"; done
+            echo "kit $KIT_VERSION verificado: 3/3 checksums OK desde $KIT_BASE"
           elif [ -f agent-kit/astro-agent.mjs ]; then
-            rm -f agent-kit/*.fresh
-            echo "::warning::No pude refrescar el kit — uso la copia local del repo."
+            echo "::warning::El kit $KIT_VERSION no verificó ($VERIF/3 checksums OK) desde $KIT_BASE — uso la copia local del repo, que puede estar vieja."
           else
-            echo "::error::Sin kit: ni descarga ni copia local. Configurá ASTRO_KIT_SOURCE/ASTRO_KIT_TOKEN o commiteá agent-kit/ a este repo."
+            echo "::error::Sin kit: $KIT_BASE/$KIT_VERSION dio $VERIF/3 checksums OK contra su manifest y este repo no tiene agent-kit/ commiteado. Si la versión no existe, Hosting devuelve el index.html del SPA con HTTP 200 — revisá ASTRO_KIT_VERSION."
             exit 1
           fi
+          rm -rf "$TMP"
 
       - name: Preparar rama del ticket
         env:
@@ -1104,25 +1133,57 @@ jobs:
           # El password NO va a GITHUB_ENV: queda local a este step (validación).
           # El step que corre astro-agent lo vuelve a resolver como env propio.
 
+      # El kit llega de la RELEASE PUBLICADA de Astrack, no de un repo privado.
+      # Antes se bajaba de raw.githubusercontent.com/$ASTRO_KIT_SOURCE, que es
+      # PRIVADO: hacía falta ASTRO_KIT_TOKEN, y como NINGÚN repo cliente lo tenía
+      # cargado, la descarga fallaba SIEMPRE y todos caían en la copia vendorizada.
+      # Resultado medido el 2026-08-04: tres versiones distintas del kit conviviendo
+      # en los repos conectados, y cada arreglo había que propagarlo a mano — con el
+      # olvido garantizado de alguno.
+      #
+      # El hosting de Astrack es público y las versiones son INMUTABLES
+      # (scripts/release-kit.mjs aborta si intentás republicar un semver con otro
+      # contenido), así que no hace falta credencial ninguna.
+      #
+      # POR QUÉ SE VERIFICA EL CHECKSUM Y NO ALCANZA EL EXIT CODE DE CURL:
+      # Firebase Hosting sirve el index.html de la SPA con **HTTP 200** para
+      # cualquier ruta que no exista. Un typo en la versión no da 404: da 200 con
+      # una página HTML, y `node` la ejecutaría como si fuera el kit. El manifest
+      # es la única autoridad real. (Me pasó a mí diagnosticando: pedí
+      # astrack.dev/agent-kit/*.mjs, recibí 200 en los tres y di por hecho que el
+      # kit estaba publicado. Eran 1716 bytes de HTML.)
       - name: Preparar el kit de Astrack
         env:
-          KIT_SOURCE: ${{ vars.ASTRO_KIT_SOURCE || 'gagrosso/pillbot-claude' }}
-          KIT_TOKEN: ${{ secrets.ASTRO_KIT_TOKEN }}
+          KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.1.0' }}
         run: |
           mkdir -p agent-kit
-          AUTH=""
-          [ -n "$KIT_TOKEN" ] && AUTH="Authorization: Bearer $KIT_TOKEN"
+          TMP="$(mktemp -d)"
           ok=1
-          for f in astro-agent.mjs astro-report.mjs SPEC.md; do
-            curl -sfL ${AUTH:+-H "$AUTH"} \
-              "https://raw.githubusercontent.com/$KIT_SOURCE/main/agent-kit/$f" \
-              -o "agent-kit/$f.fresh" || { ok=0; break; }
+          for f in manifest.txt astro-agent.mjs astro-report.mjs SPEC.md; do
+            curl -sfL --retry 3 --retry-delay 2 "$KIT_BASE/$KIT_VERSION/$f" -o "$TMP/$f" || { ok=0; break; }
           done
-          if [ "$ok" = "1" ]; then
-            for f in astro-agent.mjs astro-report.mjs SPEC.md; do mv "agent-kit/$f.fresh" "agent-kit/$f"; done
-          elif [ ! -f agent-kit/astro-agent.mjs ]; then
-            echo "::error::Sin kit: ni descarga ni copia local."; exit 1
+          # El checksum manda: si la versión no existe, acá caen 4 copias del
+          # index.html de la SPA.
+          #
+          # NO alcanza con el exit code de `sha256sum -c`: sobre un archivo SIN
+          # líneas válidas avisa "N lines are improperly formatted" por stderr y
+          # sale **0**, porque cero checksums fallaron. Verdadero por vacío. Con
+          # `>/dev/null 2>&1` eso es indistinguible de un kit verificado — probado
+          # contra el hosting real con una versión inexistente: los 4 archivos
+          # dieron 200 (HTML) y la comprobación pasó.
+          # Por eso se cuentan las verificaciones REALES: tienen que ser 3 OK.
+          VERIF=$(cd "$TMP" && sha256sum -c manifest.txt 2>/dev/null | grep -c ': OK$' || true)
+          if [ "$ok" = "1" ] && [ "$VERIF" = "3" ]; then
+            for f in astro-agent.mjs astro-report.mjs SPEC.md; do cp "$TMP/$f" "agent-kit/$f"; done
+            echo "kit $KIT_VERSION verificado: 3/3 checksums OK desde $KIT_BASE"
+          elif [ -f agent-kit/astro-agent.mjs ]; then
+            echo "::warning::El kit $KIT_VERSION no verificó ($VERIF/3 checksums OK) desde $KIT_BASE — uso la copia local del repo, que puede estar vieja."
+          else
+            echo "::error::Sin kit: $KIT_BASE/$KIT_VERSION dio $VERIF/3 checksums OK contra su manifest y este repo no tiene agent-kit/ commiteado. Si la versión no existe, Hosting devuelve el index.html del SPA con HTTP 200 — revisá ASTRO_KIT_VERSION."
+            exit 1
           fi
+          rm -rf "$TMP"
 
       - uses: anthropics/claude-code-action@v1
         timeout-minutes: 20
@@ -1359,25 +1420,57 @@ jobs:
           # El password NO va a GITHUB_ENV: queda local a este step (validación).
           # El step que corre astro-agent lo vuelve a resolver como env propio.
 
+      # El kit llega de la RELEASE PUBLICADA de Astrack, no de un repo privado.
+      # Antes se bajaba de raw.githubusercontent.com/$ASTRO_KIT_SOURCE, que es
+      # PRIVADO: hacía falta ASTRO_KIT_TOKEN, y como NINGÚN repo cliente lo tenía
+      # cargado, la descarga fallaba SIEMPRE y todos caían en la copia vendorizada.
+      # Resultado medido el 2026-08-04: tres versiones distintas del kit conviviendo
+      # en los repos conectados, y cada arreglo había que propagarlo a mano — con el
+      # olvido garantizado de alguno.
+      #
+      # El hosting de Astrack es público y las versiones son INMUTABLES
+      # (scripts/release-kit.mjs aborta si intentás republicar un semver con otro
+      # contenido), así que no hace falta credencial ninguna.
+      #
+      # POR QUÉ SE VERIFICA EL CHECKSUM Y NO ALCANZA EL EXIT CODE DE CURL:
+      # Firebase Hosting sirve el index.html de la SPA con **HTTP 200** para
+      # cualquier ruta que no exista. Un typo en la versión no da 404: da 200 con
+      # una página HTML, y `node` la ejecutaría como si fuera el kit. El manifest
+      # es la única autoridad real. (Me pasó a mí diagnosticando: pedí
+      # astrack.dev/agent-kit/*.mjs, recibí 200 en los tres y di por hecho que el
+      # kit estaba publicado. Eran 1716 bytes de HTML.)
       - name: Preparar el kit de Astrack
         env:
-          KIT_SOURCE: ${{ vars.ASTRO_KIT_SOURCE || 'gagrosso/pillbot-claude' }}
-          KIT_TOKEN: ${{ secrets.ASTRO_KIT_TOKEN }}
+          KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.1.0' }}
         run: |
           mkdir -p agent-kit
-          AUTH=""
-          [ -n "$KIT_TOKEN" ] && AUTH="Authorization: Bearer $KIT_TOKEN"
+          TMP="$(mktemp -d)"
           ok=1
-          for f in astro-agent.mjs astro-report.mjs SPEC.md; do
-            curl -sfL ${AUTH:+-H "$AUTH"} \
-              "https://raw.githubusercontent.com/$KIT_SOURCE/main/agent-kit/$f" \
-              -o "agent-kit/$f.fresh" || { ok=0; break; }
+          for f in manifest.txt astro-agent.mjs astro-report.mjs SPEC.md; do
+            curl -sfL --retry 3 --retry-delay 2 "$KIT_BASE/$KIT_VERSION/$f" -o "$TMP/$f" || { ok=0; break; }
           done
-          if [ "$ok" = "1" ]; then
-            for f in astro-agent.mjs astro-report.mjs SPEC.md; do mv "agent-kit/$f.fresh" "agent-kit/$f"; done
-          elif [ ! -f agent-kit/astro-agent.mjs ]; then
-            echo "::error::Sin kit: ni descarga ni copia local."; exit 1
+          # El checksum manda: si la versión no existe, acá caen 4 copias del
+          # index.html de la SPA.
+          #
+          # NO alcanza con el exit code de `sha256sum -c`: sobre un archivo SIN
+          # líneas válidas avisa "N lines are improperly formatted" por stderr y
+          # sale **0**, porque cero checksums fallaron. Verdadero por vacío. Con
+          # `>/dev/null 2>&1` eso es indistinguible de un kit verificado — probado
+          # contra el hosting real con una versión inexistente: los 4 archivos
+          # dieron 200 (HTML) y la comprobación pasó.
+          # Por eso se cuentan las verificaciones REALES: tienen que ser 3 OK.
+          VERIF=$(cd "$TMP" && sha256sum -c manifest.txt 2>/dev/null | grep -c ': OK$' || true)
+          if [ "$ok" = "1" ] && [ "$VERIF" = "3" ]; then
+            for f in astro-agent.mjs astro-report.mjs SPEC.md; do cp "$TMP/$f" "agent-kit/$f"; done
+            echo "kit $KIT_VERSION verificado: 3/3 checksums OK desde $KIT_BASE"
+          elif [ -f agent-kit/astro-agent.mjs ]; then
+            echo "::warning::El kit $KIT_VERSION no verificó ($VERIF/3 checksums OK) desde $KIT_BASE — uso la copia local del repo, que puede estar vieja."
+          else
+            echo "::error::Sin kit: $KIT_BASE/$KIT_VERSION dio $VERIF/3 checksums OK contra su manifest y este repo no tiene agent-kit/ commiteado. Si la versión no existe, Hosting devuelve el index.html del SPA con HTTP 200 — revisá ASTRO_KIT_VERSION."
+            exit 1
           fi
+          rm -rf "$TMP"
 
       - name: Traer la rama del ticket + diff vs main
         env:
@@ -1553,25 +1646,57 @@ jobs:
             echo "ASTRO_AGENT_ID=$AGENT_ID"
             echo "ASTRO_AGENT_EMAIL=$AGENT_ID@$ASTRO_ORG_ID.agents.astrack.dev"
           } >> "$GITHUB_ENV"
+      # El kit llega de la RELEASE PUBLICADA de Astrack, no de un repo privado.
+      # Antes se bajaba de raw.githubusercontent.com/$ASTRO_KIT_SOURCE, que es
+      # PRIVADO: hacía falta ASTRO_KIT_TOKEN, y como NINGÚN repo cliente lo tenía
+      # cargado, la descarga fallaba SIEMPRE y todos caían en la copia vendorizada.
+      # Resultado medido el 2026-08-04: tres versiones distintas del kit conviviendo
+      # en los repos conectados, y cada arreglo había que propagarlo a mano — con el
+      # olvido garantizado de alguno.
+      #
+      # El hosting de Astrack es público y las versiones son INMUTABLES
+      # (scripts/release-kit.mjs aborta si intentás republicar un semver con otro
+      # contenido), así que no hace falta credencial ninguna.
+      #
+      # POR QUÉ SE VERIFICA EL CHECKSUM Y NO ALCANZA EL EXIT CODE DE CURL:
+      # Firebase Hosting sirve el index.html de la SPA con **HTTP 200** para
+      # cualquier ruta que no exista. Un typo en la versión no da 404: da 200 con
+      # una página HTML, y `node` la ejecutaría como si fuera el kit. El manifest
+      # es la única autoridad real. (Me pasó a mí diagnosticando: pedí
+      # astrack.dev/agent-kit/*.mjs, recibí 200 en los tres y di por hecho que el
+      # kit estaba publicado. Eran 1716 bytes de HTML.)
       - name: Preparar el kit de Astrack
         env:
-          KIT_SOURCE: ${{ vars.ASTRO_KIT_SOURCE || 'gagrosso/pillbot-claude' }}
-          KIT_TOKEN: ${{ secrets.ASTRO_KIT_TOKEN }}
+          KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.1.0' }}
         run: |
           mkdir -p agent-kit
-          AUTH=""
-          [ -n "$KIT_TOKEN" ] && AUTH="Authorization: Bearer $KIT_TOKEN"
+          TMP="$(mktemp -d)"
           ok=1
-          for f in astro-agent.mjs astro-report.mjs; do
-            curl -sfL ${AUTH:+-H "$AUTH"} \
-              "https://raw.githubusercontent.com/$KIT_SOURCE/main/agent-kit/$f" \
-              -o "agent-kit/$f.fresh" || { ok=0; break; }
+          for f in manifest.txt astro-agent.mjs astro-report.mjs SPEC.md; do
+            curl -sfL --retry 3 --retry-delay 2 "$KIT_BASE/$KIT_VERSION/$f" -o "$TMP/$f" || { ok=0; break; }
           done
-          if [ "$ok" = "1" ]; then
-            for f in astro-agent.mjs astro-report.mjs; do mv "agent-kit/$f.fresh" "agent-kit/$f"; done
-          elif [ ! -f agent-kit/astro-agent.mjs ]; then
-            echo "::error::Sin kit disponible."; exit 1
+          # El checksum manda: si la versión no existe, acá caen 4 copias del
+          # index.html de la SPA.
+          #
+          # NO alcanza con el exit code de `sha256sum -c`: sobre un archivo SIN
+          # líneas válidas avisa "N lines are improperly formatted" por stderr y
+          # sale **0**, porque cero checksums fallaron. Verdadero por vacío. Con
+          # `>/dev/null 2>&1` eso es indistinguible de un kit verificado — probado
+          # contra el hosting real con una versión inexistente: los 4 archivos
+          # dieron 200 (HTML) y la comprobación pasó.
+          # Por eso se cuentan las verificaciones REALES: tienen que ser 3 OK.
+          VERIF=$(cd "$TMP" && sha256sum -c manifest.txt 2>/dev/null | grep -c ': OK$' || true)
+          if [ "$ok" = "1" ] && [ "$VERIF" = "3" ]; then
+            for f in astro-agent.mjs astro-report.mjs SPEC.md; do cp "$TMP/$f" "agent-kit/$f"; done
+            echo "kit $KIT_VERSION verificado: 3/3 checksums OK desde $KIT_BASE"
+          elif [ -f agent-kit/astro-agent.mjs ]; then
+            echo "::warning::El kit $KIT_VERSION no verificó ($VERIF/3 checksums OK) desde $KIT_BASE — uso la copia local del repo, que puede estar vieja."
+          else
+            echo "::error::Sin kit: $KIT_BASE/$KIT_VERSION dio $VERIF/3 checksums OK contra su manifest y este repo no tiene agent-kit/ commiteado. Si la versión no existe, Hosting devuelve el index.html del SPA con HTTP 200 — revisá ASTRO_KIT_VERSION."
+            exit 1
           fi
+          rm -rf "$TMP"
       # El merge se hace LOCAL y NO se pushea acá. El push vive más abajo, DESPUÉS de
       # build + suite + secret-scan sobre el árbol ya integrado. Antes este step
       # pusheaba a main y el Build corría después: si el rebase producía un main roto
