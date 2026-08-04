@@ -298,6 +298,19 @@ export function createClient({ apiKey, projectId, orgId, agentId, email, passwor
   // (server-side). `key` = `${ticketId}:${campo}` para no mezclar artefactos.
   const RETRY_BUDGET = 2;
   const retryCounts = new Map();
+
+  /** Texto de un artefacto de prosa SIN destruirlo si vino como objeto.
+   *  `String(objeto)` da "[object Object]": el trabajo del planner se pierde y no
+   *  queda rastro de que existió. Pasó de verdad — gemma entregó su planSpec en
+   *  GREGO-23 y el ticket guardó esa cadena. Un objeto se serializa legible; que
+   *  NO sea lo esperado lo dice la validación (que ahora corre sobre el valor
+   *  crudo), no una conversión silenciosa. */
+  const asText = (v) => {
+    if (typeof v === 'string') return v;
+    if (v && typeof v === 'object') { try { return JSON.stringify(v, null, 2); } catch { return String(v); } }
+    return String(v);
+  };
+
   function checkArtifact(key, result, label) {
     if (result.ok) { retryCounts.delete(key); return; }
     const n = (retryCounts.get(key) || 0) + 1;
@@ -575,11 +588,20 @@ export function createClient({ apiKey, projectId, orgId, agentId, email, passwor
   /** R2.3c — archiva el link a la transcripción COMPLETA del run (artifact de CI,
    *  claude-execution-output.json) — la fuente primaria queda en GitHub Actions;
    *  este campo es el link, no una copia. Lo llama el workflow, no el agente. */
-  async function setTranscript(id, { runUrl }) {
+  /** runUrl: el link al run de Actions (sirve solo a quien tenga el repo).
+   *  steps/outcome/total: el DIARIO del run (renderRunDiary), que es lo que ve
+   *  quien NO tiene cuenta de GitHub — o sea, el cliente. Opcionales: si el
+   *  workflow no los pasa, se guarda solo el link (degradación segura). */
+  async function setTranscript(id, { runUrl, steps = null, outcome = null, total = 0 }) {
     if (!isSafeHttpsUrl(runUrl)) throw new Error('setTranscript: runUrl debe ser https:// válida.');
     const t = await getTicket(id);
     if (!t) throw new Error(`setTranscript: no existe ${id}`);
     const transcript = { runUrl, at: nowStr() };
+    if (Array.isArray(steps) && steps.length) {
+      transcript.steps = steps;
+      transcript.total = Number(total) || steps.length;
+      if (outcome) transcript.outcome = outcome;
+    }
     await patch(id, { transcript }, ['transcript']);
     return id;
   }
@@ -707,12 +729,17 @@ export function createClient({ apiKey, projectId, orgId, agentId, email, passwor
       });
     }
     if (uiSpec != null) {
-      checkArtifact(`${id}:uiSpec`, validateUiSpec(String(uiSpec)), 'submitPlanWork:uiSpec');
-      set.uiSpec = scrubSecrets(String(uiSpec), `submitPlanWork:${id}:uiSpec`).text.slice(0, 12000);
+      // La validación va sobre el valor CRUDO: con String() adentro, el chequeo
+      // `typeof text !== 'string'` no podía fallar nunca — la guarda quedaba anulada
+      // por la conversión aplicada a su propia entrada.
+      checkArtifact(`${id}:uiSpec`, validateUiSpec(uiSpec), 'submitPlanWork:uiSpec');
+      set.uiSpec = scrubSecrets(asText(uiSpec), `submitPlanWork:${id}:uiSpec`).text.slice(0, 12000);
     }
     if (planSpec != null) {
-      checkArtifact(`${id}:planSpec`, validatePlanSpec(String(planSpec)), 'submitPlanWork:planSpec');
-      set.planSpec = scrubSecrets(String(planSpec), `submitPlanWork:${id}:planSpec`).text.slice(0, 12000);
+      // Ídem uiSpec: validar el crudo, y si degrada tras los reintentos, serializar
+      // legible en vez de "[object Object]".
+      checkArtifact(`${id}:planSpec`, validatePlanSpec(planSpec), 'submitPlanWork:planSpec');
+      set.planSpec = scrubSecrets(asText(planSpec), `submitPlanWork:${id}:planSpec`).text.slice(0, 12000);
     }
     // R3.1a: la forma canónica de un adr[] es UN objeto {id?,title,decision,
     // rationale?} (agent-kit/schemas/adr.schema.json) — SIEMPRE persistimos esa
@@ -915,6 +942,47 @@ export function createClient({ apiKey, projectId, orgId, agentId, email, passwor
   }
 
   /** Marca el fin del run para LIBERAR la cola del proyecto (avanza el siguiente). */
+  /** DECLINAR ≠ FALLAR. Usalo cuando decidís, con criterio, que este ticket NO
+   *  se debe construir tal como está. NO es para cuando algo te sale mal: si
+   *  intentaste y no pudiste, eso es un fallo y se reporta como fallo.
+   *
+   *  Sin esto, un buen juicio ("es un ticket paraguas ya partido en 4 hijos")
+   *  terminaba el run sin entregar y el sistema lo archivaba como ❌ error: te
+   *  ensuciaba la tasa de acierto a la primera y encima invitaba al humano a
+   *  apretar "Reintentar" sobre algo que no hay que reintentar.
+   *
+   *  kind (enum CERRADO — si mandás otro, tira error a propósito):
+   *    'alcance'   el ticket no es construible así (paraguas, alcance que se pisa)
+   *    'permisos'  imposible con los permisos del job (p.ej. tocar .github/workflows)
+   *    'config'    falta un secret / variable / credencial del proyecto
+   *    'bloqueado' depende de otro ticket que todavía no está
+   *
+   *  Después de declinar: NO pases a en-test, NO commitees a medias. Dejá el
+   *  detalle en addNote() — el motivo de acá es el titular, la nota es el cuerpo.
+   */
+  async function decline(id, reason, kind) {
+    const KINDS = ['alcance', 'permisos', 'config', 'bloqueado'];
+    const k = String(kind || '').trim().toLowerCase();
+    if (!KINDS.includes(k)) {
+      throw new Error(`decline: kind inválido '${kind}'. Usá uno de: ${KINDS.join(', ')}. No se declina sin causa tipada.`);
+    }
+    const motivo = String(reason || '').trim();
+    if (motivo.length < 15) {
+      throw new Error('decline: el motivo tiene que explicar POR QUÉ (mínimo 15 caracteres). Un declinado sin causa es peor que un error honesto.');
+    }
+    const t = await getTicket(id);
+    if (!t) throw new Error(`decline: no existe ${id}`);
+    const declined = {
+      by: agentId, kind: k, reason: motivo.slice(0, 600),
+      // runId ata el declinado a ESTE run: sin esto, un declinado viejo taparía
+      // el error real de un run posterior.
+      runId: String(t.dispatch?.runId || ''), at: new Date().toISOString(),
+    };
+    await patch(id, { declined }, ['declined']);
+    await addNote(id, `⏸️ DECLINADO (${k}): ${declined.reason}`);
+    return id;
+  }
+
   async function setQueueDone(id) {
     const t = await getTicket(id);
     if (!t) throw new Error(`setQueueDone: no existe ${id}`);
@@ -1043,7 +1111,97 @@ export function createClient({ apiKey, projectId, orgId, agentId, email, passwor
     }
   }
 
-  return { agentId, signIn, getMyBrief, getMyContext, listMyTickets, listProposalHistory, getTicket, getAttachment, saveAttachment, createTicket, decompose, setState, reassign, comment, addNote, addToOutbox, setPreview, setProdDeploy, setQueueFiles, setQueueDone, setRunCost, setRunMetrics, sendHeartbeat, logEvent, setQualityEval, submitReview, submitReport, submitPlanWork, addLearning, getRelevantLearnings, setPullRequest, setTranscript, checkCriterion };
+  return { agentId, signIn, getMyBrief, getMyContext, listMyTickets, listProposalHistory, getTicket, getAttachment, saveAttachment, createTicket, decompose, setState, reassign, comment, addNote, addToOutbox, setPreview, setProdDeploy, setQueueFiles, setQueueDone, setRunCost, setRunMetrics, sendHeartbeat, logEvent, setQualityEval, submitReview, submitReport, submitPlanWork, addLearning, getRelevantLearnings, setPullRequest, setTranscript, checkCriterion, reworkBrief, decline };
+}
+
+/** MEMORIA DEL REBOTE, del lado del agente: convierte ticket.feedbackLog en el
+ *  texto que el que rehace tiene que leer ANTES de tocar código. Devuelve '' si
+ *  es el primer intento.
+ *
+ *  Por qué existe además del prompt: pedirle a un modelo que camine un array
+ *  anidado (`items[].findings[]`) y ordene por ciclo es pedirle trabajo que una
+ *  función hace sin error. Una llamada, texto plano, imposible de leer "a medias".
+ *
+ *  DUPLICACIÓN DELIBERADA con functions/reworkMemory.js (renderFeedbackBrief):
+ *  son dos runtimes distintos — el kit corre en el CI del cliente y no puede
+ *  requerir functions/. El formato lo fija el CONTRATO de feedbackLog, no el
+ *  código compartido; si cambia la forma del dato hay que tocar los dos.
+ *  Escritura: SOLO el Admin SDK (firestore.rules) — acá es de lectura. */
+export function reworkBrief(ticket) {
+  const log = ticket && Array.isArray(ticket.feedbackLog) ? ticket.feedbackLog : [];
+  const entries = log.filter((e) => e && Array.isArray(e.items));
+  if (!entries.length) return '';
+  const out = [];
+  // Del ciclo más reciente al más viejo: lo último que le marcaron va primero.
+  for (const e of [...entries].sort((a, b) => (Number(b.cycle) || 0) - (Number(a.cycle) || 0))) {
+    const quien = e.source === 'humano'
+      ? 'RECHAZO HUMANO'
+      : `BLOQUEO DE LA CUADRILLA (${(e.by || []).join(', ') || 'revisores'})`;
+    out.push(`— intento ${e.cycle} · ${quien}${e.category ? ` · categoría ${e.category}` : ''}`);
+    for (const it of e.items) {
+      out.push(`  • ${it.agentId || '?'}${it.severity ? ` [${it.severity}]` : ''}: ${it.summary || '(sin resumen)'}`);
+      for (const f of (Array.isArray(it.findings) ? it.findings : [])) out.push(`      - ${f}`);
+    }
+  }
+  return out.join('\n');
+}
+
+/** DIARIO DEL RUN — qué hizo el agente, paso por paso, DENTRO de Astrack.
+ *
+ *  EL PROBLEMA QUE RESUELVE: hasta ahora la única forma de ver cómo corrió un
+ *  agente era el link a GitHub Actions. Ese link es inútil para todo el que no
+ *  tenga acceso al repo privado — o sea, para el cliente, para el resto del
+ *  equipo, y para cualquiera a quien se le muestre el producto. Se le daba un
+ *  link que devuelve 404 y se le pedía que confiara.
+ *
+ *  Esto extrae del log del run una lista ACOTADA y LIMPIA de los pasos reales
+ *  (cada llamada a una herramienta) y la guarda en el ticket, que sí se lee con
+ *  la sesión de Astrack. No reemplaza al log de Actions para depurar a fondo:
+ *  reemplaza al "confiá en mí" para entender qué pasó.
+ *
+ *  Decisiones deliberadas:
+ *   · SCRUBEADO. Los comandos del agente pueden llevar tokens; pasan por el
+ *     mismo scrubber que las notas antes de persistirse.
+ *   · ACOTADO. Tope duro de pasos y de largo por paso: esto va a un doc de
+ *     Firestore (1 MiB) y nadie lee 400 líneas.
+ *   · SIN TRUNCAR EN SILENCIO. Si se recortan pasos del medio, queda una marca
+ *     que dice cuántos — un resumen que aparenta ser completo es peor que uno
+ *     que declara su recorte.
+ *  PURA y exportada para poder testearla sin red. */
+export function renderRunDiary(log, { max = 60, maxDetail = 140 } = {}) {
+  const eventos = Array.isArray(log) ? log : (log && typeof log === 'object' ? [log] : []);
+  const pasos = [];
+  const outcome = { subtype: '', isError: false, turns: 0, ms: 0 };
+  const visitar = (n) => {
+    if (!n || typeof n !== 'object') return;
+    if (Array.isArray(n)) { for (const x of n) visitar(x); return; }
+    if (n.type === 'tool_use' && n.name) {
+      const i = n.input || {};
+      const crudo = i.command ?? i.file_path ?? i.pattern ?? i.path ?? i.description ?? i.prompt ?? '';
+      const detalle = scrubSecrets(String(crudo), 'runDiary').text
+        .replace(/\s+/g, ' ').trim().slice(0, maxDetail);
+      pasos.push({ tool: String(n.name).slice(0, 40), detail: detalle });
+    }
+    if (n.type === 'result') {
+      outcome.subtype = String(n.subtype || '').slice(0, 40);
+      outcome.isError = !!n.is_error;
+      outcome.turns = Number(n.num_turns) || 0;
+      outcome.ms = Number(n.duration_ms) || 0;
+    }
+    for (const k of Object.keys(n)) visitar(n[k]);
+  };
+  visitar(eventos);
+  let steps = pasos;
+  if (pasos.length > max) {
+    const mitad = Math.floor(max / 2);
+    const omitidos = pasos.length - max;
+    steps = [
+      ...pasos.slice(0, mitad),
+      { tool: '…', detail: `${omitidos} paso(s) omitido(s) del medio — el log completo está en el run` },
+      ...pasos.slice(pasos.length - (max - mitad)),
+    ];
+  }
+  return { steps, outcome, total: pasos.length };
 }
 
 /** Crea un cliente leyendo la config de variables de entorno ASTRO_*. */
