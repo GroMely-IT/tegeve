@@ -161,7 +161,7 @@ jobs:
       - name: Preparar el kit de Astrack
         env:
           KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
-          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.1.0' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.2.0' }}
         run: |
           mkdir -p agent-kit
           TMP="$(mktemp -d)"
@@ -221,6 +221,21 @@ jobs:
             # rama tal cual (mejor un run sobre base vieja que ningún run), pero
             # con una nota VISIBLE — un conflicto lo resuelve un humano, no un
             # reintento.
+            # EL KIT NO PUEDE ENSUCIAR EL ÁRBOL ANTES DE UN REBASE. El step que
+            # refresca el kit hace `cp` sobre agent-kit/ EN EL ÁRBOL DE TRABAJO. En un
+            # repo con el kit VENDORIZADO (commiteado), eso deja cambios sin commitear
+            # apenas la versión publicada difiere de la copia del repo — y git rebase
+            # se niega: "cannot rebase: You have unstaged changes". Acá el fallo era
+            # peor que un error, porque el rebase corre con `>/dev/null 2>&1` y su
+            # `else` culpa a un CONFLICTO que nunca existió: la nota le pedía al humano
+            # un rebase manual por un problema del runner.
+            # El kit es la herramienta del runner, no parte de la entrega: se aparta,
+            # el git corre sobre el árbol limpio, y se restaura enseguida.
+            KIT_VIVO="$RUNNER_TEMP/kit-vivo"
+            if [ -d agent-kit ] && ! git diff --quiet -- agent-kit/ 2>/dev/null; then
+              rm -rf "$KIT_VIVO"; mkdir -p "$KIT_VIVO"; cp -R agent-kit/. "$KIT_VIVO"/
+              git checkout -- agent-kit/
+            fi
             git fetch origin main >/dev/null 2>&1 || true
             BEHIND=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
             if [ "$BEHIND" != "0" ]; then
@@ -243,6 +258,8 @@ jobs:
                   "⚠️ La rama de este ticket está $BEHIND commit(s) atrás de main y CONFLICTÚA al ponerse al día. El run sigue sobre la base vieja, así que puede fallar por algo ya arreglado en main. Esto lo resuelve un humano (rebase manual), no un reintento." || true
               fi
             fi
+            # Devolver el kit fresco: de acá en adelante el agente lo usa.
+            [ -d "$KIT_VIVO" ] && cp -R "$KIT_VIVO"/. agent-kit/ || true
           else
             git checkout -B "ticket/$TICKET_ID"
             # R2.3c: commit vacío + push INMEDIATO — sin esto la rama es idéntica a
@@ -1155,7 +1172,7 @@ jobs:
       - name: Preparar el kit de Astrack
         env:
           KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
-          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.1.0' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.2.0' }}
         run: |
           mkdir -p agent-kit
           TMP="$(mktemp -d)"
@@ -1442,7 +1459,7 @@ jobs:
       - name: Preparar el kit de Astrack
         env:
           KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
-          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.1.0' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.2.0' }}
         run: |
           mkdir -p agent-kit
           TMP="$(mktemp -d)"
@@ -1668,7 +1685,7 @@ jobs:
       - name: Preparar el kit de Astrack
         env:
           KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
-          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.1.0' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.2.0' }}
         run: |
           mkdir -p agent-kit
           TMP="$(mktemp -d)"
@@ -1711,13 +1728,38 @@ jobs:
         run: |
           git config user.name "Astrack Deploy"
           git config user.email "deploy@astrack.dev"
+          # EL KIT NO PUEDE ENSUCIAR EL ÁRBOL ANTES DE INTEGRAR (ver el mismo bloque en
+          # 'trabajar'). El step que refresca el kit hace `cp` sobre agent-kit/ EN EL
+          # ÁRBOL DE TRABAJO; si el repo tiene el kit VENDORIZADO, eso deja cambios sin
+          # commitear y `git rebase` aborta con "cannot rebase: You have unstaged
+          # changes". Pasó en GREGO-24, el PRIMER deploy después de publicar el kit
+          # 1.2.0: mientras la copia commiteada coincidía con la publicada el `cp` no
+          # dejaba diff y el choque estaba latente. Es decir: refrescar el kit —el
+          # mecanismo que existe para que los repos no queden con versiones viejas—
+          # rompía la publicación de todo repo que lo tuviera vendorizado.
+          KIT_VIVO="$RUNNER_TEMP/kit-vivo"
+          if [ -d agent-kit ] && ! git diff --quiet -- agent-kit/ 2>/dev/null; then
+            rm -rf "$KIT_VIVO"; mkdir -p "$KIT_VIVO"; cp -R agent-kit/. "$KIT_VIVO"/
+            git checkout -- agent-kit/
+            echo "kit refrescado apartado — la integración corre sobre el árbol limpio"
+          fi
           if ! git fetch origin "ticket/$TICKET_ID"; then
-            if git log origin/main --oneline -200 | grep -qE "${TICKET_ID}([^0-9]|$)"; then
-              echo "::notice::$TICKET_ID ya está en main (deploy previo) — idempotente."
+            # IDEMPOTENCIA: solo cuenta como "ya publicado" la huella que deja ESTE
+            # workflow. Antes se grepeaba el ID del ticket sobre los últimos 200
+            # subjects de main, y eso lo dispara CUALQUIER commit que lo nombre —
+            # sobre todo el merge manual del draft PR desde la UI de GitHub, que
+            # escribe "Merge pull request #N from .../ticket/<ID>" y ofrece borrar la
+            # rama justo después. Resultado: un cambio que entró a main SIN pasar por
+            # build, suite ni secret-scan quedaba marcado 'live' en el ticket, con la
+            # firma humana consumida y sin que nadie se enterara. El mensaje de abajo
+            # lo escribe únicamente el step de integración de más abajo.
+            if git log origin/main --format='%s' -200 | grep -qF "deploy: integra $TICKET_ID a producción"; then
+              echo "::notice::$TICKET_ID ya está en main (deploy previo de Astrack) — idempotente."
               echo "already=1" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            echo "::error::No existe la rama ticket/$TICKET_ID."
+            echo "reason=sin-rama" >> "$GITHUB_OUTPUT"
+            echo "::error::No existe la rama ticket/$TICKET_ID y main no tiene el commit de integración de Astrack para este ticket. Si lo mergeaste a mano, ese cambio NO pasó por las compuertas."
             exit 1
           fi
           # SHA-GATE (E0/T0.4, hallazgo #3 TOCTOU): se publica EL COMMIT FIRMADO, no el tip
@@ -1727,24 +1769,65 @@ jobs:
           if [ -n "$REVIEWED_SHA" ]; then
             TIP=$(git rev-parse "origin/ticket/$TICKET_ID")
             if [ "$REVIEWED_SHA" != "$TIP" ]; then
+              echo "reason=sha-gate" >> "$GITHUB_OUTPUT"
               echo "::error::El tip de ticket/$TICKET_ID ($TIP) ≠ el commit firmado ($REVIEWED_SHA). Se publica SOLO lo firmado: abortando. Volvé a aprobar la entrega para firmar el commit nuevo."
               exit 1
             fi
             REF="$REVIEWED_SHA"
           fi
+          # CUÁNTO se movió main desde la base de este ticket. Es el dato que decide
+          # si un rojo posterior es culpa del ticket o del orden de publicación: si
+          # main NO se movió, el ticket se probó contra este mismo árbol y el rojo es
+          # suyo; si se movió, el rojo puede ser un conflicto semántico (git resolvió
+          # el texto y el código igual dejó de funcionar). Hasta ahora nadie lo medía
+          # en el camino a prod, así que las dos causas terminaban en el mismo
+          # 'failed' con la misma receta inútil ("volvé a aprobar la publicación").
+          BASE=$(git merge-base "$REF" origin/main 2>/dev/null || echo "")
+          MOVED=0
+          [ -n "$BASE" ] && MOVED=$(git rev-list --count "$BASE..origin/main" 2>/dev/null || echo 0)
+          echo "moved=$MOVED" >> "$GITHUB_OUTPUT"
+          [ "$MOVED" -gt 0 ] && echo "::notice::main avanzó $MOVED commit(s) desde la base de este ticket — las compuertas corren sobre el árbol integrado."
           git checkout -B "_integrar" "$REF"
           if ! git rebase origin/main; then
             git rebase --abort || true
+            echo "reason=rebase-conflict" >> "$GITHUB_OUTPUT"
             echo "::error::Conflicto al rebasear ticket/$TICKET_ID sobre main."
             exit 1
           fi
           git checkout main
           if ! git merge --no-ff -m "deploy: integra $TICKET_ID a producción (firma única)" "_integrar"; then
             git merge --abort || true
+            echo "reason=merge-conflict" >> "$GITHUB_OUTPUT"
             echo "::error::Conflicto al integrar ticket/$TICKET_ID con main."
             exit 1
           fi
+          # INTEGRACIÓN VACÍA: `git rebase` descarta en silencio los commits cuyo
+          # parche ya está upstream (mismo patch-id). Si otro ticket —o un humano—
+          # ya aplicó exactamente lo mismo, _integrar queda sin contenido y el
+          # --no-ff igual fabrica un merge commit: el ticket decía "🚀 publicado en
+          # producción" sin haber aportado una línea, y la rama se borraba después.
+          # No es un error (el cambio ESTÁ en main), pero no se puede callar.
+          if git diff --quiet origin/main HEAD; then
+            echo "empty=1" >> "$GITHUB_OUTPUT"
+            echo "::warning::La integración de $TICKET_ID no aporta ningún cambio a main: su contenido ya estaba publicado (rebase descartó los commits por patch-id idéntico)."
+          fi
+          # El sha que queda como tip de main. Es la contraparte publicada de la firma:
+          # reviewedSha apunta a la rama ANTES del rebase y git reescribe esos commits,
+          # así que sin esto no hay forma de demostrar después qué se publicó ni de
+          # detectar que main se movió por afuera de Astrack.
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "✓ integrado en main LOCAL. El push va después de las compuertas (build/suite/secret-scan)."
+      # Devolver el kit fresco apartado por el step anterior. `always()` porque los
+      # steps que SIGUEN a un fallo de integración —y sobre todo el que registra el
+      # estado en el ticket— usan agent-kit/: sin esto, un deploy fallido reportaría
+      # con el kit viejo del repo y perdería el motivo y el sha.
+      - name: Restaurar el kit refrescado
+        if: always()
+        run: |
+          KIT_VIVO="$RUNNER_TEMP/kit-vivo"
+          [ -d "$KIT_VIVO" ] || exit 0
+          cp -R "$KIT_VIVO"/. agent-kit/
+          echo "kit refrescado restaurado"
       # Build previo al deploy, AGNÓSTICO al lenguaje (mismo criterio que en
       # 'trabajar': stack del proyecto vía client_payload, o autodetección).
       - name: Detectar stack del proyecto
@@ -1853,6 +1936,7 @@ jobs:
       # el código del ticket ya no funciona contra el main nuevo. Eso no lo puede ver
       # la etapa de trabajo, que corrió antes y contra otro main.
       - name: Build (compuerta previa al push)
+        id: build_gate
         if: steps.merge.outputs.already != '1' && steps.stack.outputs.build != ''
         env:
           BUILD_CMD: ${{ steps.stack.outputs.build }}
@@ -1874,20 +1958,40 @@ jobs:
       # Suite: respeta testEnforcement igual que en 'trabajar' — un proyecto con suite
       # poco confiable no queda sin poder publicar por esto. Con 'enforce' un rojo
       # aborta el job ANTES del push, así main nunca recibe algo que no pasa la suite.
+      # testEnforcement='report' existe para no frenar a un agente por una suite floja
+      # que ya venía roja — un criterio razonable EN LA ETAPA DE TRABAJO. Aplicarlo tal
+      # cual acá dejaba el camino a producción sin red justo en el caso que el rebase
+      # fabrica: main se movió, git resolvió el texto, el código dejó de funcionar, la
+      # suite lo detectó... y se publicaba igual, porque 'report' es el default de todo
+      # proyecto recién conectado. La compuerta que JUSTIFICA rebasear un árbol que
+      # ningún humano miró estaba apagada de fábrica.
+      #
+      # El criterio ahora depende de quién tiene la culpa del rojo:
+      #   · main NO se movió (moved=0) → el ticket se probó contra este mismo árbol.
+      #     El rojo es deuda del proyecto, no del orden: respeta testEnforcement.
+      #   · main SÍ se movió (moved>0) → el árbol integrado es NUEVO y nadie lo probó
+      #     nunca. Un rojo acá es la señal de conflicto semántico: BLOQUEA siempre.
+      #     Publicar sería exactamente "romper el código por el orden de publicación".
       - name: Suite de tests (compuerta previa al push)
+        id: suite_gate
         if: steps.merge.outputs.already != '1' && steps.stack.outputs.suite != ''
         env:
           SUITE_CMD: ${{ steps.stack.outputs.suite }}
           ENFORCING: ${{ steps.stack.outputs.test_enforcement }}
+          MOVED: ${{ steps.merge.outputs.moved }}
         run: |
-          echo "▶ suite post-merge ($ENFORCING): $SUITE_CMD"
+          echo "▶ suite post-merge ($ENFORCING, main avanzó ${MOVED:-0}): $SUITE_CMD"
           if bash -c "$SUITE_CMD"; then
             echo "✓ la suite pasa sobre el árbol integrado"
+          elif [ "${MOVED:-0}" -gt 0 ]; then
+            echo "stale=1" >> "$GITHUB_OUTPUT"
+            echo "::error::la suite FALLÓ sobre el árbol integrado y main avanzó ${MOVED} commit(s) desde la base de este ticket — CONFLICTO SEMÁNTICO. NO se publica, sin importar testEnforcement: este árbol no lo probó nadie nunca. La rama hay que rebasarla y arreglarla contra el main nuevo."
+            exit 1
           elif [ "$ENFORCING" = "enforce" ]; then
-            echo "::error::la suite FALLÓ sobre el merge a main y el proyecto está en testEnforcement='enforce' — NO se publica. Puede ser un conflicto semántico: main se movió."
+            echo "::error::la suite FALLÓ sobre el merge a main y el proyecto está en testEnforcement='enforce' — NO se publica. main no se movió, así que el rojo es de este ticket."
             exit 1
           else
-            echo "::warning::la suite FALLÓ sobre el merge a main, pero el proyecto está en testEnforcement='report' — se publica igual. Esto NO es verde."
+            echo "::warning::la suite FALLÓ sobre el merge a main, pero main no se movió y el proyecto está en testEnforcement='report' — se publica igual. Esto NO es verde."
           fi
 
       # Secret-scan del árbol integrado. En 'trabajar' ya se escanea el diff del
@@ -1895,6 +1999,7 @@ jobs:
       # vio (resolución de conflictos). Fail-CLOSED ante hallazgo Y ante tooling que
       # no se puede instalar (mismo criterio que en 'trabajar').
       - name: Seguridad — secret-scan previo al push (compuerta)
+        id: scan_gate
         if: steps.merge.outputs.already != '1'
         env:
           GITLEAKS_VERSION: "8.21.2"
@@ -1937,8 +2042,15 @@ jobs:
             # Mover el push después de las compuertas abre una ventana de minutos en la
             # que main puede moverse. NO se re-rebasea acá A PROPÓSITO: eso publicaría un
             # árbol que las compuertas nunca verificaron — exactamente el agujero que
-            # este cambio cierra. Fail-closed y reintento explícito.
-            echo "::error::El push a main fue rechazado: main se movió mientras corrían las compuertas. NO se re-integra automáticamente (publicaría código no verificado). Re-ejecutá el deploy del ticket: vuelve a integrar, verificar y publicar."
+            # este cambio cierra. Fail-closed.
+            #
+            # Pero fail-closed NO tiene por qué significar fail-a-mano: re-integrar y
+            # volver a correr TODAS las compuertas es seguro por definición (el árbol
+            # nuevo se verifica entero). Lo marcamos como 'race' para que Astrack lo
+            # reintente solo, acotado, sin pedir otra firma humana: la carrera no es un
+            # defecto del ticket ni una decisión que le toque tomar a nadie.
+            echo "race=1" >> "$GITHUB_OUTPUT"
+            echo "::error::El push a main fue rechazado: main se movió mientras corrían las compuertas. NO se re-integra en este run (publicaría código no verificado). Astrack reintenta el ciclo completo — integrar, verificar y publicar — con el main nuevo."
             exit 1
           fi
 
@@ -2125,20 +2237,64 @@ jobs:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
           ALREADY: ${{ steps.merge.outputs.already }}
           MERGE_RESULT: ${{ steps.merge.outcome }}
+          MERGE_REASON: ${{ steps.merge.outputs.reason }}
+          MOVED: ${{ steps.merge.outputs.moved }}
+          EMPTY: ${{ steps.merge.outputs.empty }}
+          MERGED_SHA: ${{ steps.merge.outputs.sha }}
+          BUILD_RESULT: ${{ steps.build_gate.outcome }}
+          SUITE_RESULT: ${{ steps.suite_gate.outcome }}
+          SUITE_STALE: ${{ steps.suite_gate.outputs.stale }}
+          SCAN_RESULT: ${{ steps.scan_gate.outcome }}
           PUSH_RESULT: ${{ steps.push.outcome }}
+          PUSH_RACE: ${{ steps.push.outputs.race }}
           DEPLOY_RESULT: ${{ steps.deploy.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
-          # OJO con el orden de las ramas: `DEPLOY_RESULT = skipped` significa "el
-          # proyecto no tiene target de deploy, producción ES el merge a main" —
-          # pero SOLO si el push salió bien. Desde que las compuertas van ANTES del
-          # push, una compuerta roja deja push=skipped Y deploy=skipped, y sin el
-          # chequeo de PUSH_RESULT el ticket se marcaría 'live' sin haber publicado
-          # NADA. Por eso el push se evalúa primero.
-          if [ "$ALREADY" = "1" ]; then STATUS=live;
-          elif [ "$MERGE_RESULT" != "success" ]; then STATUS=conflict;
-          elif [ "$PUSH_RESULT" != "success" ]; then STATUS=failed;
-          elif [ "$DEPLOY_RESULT" = "success" ] || [ "$DEPLOY_RESULT" = "skipped" ]; then STATUS=live;
-          else STATUS=failed; fi
-          node agent-kit/astro-report.mjs prod "$TICKET_ID" "$STATUS" "$RUN_URL"
+          # El estado que se escribe acá es lo ÚNICO que ve un humano en Astrack: el log
+          # de Actions es privado y el ticket es público. Hasta ahora cinco situaciones
+          # muy distintas terminaban todas en 'failed' con la misma receta —"volvé a
+          # aprobar la publicación"—, y para la mitad de ellas esa receta no puede
+          # funcionar nunca: reintentar un conflicto semántico da exactamente el mismo
+          # rojo, para siempre. Cada estado de acá abajo enruta a una acción DISTINTA.
+          #
+          # OJO con el orden: `DEPLOY_RESULT = skipped` significa "el proyecto no tiene
+          # target de deploy, producción ES el merge a main" — pero SOLO si el push
+          # salió bien. Con las compuertas ANTES del push, una compuerta roja deja
+          # push=skipped Y deploy=skipped, y sin mirar PUSH_RESULT el ticket se marcaría
+          # 'live' sin haber publicado NADA. Por eso el push se evalúa primero.
+          DETALLE=""
+          if [ "$ALREADY" = "1" ]; then
+            STATUS=live; DETALLE="ya estaba integrado por un deploy previo de Astrack (idempotente)"
+          elif [ "$MERGE_RESULT" != "success" ]; then
+            # Los 4 modos de falla de la integración no son el mismo problema y no se
+            # arreglan igual. El 'sha-gate' sobre todo: ahí NO hubo ningún otro ticket,
+            # y decirle al humano que "otro pisó tus archivos" es directamente falso.
+            case "$MERGE_REASON" in
+              sha-gate)        STATUS=unsigned; DETALLE="la rama tiene commits posteriores a tu firma — se publica solo lo firmado" ;;
+              sin-rama)        STATUS=orphan;   DETALLE="no existe la rama del ticket y main no tiene el commit de integración de Astrack" ;;
+              rebase-conflict) STATUS=conflict; DETALLE="conflicto al rebasar la rama sobre el main nuevo" ;;
+              *)               STATUS=conflict; DETALLE="conflicto al integrar la rama con main" ;;
+            esac
+          elif [ "$SUITE_STALE" = "1" ]; then
+            STATUS=stale; DETALLE="la suite falla sobre el árbol integrado y main avanzó ${MOVED} commit(s) desde la base del ticket — conflicto semántico"
+          elif [ "$BUILD_RESULT" = "failure" ] || [ "$SUITE_RESULT" = "failure" ] || [ "$SCAN_RESULT" = "failure" ]; then
+            GATE=build; [ "$SUITE_RESULT" = "failure" ] && GATE=suite; [ "$SCAN_RESULT" = "failure" ] && GATE=secret-scan
+            if [ "${MOVED:-0}" -gt 0 ]; then
+              STATUS=stale; DETALLE="la compuerta de ${GATE} falla sobre el árbol integrado y main avanzó ${MOVED} commit(s) desde la base del ticket"
+            else
+              STATUS=failed; DETALLE="la compuerta de ${GATE} falla y main no se movió — el rojo es de este ticket"
+            fi
+          elif [ "$PUSH_RACE" = "1" ]; then
+            STATUS=race; DETALLE="main se movió mientras corrían las compuertas — hay que re-integrar y re-verificar"
+          elif [ "$PUSH_RESULT" != "success" ]; then
+            STATUS=failed; DETALLE="no se pudo publicar a main"
+          elif [ "$DEPLOY_RESULT" = "success" ] || [ "$DEPLOY_RESULT" = "skipped" ]; then
+            STATUS=live; [ "$EMPTY" = "1" ] && DETALLE="la integración no aportó cambios: su contenido ya estaba en main"
+          else
+            # El push YA salió: el código está en main y va a salir a producción montado
+            # en el próximo deploy de cualquier ticket. Decir 'failed' a secas invitaba a
+            # revertir o re-ejecutar al agente sobre algo que en realidad ya está adentro.
+            STATUS=pushed; DETALLE="el código YA está en main, pero falló la publicación en la plataforma"
+          fi
+          node agent-kit/astro-report.mjs prod "$TICKET_ID" "$STATUS" "$RUN_URL" "$MERGED_SHA" "$DETALLE"
