@@ -43,6 +43,21 @@
 # ============================================================
 name: Astrack · agente en este proyecto
 
+# R4 — EL RUN DICE DE QUÉ TICKET ES. Sin `run-name`, GitHub le pone a la corrida el
+# nombre del EVENTO, así que todos los builds del repo se llaman igual: medido, 269 de
+# 270 runs de repository_dispatch tienen `display_title` idéntico al event_type. La red
+# de seguridad del servidor (functions/dispatch.js, ticketRunStatus) tiene entonces que
+# adivinar cuál run es de qué ticket por ventana temporal, y el 52% de los dispatches de
+# build tienen otro del mismo proyecto dentro de 30 min: cuando quedan varios candidatos
+# NO se atribuye ninguna conclusión, y el fallo se queda sin nombre.
+# Con el ticket en el título la atribución es exacta y esa ambigüedad desaparece.
+#
+# EL SERVIDOR YA SABE LEER LAS DOS FORMAS (commit anterior). Al revés habría sido una
+# regresión silenciosa: el filtro comparaba por igualdad estricta contra el event_type,
+# así que el primer repo que estrenara este run-name habría dejado de matchear y su red
+# se habría apagado sin que nadie se entere.
+run-name: ${{ github.event.client_payload.ticketId && format('{0} · {1}', github.event.action, github.event.client_payload.ticketId) || github.event.action }}
+
 on:
   repository_dispatch:
     types: [astrack-ticket, astrack-plan, astrack-review, astrack-deploy-prod, astrack-healthcheck]
@@ -381,7 +396,7 @@ jobs:
           # la única con Edit/Write/push) para que Firestore los gobierne después;
           # permission-mode explícito (capa gratis previa a los hooks PreToolUse
           # de R4.3 — no reemplaza esos hooks, los antecede).
-          claude_args: "--model ${{ vars.ASTRO_MODEL_CLAUDIA || 'claude-sonnet-5' }} --max-turns ${{ vars.ASTRO_MAX_TURNS_CLAUDIA || '50' }} --permission-mode default --allowedTools Bash,Read,Edit,Write,Glob,Grep"
+          claude_args: "--model ${{ vars.ASTRO_MODEL_CLAUDIA || 'claude-sonnet-5' }} --max-turns ${{ github.event.client_payload.stack.maxTurns.builder || vars.ASTRO_MAX_TURNS_CLAUDIA || '50' }} --permission-mode default --allowedTools Bash,Read,Edit,Write,Glob,Grep"
           prompt: |
             Sos ${{ github.event.client_payload.agentId }}, agente de la software
             factory Astrack. Te asignaron el ticket
@@ -499,10 +514,21 @@ jobs:
                comment() y resolvé por lo más conservador. Si NO hay artefactos
                (ticket viejo sin plan), trabajá contra la descripción.
 
-            Después desarrollá EN ESTE repo. Ya estás parado en la rama
-            "ticket/${{ github.event.client_payload.ticketId }}": commiteá ahí
-            y pusheá ESA rama (git push -u origin HEAD). NO pushees a main ni
-            publiques: la integración la hace el pipeline cuando un humano aprueba.
+            Después desarrollá EN ESTE repo, en la rama
+            "ticket/${{ github.event.client_payload.ticketId }}", donde ya estás parado.
+
+            COMMITEÁ MIENTRAS TRABAJÁS, no al final. El runner es EFÍMERO y tenés
+            un tope de turnos: lo que no está commiteado y pusheado cuando el run
+            se corta, no existe. Cada vez que dejes algo coherente —un archivo
+            terminado, una función que anda, un paso del plan cerrado— hacé
+            `git add -A && git commit -m "wip(TICKET): qué hiciste" && git push -u origin HEAD`.
+            Un commit intermedio que no compila del todo es MUCHO mejor que
+            trabajo perfecto que se pierde entero. No agrupes todo en un commit
+            final "prolijo": si el run se corta antes, ese commit nunca ocurre.
+            Si te cortan a mitad, el próximo intento retoma ESTA rama desde tu
+            último push y sigue desde ahí — así que cada push es progreso ganado.
+            NO pushees a main ni publiques: la integración la hace el pipeline
+            cuando un humano aprueba.
 
             Protocolo de cierre: addNote() con qué hiciste, archivos, el hash
             corto del commit y cómo probarlo → tu REPORTE para el humano con
@@ -591,10 +617,10 @@ jobs:
             # el humano se va a revisar credenciales sanas. Casos reales
             # ASTRODEV-247 y ASTRODEV-251: 51 turnos, $2 gastados, diagnóstico que
             # apuntaba al lugar equivocado. Un error que miente es peor que uno mudo.
-            MAXT="${{ vars.ASTRO_MAX_TURNS_CLAUDIA || '50' }}"
+            MAXT="${{ github.event.client_payload.stack.maxTurns.builder || vars.ASTRO_MAX_TURNS_CLAUDIA || '50' }}"
             case "$SUBTYPE" in
               error_max_turns)
-                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales: el agente estaba trabajando bien y se cortó a mitad. El trabajo no entra en el tope. Dos salidas: subí la variable de repo ASTRO_MAX_TURNS_CLAUDIA (hoy $MAXT), o partí el ticket en piezas más chicas. Reintentar sin cambiar nada da el mismo resultado."
+                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales: el agente estaba trabajando bien y se cortó a mitad. EL TRABAJO NO SE PIERDE: el pipeline guarda en la rama ticket/$TICKET_ID todo lo que el agente alcanzó a escribir —haya commiteado o no— y el próximo intento sigue desde ahí, no desde cero. Subí el tope en Astrack (Reglas → Tope de turnos, hoy $MAXT) y volvé a aprobar la ejecución."
                 ;;
               error_during_execution)
                 [ -z "$MOTIVO" ] && MOTIVO="el runtime del agente abortó a mitad de la ejecución (sin mensaje del modelo) — revisá el log del run"
@@ -614,14 +640,16 @@ jobs:
       # ticket solo decía "el run terminó sin entregar" — indistinguible de un
       # fallo transitorio. El dueño reintentó 5 veces creyendo que era pasajero.
       #
-      # Este step NO arregla nada: hace VISIBLE la diferencia entre "falló" y "no
-      # puede". Es determinista (compara commits locales contra el remoto), no
-      # depende de parsear el log del agente.
+      # Este step RESCATA lo que se puede rescatar y hace VISIBLE lo que no: la
+      # diferencia entre "falló" y "no puede". Es determinista (compara commits
+      # locales contra el remoto y mira el árbol), no depende de parsear el log
+      # del agente ni de que el agente se haya acordado de commitear.
       #
-      # Y NO se corrige dándole `workflows: write` al agente: sería dejar que el
-      # builder reescriba el pipeline que lo gatea (podría borrar las compuertas
-      # de build/suite/secret-scan). Que sea imposible es la propiedad, no el bug.
-      - name: Diagnóstico — trabajo que quedó sin pushear
+      # Lo de `.github/workflows` NO se corrige dándole `workflows: write` al
+      # agente: sería dejar que el builder reescriba el pipeline que lo gatea
+      # (podría borrar las compuertas de build/suite/secret-scan). Que sea
+      # imposible es la propiedad, no el bug.
+      - name: Rescatar el trabajo que quedó sin pushear
         if: always()
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
@@ -634,7 +662,81 @@ jobs:
             RANGE="origin/main..HEAD"
           fi
           PEND=$(git rev-list --count "$RANGE" 2>/dev/null || echo 0)
-          [ "$PEND" = "0" ] && { echo "✓ no quedaron commits locales sin publicar"; exit 0; }
+          if [ "$PEND" = "0" ]; then
+            # R4 — MIRAR TAMBIÉN EL ÁRBOL DE TRABAJO. `git rev-list` sólo ve lo COMMITEADO,
+            # así que el agente que edita archivos y nunca hace `git commit` pasaba por acá
+            # con PEND=0 y el pipeline imprimía "✓ no quedaron commits locales sin publicar"
+            # sobre trabajo que se estaba perdiendo entero.
+            #
+            # Caso medido, con factura: GREGO-27 (legis, run 31336435096, 2026-08-09). El
+            # agente hizo 6 Edit sobre src/ui/App.html —los tres últimos fueron sus últimas
+            # acciones antes del tope de turnos—, gastó 4.814.934 tokens y US$2,54, dejó CERO
+            # commits, y dos segundos después el log imprimió el ✓. El detector viejo lleva
+            # 37 ejecuciones y 0 detecciones.
+            #
+            # DOS CUIDADOS QUE DECIDEN SI ESTO SIRVE O ES RUIDO:
+            # 1. `agent-kit/` SE EXCLUYE. 6 de los 7 repos lo tienen commiteado y el step
+            #    "Preparar el kit" lo PISA en cada run; en el séptimo ni siquiera está
+            #    trackeado. Sin la exclusión, este chequeo daría positivo en el 100% de los
+            #    runs y sería inservible en una semana. Igual `specs/`, que lo escribe y
+            #    commitea el propio pipeline.
+            # 2. Se avisa con `note`, NO con `run-failed`. Un `run-failed` prepende
+            #    "❌ Ejecución fallida", que el servidor lee para marcar el dispatch en error
+            #    y que además GANARÍA sobre el diagnóstico específico del step anterior
+            #    (en GREGO-27 habría tapado el "TOPE DE TURNOS", que es la causa REAL y la
+            #    única accionable). Esto no es la causa del fallo: es su factura.
+            SUCIO=$(git status --porcelain -- . ':(exclude)agent-kit' ':(exclude)specs' 2>/dev/null | head -40)
+            if [ -z "$SUCIO" ]; then
+              echo "✓ no quedaron commits locales sin publicar, ni cambios sin commitear"
+              exit 0
+            fi
+            NMOD=$(printf '%s\n' "$SUCIO" | grep -vc '^??' || true)
+            NNEW=$(printf '%s\n' "$SUCIO" | grep -c '^??' || true)
+            LISTA=$(printf '%s\n' "$SUCIO" | awk '{print $NF}' | head -8 | tr '\n' ' ')
+            # RESCATE, NO DIAGNÓSTICO. Este step VEÍA el trabajo y lo dejaba morir: escribía
+            # "ese trabajo se perdió" a una línea de `git add`. Medido en GREGO-51 (legis,
+            # 2026-08-11): claudia trabajó 151 turnos, gastó US$15,99 y no dejó UN commit —
+            # todo vivía en el árbol del runner, que es efímero. Antes había pasado igual con
+            # US$2,54 (GREGO-27): subir el tope de turnos sólo hizo la pérdida más cara.
+            #
+            # POR QUÉ ES SEGURO COMMITEAR ESTO AUTOMÁTICAMENTE:
+            #  · va a la rama del ticket, NUNCA a main. La integración sigue necesitando la
+            #    firma humana de siempre; esto no publica nada.
+            #  · el commit dice EN SU TÍTULO que es un rescate parcial, así que nadie lo
+            #    confunde con una entrega terminada.
+            #  · el ticket NO cambia de estado. Sigue fallado y sigue esperando al humano.
+            #  · si el push falla, se cae al aviso de antes: nunca es peor que hoy.
+            #
+            # `.github/workflows` se excluye del rescate porque el job NO tiene el scope
+            # 'workflows' y GitHub rechaza el push ENTERO por un solo archivo ahí: sin la
+            # exclusión, un agente que tocó el pipeline de paso haría perder también todo
+            # el resto del trabajo (es el caso NUOVASUI-15, cinco veces).
+            echo "::warning::$NMOD modificado(s) y $NNEW nuevo(s) sin commitear — rescatando a la rama"
+            git add -- . ':(exclude)agent-kit' ':(exclude)specs' ':(exclude).github/workflows' 2>/dev/null || true
+            if git diff --cached --quiet 2>/dev/null; then
+              node agent-kit/astro-report.mjs note "$TICKET_ID" \
+                "⚠️ TRABAJO SIN RESCATAR: lo único que quedó sin commitear toca .github/workflows, y el agente no puede pushear ahí (el job tiene 'contents: write' pero no 'workflows: write', a propósito: si no, el builder podría borrar sus propias compuertas). Archivos: $LISTA— aplicalo a mano." || true
+            elif git commit -m "wip($TICKET_ID): rescate del trabajo sin commitear del run cortado" \
+                            -m "El run se cortó antes de que el agente commiteara. Esto NO es una entrega: es lo que alcanzó a escribir, guardado para que el próximo intento siga desde acá en vez de empezar de cero. Archivos: $LISTA" >/dev/null 2>&1; then
+              SHA_R=$(git rev-parse --short HEAD)
+              if git push -u origin HEAD >/dev/null 2>&1; then
+                # El step "Reportar archivos del run" corre después y con `always()`: recalcula
+                # queue.files sobre origin/main...HEAD, así que el rescate YA queda registrado
+                # como avance del agente. No hace falta (ni conviene) reportarlo de nuevo acá.
+                echo "✓ rescatado en $SHA_R"
+                node agent-kit/astro-report.mjs note "$TICKET_ID" \
+                  "💾 TRABAJO RESCATADO: el run se cortó antes de que el agente commiteara, así que el pipeline guardó lo que había en la rama ticket/$TICKET_ID ($SHA_R): $NMOD archivo(s) modificado(s) y $NNEW nuevo(s). Archivos: $LISTA— NO es una entrega terminada; es el punto desde el que sigue el próximo intento en vez de empezar de cero." || true
+              else
+                echo "::error::no se pudo pushear el rescate"
+                node agent-kit/astro-report.mjs note "$TICKET_ID" \
+                  "⚠️ TRABAJO SIN COMMITEAR: el agente dejó $NMOD archivo(s) modificado(s) y $NNEW nuevo(s) y el rescate no se pudo pushear, así que ese trabajo se perdió con el runner. Archivos: $LISTA" || true
+              fi
+            else
+              node agent-kit/astro-report.mjs note "$TICKET_ID" \
+                "⚠️ TRABAJO SIN COMMITEAR: el agente dejó $NMOD archivo(s) modificado(s) y $NNEW nuevo(s) y el rescate no pudo commitear. Archivos: $LISTA" || true
+            fi
+            exit 0
+          fi
           WF=$(git diff --name-only "$RANGE" 2>/dev/null | grep '^\.github/workflows/' | head -3 | tr '\n' ' ')
           SHA=$(git rev-parse --short HEAD)
           if [ -n "$WF" ]; then
@@ -642,9 +744,17 @@ jobs:
             node agent-kit/astro-report.mjs run-failed "$TICKET_ID" \
               "NO REINTENTAR: esto NO lo puede hacer un agente. El trabajo toca $WF y GitHub rechaza ese push porque el job tiene 'contents: write' pero NO 'workflows: write'. Los $PEND commit(s) ($SHA) se pierden con el runner. NO se soluciona dando el permiso: dejaría al agente reescribir sus propias compuertas. Aplicá el diff a mano (está en las notas) — los tickets que tocan CI los hace un humano." || true
           else
-            echo "::warning::$PEND commit(s) locales sin pushear"
-            node agent-kit/astro-report.mjs run-failed "$TICKET_ID" \
-              "Quedaron $PEND commit(s) sin pushear ($SHA) y el runner es efímero, así que ese trabajo SE PERDIÓ. Revisá el log: el agente commiteó pero no llegó a 'git push -u origin HEAD'." || true
+            # Mismo criterio que arriba: el trabajo YA está commiteado, sólo falta el push.
+            # Lamentarlo costaba runs enteros a una línea de distancia de salvarlos.
+            if git push -u origin HEAD >/dev/null 2>&1; then
+              echo "✓ $PEND commit(s) pusheados ($SHA)"
+              node agent-kit/astro-report.mjs note "$TICKET_ID" \
+                "💾 TRABAJO RESCATADO: el agente había commiteado $PEND cambio(s) ($SHA) y el run se cortó antes del push. El pipeline los publicó en ticket/$TICKET_ID — el próximo intento sigue desde ahí." || true
+            else
+              echo "::warning::$PEND commit(s) locales y el push falló"
+              node agent-kit/astro-report.mjs run-failed "$TICKET_ID" \
+                "Quedaron $PEND commit(s) sin pushear ($SHA), el rescate automático tampoco pudo publicarlos y el runner es efímero: ese trabajo se perdió. Revisá el log del push." || true
+            fi
           fi
 
       - name: Reportar métricas del run
@@ -1215,7 +1325,7 @@ jobs:
           # R1.5: haiku por defecto (rol barato/rápido) vía VARIABLE del repo;
           # --disallowedTools es cinturón extra sobre --allowedTools (ya sin
           # Edit/Write/NotebookEdit) — capa gratis previa a los hooks de R4.3.
-          claude_args: "--model ${{ vars.ASTRO_MODEL_PLANNER || 'claude-haiku-4-5' }} --max-turns ${{ vars.ASTRO_MAX_TURNS_PLANNER || '15' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
+          claude_args: "--model ${{ vars.ASTRO_MODEL_PLANNER || 'claude-haiku-4-5' }} --max-turns ${{ github.event.client_payload.stack.maxTurns.planner || vars.ASTRO_MAX_TURNS_PLANNER || '15' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
           prompt: |
             Sos ${{ matrix.planner }}, agente de PLANIFICACIÓN de la software factory
             Astrack, en la etapa de Plan del ticket ${{ github.event.client_payload.ticketId }}
@@ -1321,10 +1431,10 @@ jobs:
             fi
             # Mismo diagnóstico por subtipo que el job 'trabajar': el tope de turnos
             # NO es un problema de credenciales y decir que sí manda a depurar mal.
-            MAXT="${{ vars.ASTRO_MAX_TURNS_PLANNER || '15' }}"
+            MAXT="${{ github.event.client_payload.stack.maxTurns.planner || vars.ASTRO_MAX_TURNS_PLANNER || '15' }}"
             case "$SUBTYPE" in
               error_max_turns)
-                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales. Subí la variable de repo ASTRO_MAX_TURNS_PLANNER (hoy $MAXT) o achicá el alcance; reintentar sin cambiar nada da lo mismo."
+                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales. Subí el tope en Astrack (Reglas → Tope de turnos → Planificadores, hoy $MAXT) y reintentá la planificación."
                 ;;
               error_during_execution)
                 [ -z "$MOTIVO" ] && MOTIVO="el runtime del agente abortó a mitad de la ejecución (sin mensaje del modelo) — revisá el log del run"
@@ -1511,7 +1621,7 @@ jobs:
           # read-only: el revisor NO edita código (sin Edit/Write). R1.5: sonnet
           # por defecto (default actual del action) vía VARIABLE del repo;
           # --disallowedTools cinturón extra sobre --allowedTools.
-          claude_args: "--model ${{ vars.ASTRO_MODEL_REVIEWER || 'claude-sonnet-5' }} --max-turns ${{ vars.ASTRO_MAX_TURNS_REVIEWER || '20' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
+          claude_args: "--model ${{ vars.ASTRO_MODEL_REVIEWER || 'claude-sonnet-5' }} --max-turns ${{ github.event.client_payload.stack.maxTurns.reviewer || vars.ASTRO_MAX_TURNS_REVIEWER || '20' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
           prompt: |
             Sos ${{ matrix.reviewer }}, REVISOR de la software factory Astrack, en
             la cuadrilla de revisión del ticket ${{ github.event.client_payload.ticketId }}
@@ -1568,10 +1678,10 @@ jobs:
             fi
             # Mismo diagnóstico por subtipo que el job 'trabajar': el tope de turnos
             # NO es un problema de credenciales y decir que sí manda a depurar mal.
-            MAXT="${{ vars.ASTRO_MAX_TURNS_REVIEWER || '20' }}"
+            MAXT="${{ github.event.client_payload.stack.maxTurns.reviewer || vars.ASTRO_MAX_TURNS_REVIEWER || '20' }}"
             case "$SUBTYPE" in
               error_max_turns)
-                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales. Subí la variable de repo ASTRO_MAX_TURNS_REVIEWER (hoy $MAXT) o achicá el alcance; reintentar sin cambiar nada da lo mismo."
+                MOTIVO="TOPE DE TURNOS alcanzado (usó $TURNS, tope $MAXT). NO es un problema de credenciales. Subí el tope en Astrack (Reglas → Tope de turnos → Revisores, hoy $MAXT) y reintentá la revisión."
                 ;;
               error_during_execution)
                 [ -z "$MOTIVO" ] && MOTIVO="el runtime del agente abortó a mitad de la ejecución (sin mensaje del modelo) — revisá el log del run"
