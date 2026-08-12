@@ -213,8 +213,31 @@ jobs:
         run: |
           git config user.name "$AGENT_ID (Astrack)"
           git config user.email "$AGENT_ID@astrack.dev"
+          # EL KIT NO PUEDE BLOQUEAR EL CHECKOUT. `agent-kit/` lo baja el step anterior en
+          # CADA run y es desechable, pero queda SIN TRACKEAR en los repos que no lo tienen
+          # commiteado (la mayoría). Si alguna rama de ticket sí lo tiene trackeado, git se
+          # niega a pararse en ella —"untracked working tree files would be overwritten by
+          # checkout"— y el job muere ANTES de que el agente arranque, sin diagnóstico útil.
+          #
+          # Caso real GREGO-50 (legis, 2026-08-12 11:03 y 11:09): el agente commiteó el kit
+          # de paso, la rama quedó envenenada y TODO run posterior sobre ella reventaba en
+          # este step. Se arregla en dos lados —el prompt ya no le dice `git add -A`— pero
+          # acá va la red de máquina: el kit se aparta, se hace el checkout y se restaura.
+          # Cualquier otra fuente del mismo veneno queda cubierta por construcción.
+          KIT_TMP="$RUNNER_TEMP/agent-kit-fuera"
+          if [ -d agent-kit ] && [ -n "$(git ls-files --others --exclude-standard -- agent-kit)" ]; then
+            rm -rf "$KIT_TMP"; mv agent-kit "$KIT_TMP"
+            echo "kit apartado para no bloquear el checkout"
+          fi
+          restaurar_kit() {
+            [ -d "$KIT_TMP" ] || return 0
+            # El kit recién bajado GANA sobre el que venga trackeado en la rama: es el que
+            # el pipeline verificó por checksum en este run.
+            mkdir -p agent-kit && cp -R "$KIT_TMP"/. agent-kit/ && rm -rf "$KIT_TMP"
+          }
           if git fetch origin "ticket/$TICKET_ID" 2>/dev/null; then
             git checkout -B "ticket/$TICKET_ID" "origin/ticket/$TICKET_ID"
+            restaurar_kit
             echo "Rama existente — continúo sobre el intento anterior"
             # PONER LA RAMA AL DÍA CON MAIN antes de que el agente toque nada.
             #
@@ -277,6 +300,7 @@ jobs:
             [ -d "$KIT_VIVO" ] && cp -R "$KIT_VIVO"/. agent-kit/ || true
           else
             git checkout -B "ticket/$TICKET_ID"
+            restaurar_kit
             # R2.3c: commit vacío + push INMEDIATO — sin esto la rama es idéntica a
             # main (0 commits de diferencia) y `gh pr create` (paso siguiente) no
             # puede abrir el draft PR ("No commits between main and ticket/X").
@@ -396,7 +420,7 @@ jobs:
           # la única con Edit/Write/push) para que Firestore los gobierne después;
           # permission-mode explícito (capa gratis previa a los hooks PreToolUse
           # de R4.3 — no reemplaza esos hooks, los antecede).
-          claude_args: "--model ${{ vars.ASTRO_MODEL_CLAUDIA || 'claude-sonnet-5' }} --max-turns ${{ github.event.client_payload.stack.maxTurns.builder || vars.ASTRO_MAX_TURNS_CLAUDIA || '50' }} --permission-mode default --allowedTools Bash,Read,Edit,Write,Glob,Grep"
+          claude_args: "--model ${{ github.event.client_payload.stack.models.builder || vars.ASTRO_MODEL_CLAUDIA || 'claude-sonnet-5' }} --max-turns ${{ github.event.client_payload.stack.maxTurns.builder || vars.ASTRO_MAX_TURNS_CLAUDIA || '50' }} --permission-mode default --allowedTools Bash,Read,Edit,Write,Glob,Grep"
           prompt: |
             Sos ${{ github.event.client_payload.agentId }}, agente de la software
             factory Astrack. Te asignaron el ticket
@@ -517,11 +541,22 @@ jobs:
             Después desarrollá EN ESTE repo, en la rama
             "ticket/${{ github.event.client_payload.ticketId }}", donde ya estás parado.
 
-            COMMITEÁ MIENTRAS TRABAJÁS, no al final. El runner es EFÍMERO y tenés
-            un tope de turnos: lo que no está commiteado y pusheado cuando el run
-            se corta, no existe. Cada vez que dejes algo coherente —un archivo
-            terminado, una función que anda, un paso del plan cerrado— hacé
-            `git add -A && git commit -m "wip(TICKET): qué hiciste" && git push -u origin HEAD`.
+            COMMITEÁ MIENTRAS TRABAJÁS, no al final. El runner es EFÍMERO: lo que no
+            está commiteado y pusheado cuando el run se corta, no existe. Cada vez que
+            dejes algo coherente —un archivo terminado, una función que anda, un paso
+            del plan cerrado— commiteá y pusheá con ESTE comando, tal cual:
+
+              git add -- . ':(exclude)agent-kit' ':(exclude)specs'
+              git commit -m "wip(${{ github.event.client_payload.ticketId }}): qué hiciste"
+              git push -u origin HEAD
+
+            NUNCA uses `git add -A` ni `git add .` a secas. `agent-kit/` es la
+            herramienta del runner —se baja nueva en cada ejecución— y `specs/` lo
+            escribe el propio pipeline: si los commiteás, la rama del ticket queda
+            envenenada y el PRÓXIMO intento no puede ni pararse en ella ("untracked
+            working tree files would be overwritten by checkout"), o sea que rompés
+            tu propia continuación. Pasó de verdad y costó dos ejecuciones.
+
             Un commit intermedio que no compila del todo es MUCHO mejor que
             trabajo perfecto que se pierde entero. No agrupes todo en un commit
             final "prolijo": si el run se corta antes, ese commit nunca ocurre.
@@ -763,7 +798,7 @@ jobs:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
           ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
           # R1.5: fallback si el log no trae el modelo del evento init (ver MODEL abajo).
-          MODEL_REQUESTED: ${{ vars.ASTRO_MODEL_CLAUDIA || 'claude-sonnet-5' }}
+          MODEL_REQUESTED: ${{ github.event.client_payload.stack.models.builder || vars.ASTRO_MODEL_CLAUDIA || 'claude-sonnet-5' }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
           COST=$(jq -r '.. | .total_cost_usd? // empty' "$LOG" 2>/dev/null | head -1)
@@ -1325,7 +1360,7 @@ jobs:
           # R1.5: haiku por defecto (rol barato/rápido) vía VARIABLE del repo;
           # --disallowedTools es cinturón extra sobre --allowedTools (ya sin
           # Edit/Write/NotebookEdit) — capa gratis previa a los hooks de R4.3.
-          claude_args: "--model ${{ vars.ASTRO_MODEL_PLANNER || 'claude-haiku-4-5' }} --max-turns ${{ github.event.client_payload.stack.maxTurns.planner || vars.ASTRO_MAX_TURNS_PLANNER || '15' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
+          claude_args: "--model ${{ github.event.client_payload.stack.models.planner || vars.ASTRO_MODEL_PLANNER || 'claude-haiku-4-5' }} --max-turns ${{ github.event.client_payload.stack.maxTurns.planner || vars.ASTRO_MAX_TURNS_PLANNER || '15' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
           prompt: |
             Sos ${{ matrix.planner }}, agente de PLANIFICACIÓN de la software factory
             Astrack, en la etapa de Plan del ticket ${{ github.event.client_payload.ticketId }}
@@ -1452,7 +1487,7 @@ jobs:
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
           ASTRO_AGENT_PASSWORD: ${{ matrix.planner == 'pola' && secrets.ASTRO_AGENT_PASSWORD_POLA || matrix.planner == 'gemma' && secrets.ASTRO_AGENT_PASSWORD_GEMMA || matrix.planner == 'diana' && secrets.ASTRO_AGENT_PASSWORD_DIANA || matrix.planner == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
-          MODEL_REQUESTED: ${{ vars.ASTRO_MODEL_PLANNER || 'claude-haiku-4-5' }}
+          MODEL_REQUESTED: ${{ github.event.client_payload.stack.models.planner || vars.ASTRO_MODEL_PLANNER || 'claude-haiku-4-5' }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
           COST=$(jq -r '.. | .total_cost_usd? // empty' "$LOG" 2>/dev/null | head -1)
@@ -1621,7 +1656,7 @@ jobs:
           # read-only: el revisor NO edita código (sin Edit/Write). R1.5: sonnet
           # por defecto (default actual del action) vía VARIABLE del repo;
           # --disallowedTools cinturón extra sobre --allowedTools.
-          claude_args: "--model ${{ vars.ASTRO_MODEL_REVIEWER || 'claude-sonnet-5' }} --max-turns ${{ github.event.client_payload.stack.maxTurns.reviewer || vars.ASTRO_MAX_TURNS_REVIEWER || '20' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
+          claude_args: "--model ${{ github.event.client_payload.stack.models.reviewer || vars.ASTRO_MODEL_REVIEWER || 'claude-sonnet-5' }} --max-turns ${{ github.event.client_payload.stack.maxTurns.reviewer || vars.ASTRO_MAX_TURNS_REVIEWER || '20' }} --permission-mode default --disallowedTools Edit,Write,NotebookEdit --allowedTools Bash,Read,Glob,Grep"
           prompt: |
             Sos ${{ matrix.reviewer }}, REVISOR de la software factory Astrack, en
             la cuadrilla de revisión del ticket ${{ github.event.client_payload.ticketId }}
@@ -1699,7 +1734,7 @@ jobs:
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
           ASTRO_AGENT_PASSWORD: ${{ matrix.reviewer == 'olivia' && secrets.ASTRO_AGENT_PASSWORD_OLIVIA || matrix.reviewer == 'charly' && secrets.ASTRO_AGENT_PASSWORD_CHARLY || matrix.reviewer == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
-          MODEL_REQUESTED: ${{ vars.ASTRO_MODEL_REVIEWER || 'claude-sonnet-5' }}
+          MODEL_REQUESTED: ${{ github.event.client_payload.stack.models.reviewer || vars.ASTRO_MODEL_REVIEWER || 'claude-sonnet-5' }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
           COST=$(jq -r '.. | .total_cost_usd? // empty' "$LOG" 2>/dev/null | head -1)
