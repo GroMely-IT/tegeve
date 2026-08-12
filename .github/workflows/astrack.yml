@@ -226,6 +226,10 @@ jobs:
           # Cualquier otra fuente del mismo veneno queda cubierta por construcción.
           KIT_TMP="$RUNNER_TEMP/agent-kit-fuera"
           if [ -d agent-kit ] && [ -n "$(git ls-files --others --exclude-standard -- agent-kit)" ]; then
+            # `mkdir -p` del destino: en el runner $RUNNER_TEMP existe, pero apoyarse en
+            # eso es gratis de evitar y caro de descubrir — un `mv` fallido tumba el step
+            # con `bash -e` y el ticket muere por el guardia, no por el problema.
+            mkdir -p "$RUNNER_TEMP"
             rm -rf "$KIT_TMP"; mv agent-kit "$KIT_TMP"
             echo "kit apartado para no bloquear el checkout"
           fi
