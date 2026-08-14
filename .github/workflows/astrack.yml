@@ -114,6 +114,13 @@ jobs:
       ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
       ASTRO_PROJECT: ${{ github.event.client_payload.project }}
       AGENT_ID: ${{ github.event.client_payload.agentId }}
+      # EL RELOJ DEL AGENTE, COMO DATO. Tiene que valer lo MISMO que el
+      # `timeout-minutes:` literal del step de claude-code-action, y hay un test que
+      # compara los dos números en los tres linajes. No se pone `timeout-minutes:
+      # ${{ env.X }}` para evitar la duplicación: si ese contexto no estuviera permitido
+      # ahí, el YAML queda inválido y los 5 repos cliente entran en startup_failure —
+      # radio de daño desproporcionado para ahorrarse un assert.
+      ASTRO_AGENT_TIMEOUT_MIN: "45"
       # R1.7: el password NO va al env del job (visible a TODO step, incl. el
       # Bash del agente vía claude-code-action) — solo a los steps puntuales
       # que lo necesitan, como env DE ESE STEP (secrets.ASTRO_AGENT_PASSWORD_
@@ -390,6 +397,11 @@ jobs:
           ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
           : > "$RUNNER_TEMP/astro-progress.jsonl"
+          # ESTAMPA DE ARRANQUE — el único reloj que sobrevive a un corte por tiempo.
+          # $SECONDS es por shell (cada step abre el suyo) y la API de Actions daría 403:
+          # este job declara un bloque `permissions:` propio y no incluye `actions: read`.
+          # Con esto el diagnóstico de abajo puede decir cuántos minutos corrió de verdad.
+          date +%s > "$RUNNER_TEMP/astro-agent-start"
           nohup bash -c '
             TICKET="'"$TICKET_ID"'"
             STATE="$RUNNER_TEMP/astro-progress.jsonl"
@@ -417,6 +429,7 @@ jobs:
           disown || true
 
       - uses: anthropics/claude-code-action@v1
+        id: agente
         timeout-minutes: 45
         env:
           # R1.7: password del agente ACTIVO, scopeado a ESTE step (nunca a
@@ -589,6 +602,86 @@ jobs:
             pasar a En test; NO reasignes a un tester humano. Nunca apruebes
             tickets: eso es de humanos.
 
+      # ¿AL AGENTE LO CORTÓ EL RELOJ? El step de arriba tiene `timeout-minutes: 45` y
+      # hasta acá ese corte era MUDO: el runner mata al agente antes de que escriba
+      # claude-execution-output.json, así que "Verificar resultado de Claude" hace
+      # `[ -f "$LOG" ] || exit 0` y se va; el ticket termina con el fallback de la
+      # compuerta de build —"el build/suite del proyecto o el run terminó con error"—
+      # que nombra compuertas que en ese job figuran SKIPPED. Medido: legis, run
+      # 31584766090, GREGO-51, 45'12" clavados, steps 25 a 32 skipped.
+      #
+      # SE REPORTA ACÁ Y NO AL FINAL A PROPÓSITO: si más tarde el reloj del JOB (60')
+      # cancela todo, `failure()` no se cumple y ningún step de cierre corre. Escribir
+      # pegado al agente es lo que garantiza que la nota exista.
+      #
+      # Tres condiciones CONJUNTIVAS, ninguna heurística de texto:
+      #   1. el step del agente terminó en failure (no en success ni cancelled),
+      #   2. no existe el log — si existe, el corte lo decidió el modelo y habla el step
+      #      de Verificar, que tiene el motivo real,
+      #   3. transcurrió el límite (con 60 s de tolerancia): un fallo a los 3 minutos es
+      #      otra cosa y clasificarlo como reloj sería mentir en la otra dirección.
+      - name: Diagnóstico — ¿al agente lo cortó el reloj?
+        if: failure()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+          # Por env y no inline para que el test pueda ejecutar este shell tal cual.
+          AGENTE_OUTCOME: ${{ steps.agente.outcome }}
+          LIMITE_MIN: ${{ env.ASTRO_AGENT_TIMEOUT_MIN }}
+        run: |
+          LOG=/home/runner/work/_temp/claude-execution-output.json
+          INICIO_F="$RUNNER_TEMP/astro-agent-start"
+          LIMITE="${LIMITE_MIN:-45}"
+          [ "$AGENTE_OUTCOME" = "failure" ] || exit 0
+          [ -f "$LOG" ] && exit 0
+          [ -f "$INICIO_F" ] || exit 0
+          INICIO=$(cat "$INICIO_F" 2>/dev/null || echo 0)
+          AHORA=$(date +%s)
+          ELAPSED=$((AHORA - INICIO))
+          [ "$ELAPSED" -ge $((LIMITE * 60 - 60)) ] || exit 0
+
+          # Lo único que sobrevive al corte: el archivo de progreso del hook PostToolUse.
+          STATE="$RUNNER_TEMP/astro-progress.jsonl"
+          ACCIONES=$(wc -l < "$STATE" 2>/dev/null | tr -d ' ' || echo 0)
+          ACCIONES=${ACCIONES:-0}
+          ACTIVIDAD=0
+          if [ "$ACCIONES" -gt 1 ]; then
+            T0=$(head -n 1 "$STATE" | jq -r '.t // 0' 2>/dev/null || echo 0)
+            TN=$(tail -n 1 "$STATE" | jq -r '.t // 0' 2>/dev/null || echo 0)
+            [ "$TN" -gt "$T0" ] 2>/dev/null && ACTIVIDAD=$(( (TN - T0) / 60 ))
+          fi
+          # Archivos de PRODUCTO ya publicados en la rama (el rescate corre después, pero
+          # lo que el agente commiteó por su cuenta ya está). Es lo que separa "reintentar
+          # continúa" de "reintentar choca contra la misma pared".
+          git fetch origin main >/dev/null 2>&1 || true
+          ARCHIVOS=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -vcE '^(specs/|agent-kit/)' || echo 0)
+
+          echo "::error::TOPE DE TIEMPO: el agente corrió ${ELAPSED}s (límite ${LIMITE} min) y ninguna compuerta llegó a correr"
+          printf '{"limiteMin":%s,"elapsedS":%s,"acciones":%s,"actividadMin":%s}\n' \
+            "$LIMITE" "$ELAPSED" "$ACCIONES" "$ACTIVIDAD" > "$RUNNER_TEMP/astro-timeout.json"
+
+          SALIDA=$(node agent-kit/astro-report.mjs run-timeout "$TICKET_ID" "$LIMITE" "$ACCIONES" "$ACTIVIDAD" "$ARCHIVOS" 2>&1 || true)
+          printf '%s\n' "$SALIDA"
+          # PARACAÍDAS PARA EL KIT VIEJO, y no es defensivo de más: un repo que corre un
+          # agent-kit vendorizado anterior a este cambio no conoce el verbo `run-timeout`,
+          # y astro-report responde a un verbo desconocido con "tipo desconocido" + exit 0
+          # — o sea, no-op SILENCIOSO, y el ticket se quedaría sin NADA: peor que antes.
+          #
+          # La condición es el marcador de éxito que el propio kit imprime ("<verbo> OK"),
+          # no un grep a su código fuente: un workflow que inspecciona las fuentes de su
+          # kit para detectar features se rompe con cualquier refactor. Y así el kit NUEVO
+          # no deja dos notas del mismo hecho.
+          #
+          # `build-failed` existe en TODAS las versiones del kit, hace la transición de
+          # estado, y su motivo lleva la frase TOPE DE TIEMPO, que clasifica bien aunque
+          # el envoltorio que lo imprima sea el viejo.
+          if ! printf '%s' "$SALIDA" | grep -q "run-timeout OK"; then
+            echo "::warning::el kit de este repo no conoce 'run-timeout' (o falló) — reporto el corte por la vía compatible"
+            node agent-kit/astro-report.mjs build-failed "$TICKET_ID" \
+              "TOPE DE TIEMPO: el reloj del run cortó al agente a los $LIMITE min y ninguna compuerta llegó a correr" \
+              corte || true
+          fi
+
       # CRÍTICO (R2.3a): matar el heartbeat ANTES de reportar métricas — si no,
       # una carrera entre el último latido (usd preservado, potencialmente
       # stale) y el write final de setRunMetrics podría pisar el costo real.
@@ -636,7 +729,14 @@ jobs:
           ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
-          [ -f "$LOG" ] || exit 0
+          # Sin log no hay nada que verificar, pero el silencio de este step fue durante
+          # meses la única huella de un corte por reloj. Ahora deja rastro en el log del
+          # run; al TICKET no escribe nada desde acá — si fue el reloj ya habló el
+          # diagnóstico de arriba, y si fue otra cosa habla el reconciler del servidor.
+          if [ ! -f "$LOG" ]; then
+            echo "::warning::el agente no dejó claude-execution-output.json — no hay turnos, tokens ni costo de este run"
+            exit 0
+          fi
           RES=$(jq -c '[.. | objects | select(.type=="result")] | last' "$LOG" 2>/dev/null)
           if [ "$(printf '%s' "$RES" | jq -r '.is_error // false' 2>/dev/null)" = "true" ]; then
             SUBTYPE=$(printf '%s' "$RES" | jq -r '.subtype // ""')
@@ -830,6 +930,20 @@ jobs:
           # cae al pedido vía --model (MODEL_REQUESTED) — nunca vacío.
           MODEL=$(jq -r '.. | .model? // empty' "$LOG" 2>/dev/null | head -1)
           [ -z "$MODEL" ] && MODEL="$MODEL_REQUESTED"
+          # SIN LOG, SE REPORTA IGUAL — PERO MARCADO. Antes acá salían cuatro ceros
+          # indistinguibles de un run que no gastó nada, y como setRunMetrics ACUMULA,
+          # sumar cero hace que el run más caro del ticket simplemente NO EXISTA en
+          # ticket.cost. Ahora el reloj de pared y las acciones del hook viajan en campos
+          # propios y el doc queda marcado 'estimado'.
+          # usd/turnos/tokens SIGUEN en cero a propósito: no hay dato. Y ACCIONES no se
+          # copia a TURNS — `turns` es la unidad contra la que compara --max-turns y con
+          # la que el dueño decide si sube el tope; el propio prompt de este template
+          # documenta un run con 103 acciones y tope de 50 turnos.
+          if [ ! -f "$LOG" ] && [ -f "$RUNNER_TEMP/astro-timeout.json" ]; then
+            export ASTRO_METRICS_SOURCE=estimado
+            export ASTRO_WALL_MS=$(( $(jq -r '.elapsedS // 0' "$RUNNER_TEMP/astro-timeout.json") * 1000 ))
+            export ASTRO_TOOL_CALLS=$(jq -r '.acciones // 0' "$RUNNER_TEMP/astro-timeout.json")
+          fi
           # R2.5 (AC4): fail-visible — si el reporte falla, nota ⚙️ (NO run-failed:
           # marcaría todo el dispatch como fallido por un problema solo del reporte).
           node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "${LOC:-0}" "$MODEL" "${IN:-0}" "${OUT:-0}" "${CACHE_R:-0}" "${CACHE_W:-0}" || {
@@ -971,6 +1085,7 @@ jobs:
           dotnet-version: ${{ steps.stack.outputs.version || '8.0.x' }}
 
       - name: Build del proyecto (compuerta)
+        id: build_gate
         if: steps.stack.outputs.build != ''
         env:
           BUILD_CMD: ${{ steps.stack.outputs.build }}
@@ -995,6 +1110,7 @@ jobs:
       # Lint: NOTA, nunca compuerta. El `|| true` y el if/else son deliberados acá —
       # un lint sucio no debe frenar una entrega (es estilo, no corrección).
       - name: Lint (nota, no bloquea)
+        id: lint_gate
         if: steps.stack.outputs.qa != ''
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
@@ -1013,6 +1129,7 @@ jobs:
       # Un legacy sin tests NUNCA arranca en 'enforce': se activa por proyecto cuando
       # su suite es confiable (project.testEnforcement).
       - name: Suite de tests (compuerta condicional)
+        id: suite_gate
         if: steps.stack.outputs.suite != ''
         env:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
@@ -1039,6 +1156,7 @@ jobs:
       # si encuentra un secreto en el diff, falla → T5.1 (build-failed) rebota el ticket.
       # Falsos positivos: el proyecto puede agregar un .gitleaks.toml con su allowlist.
       - name: Seguridad — secret-scan del diff (compuerta)
+        id: scan_gate
         env:
           GITLEAKS_VERSION: "8.21.2"
         run: |
@@ -1217,6 +1335,52 @@ jobs:
             else node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ El comando de preview configurado no devolvió una URL — revisá previewCmd en la configuración del proyecto." || true; fi
           fi
 
+      # EL SILENCIO DE UNA COMPUERTA SE LEE COMO VERDE, y esa es la ambigüedad que este
+      # step elimina. Cuando el run se corta, GitHub deja el build, el lint, la suite y el
+      # secret-scan en `skipped` —el `success()` implícito apaga todo lo que sigue— y el
+      # ticket no dice una palabra: el humano ve una entrega sin rojos y firma. Medido en
+      # legis (run 31584766090): steps 25 a 32 skipped, cero menciones en el ticket.
+      #
+      # Cuatro estados, y la distinción entre los dos últimos es la que importa:
+      #   ok        la compuerta corrió y pasó
+      #   rojo      corrió y falló
+      #   no-corrio el proyecto LA TIENE y el run no llegó a ella
+      #   ausente   este proyecto no tiene esa compuerta (no hay comando de build, etc.)
+      #
+      # FAIL-CLOSED: si el step `stack` no terminó bien, sus outputs no existen y no se
+      # puede distinguir "no aplica" de "no llegó" — se reportan las cuatro como
+      # `no-corrio`. Decir `ausente` ahí sería reinventar el verde por omisión.
+      - name: Registrar qué compuertas corrieron
+        if: always()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+          STACK_OUTCOME: ${{ steps.stack.outcome }}
+          BUILD_CMD: ${{ steps.stack.outputs.build }}
+          QA_CMD: ${{ steps.stack.outputs.qa }}
+          SUITE_CMD: ${{ steps.stack.outputs.suite }}
+          BUILD_OUTCOME: ${{ steps.build_gate.outcome }}
+          LINT_OUTCOME: ${{ steps.lint_gate.outcome }}
+          SUITE_OUTCOME: ${{ steps.suite_gate.outcome }}
+          SCAN_OUTCOME: ${{ steps.scan_gate.outcome }}
+        run: |
+          # $1 = outcome del step · $2 = comando configurado (vacío ⇒ el proyecto no tiene
+          # esa compuerta). El secret-scan no depende del stack: siempre corresponde.
+          v() {
+            case "$1" in
+              success) echo ok ;;
+              failure) echo rojo ;;
+              *) if [ "$STACK_OUTCOME" != "success" ] || [ -n "$2" ]; then echo no-corrio; else echo ausente; fi ;;
+            esac
+          }
+          GATES=$(printf '{"build":"%s","lint":"%s","suite":"%s","scan":"%s"}' \
+            "$(v "$BUILD_OUTCOME" "$BUILD_CMD")" \
+            "$(v "$LINT_OUTCOME" "$QA_CMD")" \
+            "$(v "$SUITE_OUTCOME" "$SUITE_CMD")" \
+            "$(v "$SCAN_OUTCOME" "siempre")")
+          echo "compuertas: $GATES"
+          node agent-kit/astro-report.mjs gates "$TICKET_ID" "$GATES" || true
+
       # Compuerta de la suite (E5/T5.1): si CUALQUIER paso del pipeline falla (build del
       # proyecto, etc.) tras la entrega, build-failed baja el ticket de en-test a pendiente
       # — un build/suite rojo NO queda esperando revisión humana. Si el agente murió antes
@@ -1227,6 +1391,11 @@ jobs:
           TICKET_ID: ${{ github.event.client_payload.ticketId }}
           ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
         run: |
+          # Si el corte fue por reloj, el diagnóstico pegado al agente ya escribió la nota
+          # con la causa REAL. Este step nombra al build y a la suite, que en ese run
+          # quedaron skipped: dejarlo hablar acá volvería a culpar a compuertas que nunca
+          # corrieron, que es exactamente lo que se vino a arreglar.
+          [ -f "$RUNNER_TEMP/astro-timeout.json" ] && exit 0
           LOG=/home/runner/work/_temp/claude-execution-output.json
           MOTIVO=$(jq -r '.. | .result? // empty' "$LOG" 2>/dev/null | tail -1 | tr '\n' ' ' | head -c 220)
           [ -z "$MOTIVO" ] && MOTIVO="el build/suite del proyecto o el run terminó con error (ver el log de Actions)"
@@ -1462,7 +1631,14 @@ jobs:
           ASTRO_AGENT_PASSWORD: ${{ matrix.planner == 'pola' && secrets.ASTRO_AGENT_PASSWORD_POLA || matrix.planner == 'gemma' && secrets.ASTRO_AGENT_PASSWORD_GEMMA || matrix.planner == 'diana' && secrets.ASTRO_AGENT_PASSWORD_DIANA || matrix.planner == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
-          [ -f "$LOG" ] || exit 0
+          # Sin log no hay nada que verificar, pero el silencio de este step fue durante
+          # meses la única huella de un corte por reloj. Ahora deja rastro en el log del
+          # run; al TICKET no escribe nada desde acá — si fue el reloj ya habló el
+          # diagnóstico de arriba, y si fue otra cosa habla el reconciler del servidor.
+          if [ ! -f "$LOG" ]; then
+            echo "::warning::el agente no dejó claude-execution-output.json — no hay turnos, tokens ni costo de este run"
+            exit 0
+          fi
           RES=$(jq -c '[.. | objects | select(.type=="result")] | last' "$LOG" 2>/dev/null)
           if [ "$(printf '%s' "$RES" | jq -r '.is_error // false' 2>/dev/null)" = "true" ]; then
             SUBTYPE=$(printf '%s' "$RES" | jq -r '.subtype // ""')
@@ -1709,7 +1885,14 @@ jobs:
           ASTRO_AGENT_PASSWORD: ${{ matrix.reviewer == 'olivia' && secrets.ASTRO_AGENT_PASSWORD_OLIVIA || matrix.reviewer == 'charly' && secrets.ASTRO_AGENT_PASSWORD_CHARLY || matrix.reviewer == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
         run: |
           LOG=/home/runner/work/_temp/claude-execution-output.json
-          [ -f "$LOG" ] || exit 0
+          # Sin log no hay nada que verificar, pero el silencio de este step fue durante
+          # meses la única huella de un corte por reloj. Ahora deja rastro en el log del
+          # run; al TICKET no escribe nada desde acá — si fue el reloj ya habló el
+          # diagnóstico de arriba, y si fue otra cosa habla el reconciler del servidor.
+          if [ ! -f "$LOG" ]; then
+            echo "::warning::el agente no dejó claude-execution-output.json — no hay turnos, tokens ni costo de este run"
+            exit 0
+          fi
           RES=$(jq -c '[.. | objects | select(.type=="result")] | last' "$LOG" 2>/dev/null)
           if [ "$(printf '%s' "$RES" | jq -r '.is_error // false' 2>/dev/null)" = "true" ]; then
             SUBTYPE=$(printf '%s' "$RES" | jq -r '.subtype // ""')
