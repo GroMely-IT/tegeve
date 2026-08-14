@@ -375,12 +375,12 @@ jobs:
         run: |
           mkdir -p .claude
           cat > .claude/settings.json <<'JSON'
-          { "hooks": { "PostToolUse": [ { "matcher": "*", "hooks": [ { "type": "command", "command": "jq -c '{t: (now|floor), tool: .tool_name, sig: ((.tool_input.command // .tool_input.file_path // .tool_input.description // \"\")|tostring|.[0:160])}' >> \"$RUNNER_TEMP/astro-progress.jsonl\" 2>/dev/null || true" } ] } ] } }
+          { "hooks": { "PostToolUse": [ { "matcher": "*", "hooks": [ { "type": "command", "command": "jq -c '{t: (now|floor), tool: .tool_name, sig: ((.tool_name // \"?\") + \"|\" + ((.tool_input|tojson)|length|tostring) + \"|\" + ((.tool_input|tojson)|.[0:200]))}' >> \"$RUNNER_TEMP/astro-progress.jsonl\" 2>/dev/null || true" } ] } ] } }
           JSON
 
       # Cada 120s: lee la ÚLTIMA fase del archivo de estado (lo apendan los
       # hooks de arriba) y reporta el latido vía el kit. Stuck detection
-      # barata: si las últimas 5 firmas son (casi) idénticas, aborta el run
+      # barata: si las últimas 8 acciones son idénticas byte a byte, aborta el run
       # con nota ⚙️ ANTES del wall-clock de 45' (loop que quema tokens sin
       # avanzar). No bloquea el job: corre en background (nohup + disown) y
       # este step termina de inmediato.
@@ -397,11 +397,16 @@ jobs:
               sleep 120
               FASE=$(tail -n 1 "$STATE" 2>/dev/null | jq -r ".tool // \"trabajando\"" 2>/dev/null || echo trabajando)
               node agent-kit/astro-report.mjs heartbeat "$TICKET" "$FASE" 0 || true
-              # stuck: últimas 5 firmas casi idénticas → abortar
-              LAST5=$(tail -n 5 "$STATE" 2>/dev/null | jq -r ".sig" 2>/dev/null | sort -u | wc -l)
-              CNT=$(tail -n 5 "$STATE" 2>/dev/null | wc -l)
-              if [ "$CNT" -ge 5 ] && [ "$LAST5" -le 1 ]; then
-                node agent-kit/astro-report.mjs run-failed "$TICKET" "Loop detectado: 5+ acciones idénticas — run abortado por el watchdog (R2.3a)" || true
+              # stuck: la MISMA acción repetida byte a byte 8 veces seguidas.
+              # La firma incluye el tool_input entero (largo + prefijo), no sólo
+              # el archivo: ocho ediciones DISTINTAS al mismo archivo dan ocho
+              # firmas distintas. Antes la firma de Edit/Write era el file_path
+              # pelado, así que trabajar sostenido sobre un archivo monolítico
+              # se leía como lazo y el watchdog mataba builds sanos.
+              LAST=$(tail -n 8 "$STATE" 2>/dev/null | jq -r ".sig" 2>/dev/null | sort -u | wc -l)
+              CNT=$(tail -n 8 "$STATE" 2>/dev/null | wc -l)
+              if [ "$CNT" -ge 8 ] && [ "$LAST" -le 1 ]; then
+                node agent-kit/astro-report.mjs run-failed "$TICKET" "Loop detectado: 8 acciones idénticas seguidas — run abortado por el watchdog (R2.3a)" || true
                 pkill -f "claude" 2>/dev/null || true
                 touch "$RUNNER_TEMP/astro-stuck"
                 exit 0
