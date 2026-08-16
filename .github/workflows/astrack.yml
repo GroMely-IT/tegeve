@@ -121,6 +121,13 @@ jobs:
       # ahí, el YAML queda inválido y los 5 repos cliente entran en startup_failure —
       # radio de daño desproporcionado para ahorrarse un assert.
       ASTRO_AGENT_TIMEOUT_MIN: "45"
+      # EL RELOJ DEL JOB, y es OTRO reloj. El de arriba corta el STEP del agente y lo marca
+      # `failure`; éste corta el JOB ENTERO y lo marca `cancelled` — que es una diferencia de
+      # semántica, no de grado: con `cancelled` la función `failure()` evalúa FALSO, así que
+      # el step de diagnóstico de arriba NO corre y hasta esta rebanada el ticket se quedaba
+      # mudo. Tiene que valer lo mismo que el `timeout-minutes:` del job, y hay un test que
+      # compara los dos números en los tres linajes.
+      ASTRO_JOB_TIMEOUT_MIN: "60"
       # R1.7: el password NO va al env del job (visible a TODO step, incl. el
       # Bash del agente vía claude-code-action) — solo a los steps puntuales
       # que lo necesitan, como env DE ESE STEP (secrets.ASTRO_AGENT_PASSWORD_
@@ -128,6 +135,14 @@ jobs:
       # server-side, functions/index.js) — sin case multi-agente ni otras
       # passwords acá [HAR-2].
     steps:
+      # LA ESTAMPA DEL ARRANQUE DEL JOB. Va PRIMERA, antes del checkout, porque el reloj de
+      # `timeout-minutes` del job cuenta desde que arranca el job —no desde que hay repo—, y
+      # el cierre por cancelación necesita comparar contra ese mismo cero. No usa
+      # `github.event.repository.pushed_at` ni nada del contexto: el único reloj que coincide
+      # con el del runner es el del propio runner.
+      - name: Marcar el arranque del job
+        run: date +%s > "$RUNNER_TEMP/astro-job-start"
+
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
@@ -183,7 +198,7 @@ jobs:
       - name: Preparar el kit de Astrack
         env:
           KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
-          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.2.0' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.4.0' }}
         run: |
           mkdir -p agent-kit
           TMP="$(mktemp -d)"
@@ -611,8 +626,10 @@ jobs:
       # 31584766090, GREGO-51, 45'12" clavados, steps 25 a 32 skipped.
       #
       # SE REPORTA ACÁ Y NO AL FINAL A PROPÓSITO: si más tarde el reloj del JOB (60')
-      # cancela todo, `failure()` no se cumple y ningún step de cierre corre. Escribir
-      # pegado al agente es lo que garantiza que la nota exista.
+      # cancela todo, `failure()` no se cumple. Desde esta rebanada SÍ hay un cierre para
+      # ese caso ("Cierre — el job fue cancelado", `if: cancelled()`), pero corre dentro de
+      # la ventana de gracia de la cancelación, que GitHub no garantiza. Escribir pegado al
+      # agente sigue siendo lo único que garantiza que la nota exista.
       #
       # Tres condiciones CONJUNTIVAS, ninguna heurística de texto:
       #   1. el step del agente terminó en failure (no en success ni cancelled),
@@ -654,7 +671,13 @@ jobs:
           # lo que el agente commiteó por su cuenta ya está). Es lo que separa "reintentar
           # continúa" de "reintentar choca contra la misma pared".
           git fetch origin main >/dev/null 2>&1 || true
-          ARCHIVOS=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -vcE '^(specs/|agent-kit/)' || echo 0)
+          # OJO CON EL `|| echo 0` ACÁ: `grep -vc` IMPRIME el conteo Y SALE 1 cuando ese
+          # conteo es cero, así que el fallback no reemplazaba nada — lo CONCATENABA, y
+          # ARCHIVOS quedaba con el literal "0\n0". Verificado ejecutando el shell real: la
+          # comparación `[ "$ARCHIVOS" -gt 0 ]` de más abajo revienta con "integer expression
+          # expected" y el rescate se pierde. `|| true` deja pasar el 0 que grep ya imprimió.
+          ARCHIVOS=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -vcE '^(specs/|agent-kit/)' || true)
+          ARCHIVOS=${ARCHIVOS:-0}
 
           echo "::error::TOPE DE TIEMPO: el agente corrió ${ELAPSED}s (límite ${LIMITE} min) y ninguna compuerta llegó a correr"
           printf '{"limiteMin":%s,"elapsedS":%s,"acciones":%s,"actividadMin":%s}\n' \
@@ -1401,6 +1424,76 @@ jobs:
           [ -z "$MOTIVO" ] && MOTIVO="el build/suite del proyecto o el run terminó con error (ver el log de Actions)"
           node agent-kit/astro-report.mjs build-failed "$TICKET_ID" "$MOTIVO" || true
 
+      # ¿Y SI EL JOB ENTERO FUE CANCELADO? Es el agujero que quedaba abierto: `cancelled()`
+      # es la ÚNICA condición que se cumple ahí —ni `success()` ni `failure()`— así que hasta
+      # acá ningún step hablaba, el ticket quedaba en Pendiente sin una sola nota y el
+      # reconciler del servidor escribía el genérico "terminó con error y no avisó", que cae
+      # en `desconocido:` y por lo tanto DEJA REINTENTAR PARA SIEMPRE un job que va a volver
+      # a chocar contra los mismos minutos.
+      #
+      # ESTE STEP CORRE DENTRO DE LA VENTANA DE GRACIA DE LA CANCELACIÓN, que GitHub no
+      # garantiza. Por eso hace lo mínimo indispensable y no encadena nada detrás: una sola
+      # llamada al kit. El servidor sigue teniendo su propio camino (functions/stepFailure.js
+      # lee las anotaciones del job y clasifica solo), así que si esta ventana no alcanza, la
+      # cancelación igual se nombra — más tarde y con menos detalle, pero se nombra.
+      #
+      # QUIÉN DECIDE QUE FUE EL RELOJ: la aritmética del runner contra su propio tope, nunca
+      # el texto de GitHub. `cancel:reloj-del-job` es la única de las cuatro cancelaciones que
+      # FRENA el reintento; afirmarla sobre una cancelación por concurrencia —que es rutina y
+      # se arregla reintentando— le trabaría al dueño el click correcto.
+      - name: Cierre — el job fue cancelado
+        if: cancelled()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ secrets.ASTRO_AGENT_PASSWORD_CLAUDIA }}
+          LIMITE_MIN: ${{ env.ASTRO_JOB_TIMEOUT_MIN }}
+        run: |
+          # Si el reloj del AGENTE ya diagnosticó, ésa es la causa verdadera y ya está escrita
+          # con más detalle. Una segunda nota del mismo hecho sólo agrega ruido.
+          [ -f "$RUNNER_TEMP/astro-timeout.json" ] && exit 0
+
+          LIMITE="${LIMITE_MIN:-60}"
+          INICIO_F="$RUNNER_TEMP/astro-job-start"
+          INICIO=$(cat "$INICIO_F" 2>/dev/null || echo 0)
+          AHORA=$(date +%s)
+          ELAPSED=0
+          [ "$INICIO" -gt 0 ] 2>/dev/null && ELAPSED=$((AHORA - INICIO))
+          TRANSCURRIDO=$((ELAPSED / 60))
+
+          # 90 s de tolerancia: entre el tope del job y este step está la propia ventana de
+          # cancelación. Sin estampa (INICIO=0) ELAPSED es 0 y esto da falso — o sea que la
+          # duda cae del lado reintentable, que es el lado seguro.
+          POR_RELOJ=0
+          [ "$ELAPSED" -ge $((LIMITE * 60 - 90)) ] && POR_RELOJ=1
+
+          STATE="$RUNNER_TEMP/astro-progress.jsonl"
+          ACCIONES=$(wc -l < "$STATE" 2>/dev/null | tr -d ' ' || echo 0)
+          ACCIONES=${ACCIONES:-0}
+
+          # Mismo `|| true` que en el diagnóstico del agente, y por el mismo motivo: `grep -vc`
+          # imprime el 0 y SALE 1, así que un `|| echo 0` lo duplicaría.
+          git fetch origin main >/dev/null 2>&1 || true
+          ARCHIVOS=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -vcE '^(specs/|agent-kit/)' || true)
+          ARCHIVOS=${ARCHIVOS:-0}
+
+          echo "::error::CANCELADO: el job corrió ${ELAPSED}s de un tope de ${LIMITE} min (por reloj: ${POR_RELOJ}) y ninguna compuerta llegó a correr"
+
+          SALIDA=$(node agent-kit/astro-report.mjs run-cancelled "$TICKET_ID" "$LIMITE" "$TRANSCURRIDO" "$POR_RELOJ" "$ACCIONES" "$ARCHIVOS" 2>&1 || true)
+          printf '%s\n' "$SALIDA"
+          # PARACAÍDAS PARA EL KIT VIEJO, igual que en el corte por reloj del agente: un verbo
+          # que el kit vendorizado no conoce es un no-op SILENCIOSO. `note` existe en todas las
+          # versiones y NO prepende "❌ Ejecución fallida" —que sería mentir: no falló nada—,
+          # así que el texto viaja tal cual y clasifica por su propia frase marcada.
+          if ! printf '%s' "$SALIDA" | grep -q "run-cancelled OK"; then
+            echo "::warning::el kit de este repo no conoce 'run-cancelled' (o falló) — reporto la cancelación por la vía compatible"
+            if [ "$POR_RELOJ" = "1" ]; then
+              MSG="⏹ CANCELADO por el RELOJ DEL JOB: GitHub cortó el job entero a los ${LIMITE} min, su tope máximo. Ninguna compuerta llegó a correr."
+            else
+              MSG="⏹ CANCELADO: GitHub cortó este job a los ${TRANSCURRIDO} min sin que fallara nada. Ninguna compuerta llegó a correr."
+            fi
+            node agent-kit/astro-report.mjs note "$TICKET_ID" "$MSG" || true
+          fi
+
       - name: Liberar la cola
         if: always()
         env:
@@ -1439,10 +1532,23 @@ jobs:
       ASTRO_ORG_ID: ${{ secrets.ASTRO_ORG_ID }}
       ASTRO_PROJECT: ${{ github.event.client_payload.project }}
       AGENT_ID: ${{ matrix.planner }}
+      # LOS DOS RELOJES DE LA ETAPA DE PLAN, con la misma regla que en 'trabajar': tienen que
+      # valer lo mismo que los `timeout-minutes:` literales (20 el step del planner, 30 el
+      # job) y hay un test que compara los pares en los tres linajes. Hasta esta rebanada los
+      # dos cortes eran MUDOS acá: el job tiene tres steps `always()` y ninguno escribía al
+      # ticket, así que un planner cortado dejaba el plan trabado en 'planning' sin una sola
+      # nota hasta que el reloj de 90' del servidor lo cerraba con un motivo genérico.
+      ASTRO_PLANNER_TIMEOUT_MIN: "20"
+      ASTRO_PLAN_JOB_TIMEOUT_MIN: "30"
       # R1.7: passwords fuera del env del job (ver 'trabajar' arriba) — el
       # subconjunto de rol vive solo en el step "Credenciales del planner"
       # (validación) y, para el activo, en el step que corre astro-agent.
     steps:
+      # Igual que en 'trabajar': la estampa va antes del checkout porque el reloj del job
+      # cuenta desde que arranca el job, no desde que hay repo.
+      - name: Marcar el arranque del job
+        run: date +%s > "$RUNNER_TEMP/astro-plan-job-start"
+
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
@@ -1495,7 +1601,7 @@ jobs:
       - name: Preparar el kit de Astrack
         env:
           KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
-          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.2.0' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.4.0' }}
         run: |
           mkdir -p agent-kit
           TMP="$(mktemp -d)"
@@ -1525,7 +1631,22 @@ jobs:
           fi
           rm -rf "$TMP"
 
+      # EL MISMO HOOK QUE 'trabajar', y por el mismo motivo: cuando el reloj corta al
+      # planner, este archivo es LO ÚNICO que sobrevive — el runner lo mata antes de que
+      # escriba claude-execution-output.json, así que sin esto no se sabe si alcanzó a hacer
+      # 2 acciones o 200. No lleva el heartbeat en background que sí tiene 'trabajar': el
+      # planner es read-only y corre 20 minutos, no 45.
+      - name: Instalar hook de progreso y marcar el arranque del planner
+        run: |
+          mkdir -p .claude
+          cat > .claude/settings.json <<'JSON'
+          { "hooks": { "PostToolUse": [ { "matcher": "*", "hooks": [ { "type": "command", "command": "jq -c '{t: (now|floor), tool: .tool_name, sig: ((.tool_name // \"?\") + \"|\" + ((.tool_input|tojson)|length|tostring) + \"|\" + ((.tool_input|tojson)|.[0:200]))}' >> \"$RUNNER_TEMP/astro-progress.jsonl\" 2>/dev/null || true" } ] } ] } }
+          JSON
+          : > "$RUNNER_TEMP/astro-progress.jsonl"
+          date +%s > "$RUNNER_TEMP/astro-planner-start"
+
       - uses: anthropics/claude-code-action@v1
+        id: planner
         timeout-minutes: 20
         env:
           # resuelto por matrix.planner (compile-time) — NUNCA por GITHUB_ENV ni
@@ -1618,6 +1739,59 @@ jobs:
                  findings: ['punto clave 1', 'punto clave 2']  // 3-6, lo más importante
                }).
 
+      # ¿AL PLANNER LO CORTÓ EL RELOJ? Mismas tres condiciones conjuntivas que en
+      # 'trabajar', y va PEGADO al agente por el mismo motivo: si más tarde el reloj del JOB
+      # (30') cancela, `failure()` no se cumple.
+      #
+      # LO QUE CAMBIA RESPECTO DEL BUILD: acá no hay compuertas que contar ni rama de
+      # producto que rescatar. Lo que se pierde son los artefactos del plan, y el ticket NO
+      # se mueve de estado: `plan.stage` lo cierra el servidor (functions/planClose.js), que
+      # es el único que ve a los DOS planners. Escribir 'failed' desde uno solo cerraría el
+      # plan mientras el otro sigue trabajando.
+      - name: Diagnóstico — ¿al planner lo cortó el reloj?
+        if: failure()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ matrix.planner == 'pola' && secrets.ASTRO_AGENT_PASSWORD_POLA || matrix.planner == 'gemma' && secrets.ASTRO_AGENT_PASSWORD_GEMMA || matrix.planner == 'diana' && secrets.ASTRO_AGENT_PASSWORD_DIANA || matrix.planner == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
+          PLANNER_OUTCOME: ${{ steps.planner.outcome }}
+          LIMITE_MIN: ${{ env.ASTRO_PLANNER_TIMEOUT_MIN }}
+        run: |
+          LOG=/home/runner/work/_temp/claude-execution-output.json
+          INICIO_F="$RUNNER_TEMP/astro-planner-start"
+          LIMITE="${LIMITE_MIN:-20}"
+          [ "$PLANNER_OUTCOME" = "failure" ] || exit 0
+          [ -f "$LOG" ] && exit 0
+          [ -f "$INICIO_F" ] || exit 0
+          INICIO=$(cat "$INICIO_F" 2>/dev/null || echo 0)
+          AHORA=$(date +%s)
+          ELAPSED=$((AHORA - INICIO))
+          [ "$ELAPSED" -ge $((LIMITE * 60 - 60)) ] || exit 0
+
+          STATE="$RUNNER_TEMP/astro-progress.jsonl"
+          ACCIONES=$(wc -l < "$STATE" 2>/dev/null | tr -d ' ' || echo 0)
+          ACCIONES=${ACCIONES:-0}
+          ACTIVIDAD=0
+          if [ "$ACCIONES" -gt 1 ]; then
+            T0=$(head -n 1 "$STATE" | jq -r '.t // 0' 2>/dev/null || echo 0)
+            TN=$(tail -n 1 "$STATE" | jq -r '.t // 0' 2>/dev/null || echo 0)
+            [ "$TN" -gt "$T0" ] 2>/dev/null && ACTIVIDAD=$(( (TN - T0) / 60 ))
+          fi
+
+          echo "::error::RELOJ DEL PLANNER: corrió ${ELAPSED}s (límite ${LIMITE} min) sin llegar a entregar"
+          printf '{"limiteMin":%s,"elapsedS":%s,"acciones":%s,"actividadMin":%s}\n' \
+            "$LIMITE" "$ELAPSED" "$ACCIONES" "$ACTIVIDAD" > "$RUNNER_TEMP/astro-plan-timeout.json"
+
+          SALIDA=$(node agent-kit/astro-report.mjs plan-timeout "$TICKET_ID" "$LIMITE" "$ACCIONES" "$ACTIVIDAD" 0 2>&1 || true)
+          printf '%s\n' "$SALIDA"
+          # PARACAÍDAS PARA EL KIT VIEJO. Se usa `note` y no `run-failed`: el planner no mueve
+          # el estado del ticket, y "❌ Ejecución fallida" es la frase que dispara el desenlace
+          # del DISPATCH del Build. Reusarla acá marcaría en rojo un Build que ni existió.
+          if ! printf '%s' "$SALIDA" | grep -q "plan-timeout OK"; then
+            echo "::warning::el kit de este repo no conoce 'plan-timeout' (o falló) — reporto el corte por la vía compatible"
+            node agent-kit/astro-report.mjs note "$TICKET_ID" \
+              "⏱ RELOJ DEL PLANNER: la etapa de Plan cortó al planner a los ${LIMITE} min sin que llegara a entregar sus artefactos." || true
+          fi
+
       # Claude puede terminar con is_error=true SIN hacer fallar el job (sale con
       # código 0). Sin este chequeo el job queda VERDE aunque el planner no ejecutó
       # (token de Claude inválido/vencido, límite de sesión) → el ticket no avanza y
@@ -1686,6 +1860,16 @@ jobs:
           CACHE_W=$(jq -rs "$USAGE_SEL | (.cache_creation_input_tokens // 0)" "$LOG" 2>/dev/null | head -1)
           MODEL=$(jq -r '.. | .model? // empty' "$LOG" 2>/dev/null | head -1)
           [ -z "$MODEL" ] && MODEL="$MODEL_REQUESTED"
+          # SIN LOG, SE REPORTA IGUAL — PERO MARCADO. Mismo carril que el Build: un planner
+          # cortado por el reloj gastó tokens reales y sumaba CUATRO CEROS, que como
+          # setRunMetrics ACUMULA equivale a que el run no haya existido. El reloj de pared y
+          # las acciones del hook viajan en campos propios; usd/turnos/tokens siguen en cero
+          # a propósito, porque de eso no hay dato.
+          if [ ! -f "$LOG" ] && [ -f "$RUNNER_TEMP/astro-plan-timeout.json" ]; then
+            export ASTRO_METRICS_SOURCE=estimado
+            export ASTRO_WALL_MS=$(( $(jq -r '.elapsedS // 0' "$RUNNER_TEMP/astro-plan-timeout.json") * 1000 ))
+            export ASTRO_TOOL_CALLS=$(jq -r '.acciones // 0' "$RUNNER_TEMP/astro-plan-timeout.json")
+          fi
           node agent-kit/astro-report.mjs cost "$TICKET_ID" "${COST:-0}" "${TURNS:-0}" "${TOKENS:-0}" "${MS:-0}" "0" "$MODEL" "${IN:-0}" "${OUT:-0}" "${CACHE_R:-0}" "${CACHE_W:-0}" || {
             echo "::warning::no se pudo registrar el costo del run"
             node agent-kit/astro-report.mjs note "$TICKET_ID" "⚙️ no se pudo registrar el costo del run (ver el log de este step)" || true
@@ -1705,6 +1889,53 @@ jobs:
           path: /home/runner/work/_temp/claude-execution-output.json
           if-no-files-found: ignore
           retention-days: 90
+
+      # EL JOB DEL PLAN TAMBIÉN PUEDE SER CANCELADO, y acá pasa MÁS seguido que en el Build:
+      # este job declara `cancel-in-progress: true`, así que un segundo dispatch del mismo
+      # ticket cancela al primero por diseño. Por eso el texto NO afirma el reloj salvo que la
+      # aritmética lo respalde — decir "reloj" sobre una cancelación por concurrencia sería
+      # falso en el caso MÁS FRECUENTE de este job.
+      #
+      # No toca `plan.stage` ni el estado del ticket: cerrar el plan es del servidor, que ve
+      # a los dos planners. Acá sólo se deja el hecho escrito.
+      - name: Cierre — el job del plan fue cancelado
+        if: cancelled()
+        env:
+          TICKET_ID: ${{ github.event.client_payload.ticketId }}
+          ASTRO_AGENT_PASSWORD: ${{ matrix.planner == 'pola' && secrets.ASTRO_AGENT_PASSWORD_POLA || matrix.planner == 'gemma' && secrets.ASTRO_AGENT_PASSWORD_GEMMA || matrix.planner == 'diana' && secrets.ASTRO_AGENT_PASSWORD_DIANA || matrix.planner == 'arturo' && secrets.ASTRO_AGENT_PASSWORD_ARTURO || '' }}
+          LIMITE_MIN: ${{ env.ASTRO_PLAN_JOB_TIMEOUT_MIN }}
+        run: |
+          # Si el reloj del PLANNER ya diagnosticó, ésa es la causa verdadera y ya está escrita.
+          [ -f "$RUNNER_TEMP/astro-plan-timeout.json" ] && exit 0
+
+          LIMITE="${LIMITE_MIN:-30}"
+          INICIO=$(cat "$RUNNER_TEMP/astro-plan-job-start" 2>/dev/null || echo 0)
+          AHORA=$(date +%s)
+          ELAPSED=0
+          [ "$INICIO" -gt 0 ] 2>/dev/null && ELAPSED=$((AHORA - INICIO))
+          TRANSCURRIDO=$((ELAPSED / 60))
+          POR_RELOJ=0
+          [ "$ELAPSED" -ge $((LIMITE * 60 - 90)) ] && POR_RELOJ=1
+
+          ACCIONES=$(wc -l < "$RUNNER_TEMP/astro-progress.jsonl" 2>/dev/null | tr -d ' ' || echo 0)
+          ACCIONES=${ACCIONES:-0}
+
+          echo "::error::CANCELADO: el job del plan corrió ${ELAPSED}s de un tope de ${LIMITE} min (por reloj: ${POR_RELOJ})"
+
+          # ARCHIVOS va en 0 SIEMPRE, y no es un olvido: el planner es read-only (sin
+          # Edit/Write) y no tiene rama de ticket, así que no hay trabajo de producto que
+          # rescatar. Pasar un conteo de git acá inventaría un avance que no existe.
+          SALIDA=$(node agent-kit/astro-report.mjs run-cancelled "$TICKET_ID" "$LIMITE" "$TRANSCURRIDO" "$POR_RELOJ" "$ACCIONES" 0 2>&1 || true)
+          printf '%s\n' "$SALIDA"
+          if ! printf '%s' "$SALIDA" | grep -q "run-cancelled OK"; then
+            echo "::warning::el kit de este repo no conoce 'run-cancelled' (o falló) — reporto la cancelación por la vía compatible"
+            if [ "$POR_RELOJ" = "1" ]; then
+              MSG="⏹ CANCELADO por el RELOJ DEL JOB: GitHub cortó el job del plan a los ${LIMITE} min, su tope máximo."
+            else
+              MSG="⏹ CANCELADO: GitHub cortó el job del plan a los ${TRANSCURRIDO} min sin que fallara nada."
+            fi
+            node agent-kit/astro-report.mjs note "$TICKET_ID" "$MSG" || true
+          fi
 
   # ── La CUADRILLA de revisión (FASE 1, writer≠reviewer): cada revisor casteado
   #    (matrix) evalúa el diff de la rama del ticket con CONTEXTO FRESCO y deja su
@@ -1789,7 +2020,7 @@ jobs:
       - name: Preparar el kit de Astrack
         env:
           KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
-          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.2.0' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.4.0' }}
         run: |
           mkdir -p agent-kit
           TMP="$(mktemp -d)"
@@ -2022,7 +2253,7 @@ jobs:
       - name: Preparar el kit de Astrack
         env:
           KIT_BASE: ${{ vars.ASTRO_KIT_BASE || 'https://astrack.dev/kit' }}
-          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.2.0' }}
+          KIT_VERSION: ${{ vars.ASTRO_KIT_VERSION || '1.4.0' }}
         run: |
           mkdir -p agent-kit
           TMP="$(mktemp -d)"
